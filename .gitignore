@@ -1,0 +1,4 @@
+# ローカル検証用に ORPHE-CORE-INSOLE.js の dist/browser をコピーする場所（scripts/toggle-cdn.mjs 参照）
+vendor/
+.DS_Store
+node_modules/

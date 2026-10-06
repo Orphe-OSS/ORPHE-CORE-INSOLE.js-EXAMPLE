@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>orphe.js</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css">
+</head>
+
+<body>
+    <h1>Number of STEPS</h1>
+<button onclick="ble.begin();">connect</button>
+    <br>
+    <ul>
+        <li id="steps_number"></li>
+    </ul>
+
+
+    
+    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+    <script>
+        
+        var ble = new Orphe(0);
+        window.onload = function () {
+            // ORPHE CORE Init
+            ble.setup();
+            ble.gotStepsNumber = function (steps_number) {
+                document.querySelector('#steps_number').innerHTML = steps_number.value;
+            }
+        }
+    
+    </script>
+</body>
+
+</html>

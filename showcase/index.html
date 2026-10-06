@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ORPHE INSOLE — Showcase</title>
+  <meta name="description"
+    content="ORPHE INSOLE の製品紹介・データ理解・SDKの使い方が1つで分かるショーケースです。">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css">
+  <link href="./style.css" rel="stylesheet">
+</head>
+
+<body class="bg-dark text-light">
+
+  <!-- 0. 固定ヘッダ: 接続UI（2台）+ LIVE/DEMOバッジ + ナビ -->
+  <header class="showcase-header bg-dark border-bottom border-secondary">
+    <div class="container d-flex flex-wrap align-items-center gap-3 py-2">
+      <a class="fw-bold header-home-link" href="../index.html"
+        title="ORPHE-INSOLE.js トップページ（examples一覧）へ戻る" data-i18n-title="headerHomeTitle">ORPHE INSOLE <span
+          class="text-muted">Showcase</span></a>
+      <div id="toolkit0"></div>
+      <div id="toolkit1"></div>
+      <span id="live_badge" class="badge bg-secondary" title="実機未接続の間は記録済み/合成の歩行データを再生しています"
+        data-i18n-title="liveBadgeTitle">DEMO</span>
+      <span id="bt_unsupported" class="badge bg-warning text-dark d-none"
+        title="Chrome / Edge / Opera でアクセスしてください" data-i18n-title="btUnsupportedTitle"
+        data-i18n="btUnsupported">Web Bluetooth 非対応ブラウザ</span>
+      <nav class="ms-auto small d-none d-lg-flex gap-2" aria-label="ページ内ナビゲーション" data-i18n-aria-label="navLabel">
+        <a href="#spec" data-i18n="navSpec">スペック</a>
+        <a href="#connect" data-i18n="navConnect">つなぐ</a>
+        <a href="#pressure" data-i18n="navPressure">圧力</a>
+        <a href="#imu" data-i18n="navImu">IMU</a>
+        <a href="#attitude" data-i18n="navAttitude">姿勢3D</a>
+        <a href="#record" data-i18n="navRecord">記録</a>
+        <a href="#buy" class="text-warning" data-i18n="navBuy">購入</a>
+        <a href="#next" data-i18n="navNext">Examples</a>
+      </nav>
+      <div class="language-switch" aria-label="言語" data-i18n-aria-label="languageLabel">
+        <button type="button" data-lang-button="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang-button="ja" class="active" aria-pressed="true">日本語</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- 1. Hero -->
+    <section id="hero" class="py-5 text-center">
+      <p class="text-info small mb-1">SENSING MODULE FOR SMART FOOTWEAR</p>
+      <h1 class="display-5 fw-bold">ORPHE INSOLE</h1>
+      <p class="lead mt-3 mx-auto" style="max-width: 42rem;" data-i18n="heroLead">
+        6チャネルの圧力センサとモーションセンサ（IMU）を内蔵したインソール型IoTセンサー。
+        足裏の荷重分布と足の動きを、最大200Hzでリアルタイムにワイヤレス取得できます。
+      </p>
+      <img class="hero-product-image" src="./assets/orphe-insole-beta-3d.webp" alt="ORPHE INSOLE の製品画像"
+        data-i18n-alt="heroImageAlt" width="1000" height="1000">
+      <p class="text-muted mx-auto" style="max-width: 42rem;" data-i18n-html="heroDesc">
+        このページは ORPHE INSOLE の<strong>製品紹介・データ理解・SDKの使い方</strong>が1つで分かるショーケースです。
+        実機が無くても歩行データのデモ再生ですべての図が動きます。実機（左右最大2台）を接続すると
+        <span class="badge bg-success">LIVE</span> に切り替わります。
+      </p>
+      <div class="d-flex justify-content-center gap-2 mt-3">
+        <a class="btn btn-warning fw-bold" href="https://shop.orphe.io/collections/sensor/products/orphe-insole-%CE%B2-evaluation-kit" target="_blank" rel="noopener">
+          <i class="bi bi-bag"></i> <span data-i18n="heroBuy">ORPHE STORE で購入</span>
+        </a>
+        <a class="btn btn-outline-light" href="https://orphe.io/insole" target="_blank" rel="noopener">
+          <span data-i18n="heroContact">製品ページ・お問い合わせ</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 2. スペック + 購入導線 -->
+    <section id="spec" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-cpu"></i> <span data-i18n="specTitle">スペック & センサ構成</span></h2>
+      <div class="row g-4 mt-1">
+        <div class="col-md-7">
+          <table class="table table-dark table-sm table-hover spec-table">
+            <tbody>
+              <tr><th data-i18n="specMotionLabel">モーションセンサ</th><td data-i18n="specMotionValue">3軸加速度 + 3軸ジャイロ（クォータニオンはSDKで取得可能）</td></tr>
+              <tr><th data-i18n="specPressureLabel">圧力センサ</th><td data-i18n="specPressureValue">片足 6点</td></tr>
+              <tr><th data-i18n="specAccRangeLabel">加速度レンジ</th><td>±16G</td></tr>
+              <tr><th data-i18n="specGyroRangeLabel">ジャイロレンジ</th><td>±2000dps</td></tr>
+              <tr><th data-i18n="specPressureRangeLabel">圧力レンジ</th><td>0N – 148N</td></tr>
+              <tr><th data-i18n="specSamplingLabel">サンプリングレート</th><td data-i18n="specSamplingValue">100Hz / 200Hz（ストリーミングモードによる）</td></tr>
+              <tr><th data-i18n="specConnectionLabel">接続</th><td data-i18n="specConnectionValue">Bluetooth 5.2（Web Bluetooth 対応）</td></tr>
+              <tr><th data-i18n="specBatteryLabel">連続動作時間</th><td data-i18n="specBatteryValue">24時間</td></tr>
+              <tr><th data-i18n="specChargeLabel">充電</th><td data-i18n="specChargeValue">マグネットコネクタ / ワイヤレス充電対応</td></tr>
+              <tr><th data-i18n="specWeightLabel">重量</th><td data-i18n="specWeightValue">約87g（片足）</td></tr>
+              <tr><th data-i18n="specSizeLabel">サイズ (US men)</th><td>5, 5.5, 6, 8.5, 9, 9.5</td></tr>
+            </tbody>
+          </table>
+          <p class="small text-muted" data-i18n="specNote">※ ORPHE INSOLE (Beta) の公称値。アプリケーションにより変動する場合があります。</p>
+        </div>
+        <div class="col-md-5" id="buy">
+          <div class="buy-card">
+            <h5><i class="bi bi-bag text-warning"></i> <span data-i18n="buyTitle">購入について</span></h5>
+            <p class="small" data-i18n-html="buyBody">
+              ORPHE INSOLE (Beta) は <strong>ORPHE Official Store</strong> の評価キットとして購入できます。
+              共同開発パッケージや研究・事業でのご利用は製品ページのお問い合わせフォームからご相談ください。
+            </p>
+            <div class="d-grid gap-2">
+              <a class="btn btn-warning fw-bold" href="https://shop.orphe.io/collections/sensor/products/orphe-insole-%CE%B2-evaluation-kit" target="_blank" rel="noopener">
+                <i class="bi bi-bag"></i> <span data-i18n="buyKit">評価キットを購入（ORPHE STORE）</span>
+              </a>
+              <a class="btn btn-outline-light" href="https://orphe.io/insole" target="_blank" rel="noopener">
+                <i class="bi bi-envelope"></i> <span data-i18n="buyContact">評価キットのお問い合わせ</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. つないでみる -->
+    <section id="connect" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-bluetooth"></i> <span data-i18n="connectTitle">つないでみる</span></h2>
+      <div class="row g-4 mt-1">
+        <div class="col-md-6">
+          <ol class="connect-steps">
+            <li data-i18n="connectStep1">充電された INSOLE を用意する</li>
+            <li data-i18n-html="connectStep2">ページ上部の<strong>トグルスイッチをON</strong>にする（左右2台まで。1台でもOK）</li>
+            <li data-i18n-html="connectStep3">デバイス選択ダイアログで <code>ORPHE INSOLE</code> を選ぶ</li>
+          </ol>
+          <p class="small" data-i18n-html="connectBody">
+            接続するとヘッダに実測周波数・<span class="badge bg-success">L</span>/<span class="badge bg-primary">R</span>
+            バッジ（装着位置から自動判定）・バッテリーが表示され、ページ内の左右パネルも実際の足に合わせて並び替わります。
+            <i class="bi bi-gear"></i> ギアアイコンから<strong>Raw Sensor Data / Step Analysis</strong>と
+            Raw Data の<strong>Realtime / FIFO</strong>、Realtime の配信フォーマットを切り替えられます。
+          </p>
+          <table class="table table-dark table-sm small">
+            <thead>
+              <tr><th>Mode</th><th data-i18n="modeDataHeader">データ</th><th data-i18n="modeRateHeader">周波数</th><th data-i18n="modeUseHeader">用途</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>quat + gyro + acc</td><td>200Hz</td><td data-i18n="mode1Use">姿勢のみ高速取得</td></tr>
+              <tr><td>3</td><td>gyro + acc + press</td><td>200Hz</td><td data-i18n="mode3Use">圧力＋IMUの高速取得</td></tr>
+              <tr><td><strong>4</strong></td><td>gyro + acc + press + quat</td><td>100Hz</td><td><strong data-i18n="mode4Use">全データ（デフォルト）</strong></td></tr>
+            </tbody>
+          </table>
+          <p class="small text-muted" data-i18n="connectBrowserNote">
+            対応ブラウザ: Chrome / Edge / Opera（Web Bluetooth API が必要）。
+            Firefox / Safari では接続できませんが、このページの閲覧とデモ再生は可能です。
+          </p>
+        </div>
+        <div class="col-md-6">
+          <div class="connect-note-card">
+            <h3 class="h6 text-info" data-i18n="connectPrepTitle">接続前の確認</h3>
+            <ul class="small mb-0">
+              <li data-i18n="connectPrepItem1">ORPHE INSOLE は動きを検知すると自動的にアドバタイズします。</li>
+              <li data-i18n="connectPrepItem2">反応しない場合は、軽く動かしてからブラウザのデバイス選択をやり直してください。</li>
+              <li data-i18n="connectPrepItem3">圧力値を見る場合は、Realtime のモード3/4、または FIFO を選びます。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 圧力センサ -->
+    <section id="pressure" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-grid-3x2-gap"></i> <span data-i18n="pressureTitle">圧力センサ（6ch × 左右）</span></h2>
+      <p class="section-desc" data-i18n-html="pressureDesc">
+        足裏の6点で荷重を計測します。足型マップでは値が大きいほど赤く表示され、
+        <span class="cop-legend"></span> は6点の重み付き平均から計算した<strong>推定中心</strong>です。
+        左右2台を接続すると、体重移動・左右バランスがそのまま観察できます。
+      </p>
+      <span id="notice_press" class="badge bg-warning text-dark d-none" data-i18n="noticePress">現在のモード(1)では圧力は配信されません — ギアからモード3/4へ</span>
+      <div class="row g-4 mt-1" id="press_panels">
+        <div class="col-md-6 device-panel" id="press_panel0">
+          <div class="panel-label"><span class="device-name">INSOLE 01</span> <span class="badge bg-secondary side-badge">-</span></div>
+          <div class="row g-3 align-items-center">
+            <div class="col-5 text-center">
+              <div id="footmap0" class="insole-map is-left mx-auto">
+                <span id="cop_dot0" class="cop-dot"></span>
+              </div>
+              <div class="small text-muted mt-2"><span data-i18n="pressureTotalLabel">合計</span>: <span id="press_total0" class="mono">0</span></div>
+            </div>
+            <div class="col-7">
+              <canvas id="chart_press0"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 device-panel" id="press_panel1">
+          <div class="panel-label"><span class="device-name">INSOLE 02</span> <span class="badge bg-secondary side-badge">-</span></div>
+          <div class="row g-3 align-items-center">
+            <div class="col-5 text-center">
+              <div id="footmap1" class="insole-map is-right mx-auto">
+                <span id="cop_dot1" class="cop-dot"></span>
+              </div>
+              <div class="small text-muted mt-2"><span data-i18n="pressureTotalLabel">合計</span>: <span id="press_total1" class="mono">0</span></div>
+            </div>
+            <div class="col-7">
+              <canvas id="chart_press1"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pressure-load-card mt-3">
+        <div class="d-flex justify-content-between align-items-baseline gap-3 flex-wrap">
+          <div>
+            <div class="small text-info fw-bold" data-i18n="pressureGaugeEyebrow">TOTAL PRESSURE</div>
+            <h3 class="h6 mb-0" data-i18n="pressureGaugeTitle">全体圧力ゲージ</h3>
+          </div>
+          <div class="mono fs-5"><span id="pressure_total_value">0</span> a.u.</div>
+        </div>
+        <div class="pressure-total-track mt-3" aria-label="Total pressure">
+          <div id="pressure_total_gauge" class="pressure-total-fill"></div>
+        </div>
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <div class="d-flex justify-content-between small">
+              <span data-i18n="pressureLeftLabel">左足</span>
+              <span class="mono" id="pressure_left_value">0</span>
+            </div>
+            <div class="pressure-side-track"><div id="pressure_left_bar" class="pressure-side-fill"></div></div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex justify-content-between small">
+              <span data-i18n="pressureRightLabel">右足</span>
+              <span class="mono" id="pressure_right_value">0</span>
+            </div>
+            <div class="pressure-side-track"><div id="pressure_right_bar" class="pressure-side-fill right"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col-md-8">
+          <div class="snippet-block">
+            <div class="snippet-title" data-i18n="snippetPressureTitle">圧力データの取得</div>
+            <pre class="snippet"><code data-i18n-html="snippetPressureCode">insole.gotPress = function (press) {
+  // press.values: [p0..p5] 6ch の ADC 生値 (uint16)
+  const total = press.values.reduce((a, b) =&gt; a + b, 0);
+};</code></pre>
+            <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <p class="small text-muted" data-i18n-html="pressureNote">
+            <i class="bi bi-exclamation-triangle"></i>
+            値は ADC 生値です。荷重[N]などの物理量が必要な場合は、無負荷時・既知荷重時のサンプリングによる
+            キャリブレーションをアプリ側で行ってください。チャネルの物理配置はモデルにより異なる場合があります。
+          </p>
+        </div>
+      </div>
+      <div class="related-examples mt-2">
+        <span class="related-label"><i class="bi bi-signpost"></i> <span data-i18n="relatedLabel">関連 examples</span></span>
+        <a class="related-link" href="../udon/index.html">
+          <strong>Udon</strong> <span data-i18n="relatedUdonDesc">圧力で遊ぶ足踏みゲーム（キャリブレーション不要）</span>
+        </a>
+        <a class="related-link" href="../balance-tuner/index.html">
+          <strong>Balance Tuner</strong> <span data-i18n="relatedBalanceTunerDesc">荷重バランスの可聴化</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 5. IMU -->
+    <section id="imu" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-speedometer2"></i> <span data-i18n="imuTitle">IMU: 加速度・ジャイロ</span></h2>
+      <p class="section-desc" data-i18n-html="imuDesc">
+        3軸加速度（±16G）と3軸角速度（±2000dps）。<code>gotAcc</code>/<code>gotGyro</code> は -1..1 の正規化値、
+        <code>gotConvertedAcc</code>/<code>gotConvertedGyro</code> は実値（G / deg/s）を返します。下のチャートは実値です。
+      </p>
+      <div class="row g-4 mt-1" id="imu_panels">
+        <div class="col-md-6 device-panel" id="imu_panel0">
+          <div class="panel-label"><span class="device-name">INSOLE 01</span> <span class="badge bg-secondary side-badge">-</span></div>
+          <canvas id="chart_acc0"></canvas>
+          <div class="text-center small mono mt-1" id="acc_readout0">-</div>
+          <canvas id="chart_gyro0" class="mt-3"></canvas>
+          <div class="text-center small mono mt-1" id="gyro_readout0">-</div>
+        </div>
+        <div class="col-md-6 device-panel" id="imu_panel1">
+          <div class="panel-label"><span class="device-name">INSOLE 02</span> <span class="badge bg-secondary side-badge">-</span></div>
+          <canvas id="chart_acc1"></canvas>
+          <div class="text-center small mono mt-1" id="acc_readout1">-</div>
+          <canvas id="chart_gyro1" class="mt-3"></canvas>
+          <div class="text-center small mono mt-1" id="gyro_readout1">-</div>
+        </div>
+      </div>
+      <div class="snippet-block mt-3">
+        <div class="snippet-title" data-i18n="snippetImuTitle">IMUデータの取得</div>
+        <pre class="snippet"><code data-i18n-html="snippetImuCode">insole.gotConvertedAcc = function (acc) {
+  // {x, y, z} 単位: G
+};
+insole.gotConvertedGyro = function (gyro) {
+  // {x, y, z} 単位: deg/s
+};</code></pre>
+        <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
+      </div>
+      <div class="related-examples mt-3">
+        <span class="related-label"><i class="bi bi-signpost"></i> <span data-i18n="relatedLabel">関連 examples</span></span>
+        <a class="related-link" href="../music-shoe/index.html">
+          <strong>Music Shoe</strong> <span data-i18n="relatedMusicShoeDesc">IMUジェスチャで演奏する楽器</span>
+        </a>
+        <a class="related-link" href="../hula-motion-sonifier/index.html">
+          <strong>Hula Motion Sonifier</strong> <span data-i18n="relatedSonifierDesc">動作の可聴化（Web Audio）</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 6. 姿勢 3D -->
+    <section id="attitude" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-badge-3d"></i> <span data-i18n="attitudeTitle">姿勢: クォータニオン → 3D</span></h2>
+      <p class="section-desc" data-i18n="attitudeDesc">
+        センサ内部で融合計算されたクォータニオン（姿勢）を取得できます。下のCGは受信したクォータニオンを
+        左右それぞれの3Dモデルに適用したものです。実機をつま先上げ・かかと上げ・ひねりの方向に動かしてみてください。
+      </p>
+      <span id="notice_quat" class="badge bg-warning text-dark d-none" data-i18n="noticeQuat">現在のモード(3)ではクォータニオンは配信されません — ギアからモード1/4へ</span>
+      <div class="row g-4 mt-1">
+        <div class="col-md-8">
+          <div id="canvas3d_placeholder"></div>
+          <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
+            <button id="reset_attitude" class="btn btn-sm btn-warning" data-i18n="resetAttitude">姿勢をリセット（現在の向きを基準にする）</button>
+            <span class="small text-muted" data-i18n="modelFollowNote">モデル: 装着位置(L/R)に追従</span>
+            <div class="form-check form-switch ms-1 mb-0">
+              <input class="form-check-input" type="checkbox" role="switch" id="swap_pitch_roll">
+              <label class="form-check-label small" for="swap_pitch_roll" data-i18n="swapPitchRoll">pitch / roll を入れ替えて表示</label>
+            </div>
+          </div>
+          <div class="small text-muted mt-1" data-i18n="swapPitchRollNote">
+            FW・IMU実装によっては pitch と roll の割り当てが入れ替わり、つま先上げが横倒しに見えることがあります。実機の動きと表示が一致しない場合はこのスイッチをONにしてください（3Dモデルと右のEulerゲージの両方に適用。CSVはSDKの生値のまま記録されます）。
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="d-flex flex-column gap-3" id="euler_panels">
+          <div class="device-panel" id="euler_panel0">
+            <div class="panel-label"><span class="device-name">INSOLE 01</span> <span class="badge bg-secondary side-badge">-</span></div>
+            <div class="euler-gauge"><span>pitch</span><div class="gauge-track"><div id="gauge_pitch0" class="gauge-bar"></div></div><span id="val_pitch0" class="mono">0°</span></div>
+            <div class="euler-gauge"><span>roll</span><div class="gauge-track"><div id="gauge_roll0" class="gauge-bar"></div></div><span id="val_roll0" class="mono">0°</span></div>
+            <div class="euler-gauge"><span>yaw</span><div class="gauge-track"><div id="gauge_yaw0" class="gauge-bar"></div></div><span id="val_yaw0" class="mono">0°</span></div>
+            <div class="small mono" id="quat_readout0">w - / x - / y - / z -</div>
+          </div>
+          <div class="device-panel" id="euler_panel1">
+            <div class="panel-label"><span class="device-name">INSOLE 02</span> <span class="badge bg-secondary side-badge">-</span></div>
+            <div class="euler-gauge"><span>pitch</span><div class="gauge-track"><div id="gauge_pitch1" class="gauge-bar"></div></div><span id="val_pitch1" class="mono">0°</span></div>
+            <div class="euler-gauge"><span>roll</span><div class="gauge-track"><div id="gauge_roll1" class="gauge-bar"></div></div><span id="val_roll1" class="mono">0°</span></div>
+            <div class="euler-gauge"><span>yaw</span><div class="gauge-track"><div id="gauge_yaw1" class="gauge-bar"></div></div><span id="val_yaw1" class="mono">0°</span></div>
+            <div class="small mono" id="quat_readout1">w - / x - / y - / z -</div>
+          </div>
+          </div>
+          <div class="snippet-block mt-3">
+            <div class="snippet-title" data-i18n="snippetAttitudeTitle">姿勢データの取得（モード1/4）</div>
+            <pre class="snippet"><code data-i18n-html="snippetAttitudeCode">insole.gotQuat = function (quat) {
+  // {w, x, y, z}
+};
+insole.gotEuler = function (euler) {
+  // {pitch, roll, yaw} 単位: rad
+};</code></pre>
+            <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
+          </div>
+        </div>
+      </div>
+      <div class="statokinesigram-card mt-4">
+        <div class="d-flex justify-content-between align-items-baseline gap-3 flex-wrap">
+          <div>
+            <div class="small text-info fw-bold" data-i18n="statoEyebrow">ESTIMATED LOAD CENTER</div>
+            <h3 class="h5 mb-1" data-i18n="statoTitle">左右荷重分布の推定中心軌跡</h3>
+            <p class="small text-muted mb-0" data-i18n="statoDesc">左右それぞれ6点のADC生値から求めた推定中心を、荷重比で合成した30秒軌跡。</p>
+          </div>
+          <div class="small mono text-muted" id="stato_readout">x - / y -</div>
+        </div>
+        <canvas id="statokinesigram_canvas" width="900" height="420" class="mt-3" aria-label="Estimated load center trace"></canvas>
+        <div class="related-examples mt-3">
+          <span class="related-label"><i class="bi bi-signpost"></i> <span data-i18n="relatedLabel">関連 examples</span></span>
+          <a class="related-link" href="../balance-sway/index.html">
+            <strong>Balance Sway</strong> <span data-i18n="relatedBalanceSwayDesc">重心動揺（CoP軌跡）の本格的な可視化・記録</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. データ記録 -->
+    <section id="record" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-record-circle"></i> <span data-i18n="recordTitle">データ記録（CSV）</span></h2>
+      <p class="section-desc" data-i18n-html="recordDesc">
+        ストリーミング中のデータ（接続中の全デバイス）をCSVとして保存できます。列:
+        <code class="small">device, timestamp, serial_number, press0..5, acc_x/y/z[G], gyro_x/y/z[dps], quat_w/x/y/z, euler_pitch/roll/yaw[rad]</code>
+        （モードにより配信されない列は空欄）。
+        保存したCSVは下の「CSVを読み込んでデモ再生」からループ再生でき、このページのデモ用歩行データとしても利用されます。
+      </p>
+      <div class="row g-4 mt-1">
+        <div class="col-md-6">
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <button id="record_toggle" class="btn btn-danger"><i class="bi bi-record-fill"></i> <span data-i18n="recordStart">記録開始</span></button>
+            <button id="record_download" class="btn btn-outline-light" disabled><i class="bi bi-download"></i> <span data-i18n="recordDownload">CSV保存</span></button>
+            <span id="record_status" class="small text-muted" data-i18n="recordStatusIdle">未記録</span>
+          </div>
+          <p class="small text-muted mt-2" data-i18n="recordNote">
+            記録はライブ・デモどちらのデータでも可能です（デモ記録時はファイル名に demo が付きます）。
+          </p>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small" data-i18n="csvInputLabel">CSVを読み込んでデモ再生</label>
+          <input id="csv_input" class="form-control form-control-sm bg-dark text-light" type="file" accept=".csv,text/csv">
+          <div id="csv_load_status" class="small text-muted mt-1"></div>
+        </div>
+      </div>
+
+      <!-- ロスレス収録（FIFO） -->
+      <div class="row g-4 mt-1">
+        <div class="col-12">
+          <div class="fifo-card p-3 rounded border border-secondary">
+            <h3 class="h6 mb-1"><i class="bi bi-hdd-stack"></i> <span data-i18n="fifoTitle">ロスレス収録（FIFO）</span></h3>
+            <p class="small text-muted mb-2" data-i18n-html="fifoDesc">
+              ファームウェアのバッファから<strong>欠損なく</strong>センサーデータを回収します（<code>read_sensor_data_by_tokoroten_loop</code> 相当）。
+              取りこぼしたパケットは自動で再要求されます。収録中はリアルタイム表示が一時停止し、収録データで可視化されます。
+              <strong>FIFOモードにクォータニオンは含まれません</strong>（ジャイロ・加速度・6ch圧力のみ）。
+            </p>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <button id="fifo_toggle" class="btn btn-primary" disabled><i class="bi bi-play-fill"></i> <span data-i18n="fifoStart">収録開始</span></button>
+              <button id="fifo_download" class="btn btn-outline-light" disabled><i class="bi bi-download"></i> <span data-i18n="fifoDownload">CSV保存</span></button>
+              <div class="form-check form-switch ms-1 mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="fifo_autostop" checked>
+                <label class="form-check-label small" for="fifo_autostop" data-i18n="fifoAutoStop">欠損したら自動停止</label>
+              </div>
+              <span id="fifo_status" class="small text-muted" data-i18n="fifoStatusIdle">実機を接続すると使用できます</span>
+            </div>
+            <div class="related-examples mt-2">
+              <span class="related-label"><i class="bi bi-signpost"></i> <span data-i18n="relatedLabel">関連 examples</span></span>
+              <a class="related-link" href="../fifo-guide/index.html">
+                <strong>FIFO Guide</strong> <span data-i18n="relatedFifoGuideDesc">FIFO収録の入門ガイド（欠損の可視化つき）</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 歩容解析（Gait Analysis） -->
+      <div class="row g-4 mt-1">
+        <div class="col-12">
+          <div class="fifo-card p-3 rounded border border-secondary">
+            <h3 class="h6 mb-1"><i class="bi bi-person-walking"></i> <span data-i18n="gaitTitle">歩容解析（Gait Analysis）</span></h3>
+            <p class="small text-muted mb-2" data-i18n-html="gaitDesc">
+              ファームウェアが歩行中にリアルタイム計算する<strong>歩容パラメーター</strong>（ストライド・立脚期/遊脚期・接地パターン・プロネーション等）を取得します。
+              専用の characteristic を 50Hz で subscribe するだけで、1歩ごとに集約された値が届きます（<code>read_gait_analysis</code> 相当）。
+              歩いて（その場足踏みでも可）ください。
+            </p>
+            <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
+              <button id="gait_toggle" class="btn btn-primary" disabled><i class="bi bi-play-fill"></i> <span data-i18n="gaitStart">計測開始</span></button>
+              <button id="gait_download" class="btn btn-outline-light" disabled><i class="bi bi-download"></i> <span data-i18n="gaitDownload">CSV保存</span></button>
+              <span id="gait_status" class="small text-muted" data-i18n="gaitStatusIdle">実機を接続すると使用できます</span>
+            </div>
+            <div id="gait_display" class="row g-2"></div>
+            <div class="related-examples mt-2">
+              <span class="related-label"><i class="bi bi-signpost"></i> <span data-i18n="relatedLabel">関連 examples</span></span>
+              <a class="related-link" href="../step-analysis/index.html">
+                <strong>Step Analysis</strong> <span data-i18n="relatedStepAnalysisDesc">歩容パラメーターの詳細可視化</span>
+              </a>
+              <a class="related-link" href="../gait-report/index.html">
+                <strong>Gait Report</strong> <span data-i18n="relatedGaitReportDesc">歩行計測レポートの自動生成</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. プログラムを自作する -->
+    <section id="program" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-code-slash"></i> <span data-i18n="programTitle">プログラムを自作する</span></h2>
+      <p class="section-desc" data-i18n-html="programDesc">
+        独自アプリでは <code>orphe-core-insole.js</code> を読み込み、ユーザー操作から <code>begin()</code> を呼びます。
+        このShowcaseのような接続UIごと使いたい場合は <code>orphe-core-insole-toolkit.js</code> の <code>buildInsoleToolkit()</code> が便利です。
+      </p>
+      <div class="row g-4 mt-1">
+        <div class="col-lg-7">
+          <div class="snippet-block">
+            <div class="snippet-title" data-i18n="snippetMinimalTitle">最小コード</div>
+            <pre class="snippet"><code data-i18n-html="snippetMinimalCode">&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  var insole = new OrpheInsole(0);  // id: 0 or 1 (最大2台)
+  insole.setup();                   // begin の前に必須
+
+  // ボタンクリック等のユーザー操作から呼ぶ
+  async function connect() {
+    await insole.begin('SENSOR_VALUES', {
+      streamingMode: 4,     // 1 | 3 | 4
+      autoReconnect: true,  // 切断時に自動再接続
+    });
+  }
+
+  insole.gotPress = function (press) {
+    console.log(this.id, press.values);  // 6ch の ADC 生値
+  };
+&lt;/script&gt;</code></pre>
+            <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="connect-note-card">
+            <h3 class="h6 text-info" data-i18n="programStepsTitle">実装の流れ</h3>
+            <ol class="small mb-0">
+              <li data-i18n-html="programStep1"><code>new OrpheInsole(id)</code> でインスタンスを作る。</li>
+              <li data-i18n-html="programStep2"><code>setup()</code> を呼び、ボタン操作などから <code>begin()</code> で接続する。</li>
+              <li data-i18n-html="programStep3"><code>gotPress</code>, <code>gotConvertedAcc</code>, <code>gotConvertedGyro</code>, <code>gotQuat</code> を必要に応じて実装する。</li>
+              <li data-i18n-html="programStep4">接続UIも必要なら <code>buildInsoleToolkit()</code> を使う。</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. 購入・お問い合わせ -->
+    <section id="contact" class="py-5 border-top border-secondary text-center">
+      <h2 class="section-title justify-content-center"><i class="bi bi-chat-dots"></i> <span data-i18n="contactTitle">購入・お問い合わせ</span></h2>
+      <p class="mx-auto mt-3" style="max-width: 40rem;" data-i18n-html="contactDesc">
+        ORPHE のセンサー製品・スマートシューズは ORPHE Official Store で購入できます。<br>
+        ORPHE INSOLE の評価キット・共同開発パッケージ、研究・事業でのご利用のご相談は
+        製品ページのお問い合わせフォームからご連絡ください。
+      </p>
+      <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
+        <a class="btn btn-warning fw-bold" href="https://shop.orphe.io/collections/sensor/products/orphe-insole-%CE%B2-evaluation-kit" target="_blank" rel="noopener">
+          <i class="bi bi-bag"></i> <span data-i18n="buyKit">評価キットを購入（ORPHE STORE）</span>
+        </a>
+        <a class="btn btn-outline-light" href="https://orphe.io/insole" target="_blank" rel="noopener">
+          <i class="bi bi-envelope"></i> <span data-i18n="contactProduct">お問い合わせ（製品ページ）</span>
+        </a>
+        <a class="btn btn-outline-light" href="https://github.com/Orphe-OSS/ORPHE-INSOLE.js/issues" target="_blank" rel="noopener">
+          <i class="bi bi-github"></i> <span data-i18n="contactIssues">SDKの不具合報告 (Issues)</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 10. 次のステップ（他の examples） -->
+    <section id="next" class="py-4 border-top border-secondary">
+      <h2 class="section-title"><i class="bi bi-signpost-2"></i> <span data-i18n="nextTitle">次のステップ（Examples）</span></h2>
+      <p class="section-desc" data-i18n="nextDesc">用途に合わせて他のexampleアプリも試してみてください。すべてこのリポジトリに同梱されています。</p>
+      <div class="row g-3 mt-1">
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../VISUALIZE/index.html">
+            <img class="next-thumb" src="./assets/thumbs/visualize.svg" alt="VISUALIZE">
+            <div class="next-body">
+              <strong>VISUALIZE</strong>
+              <p class="small mb-0" data-i18n="nextVisualizeBody">全データのリアルタイムチャート可視化（2台対応）</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../sensor-dashboard/index.html">
+            <img class="next-thumb" src="./assets/thumbs/dashboard.svg" alt="Sensor Dashboard">
+            <div class="next-body">
+              <strong>Sensor Dashboard</strong>
+              <p class="small mb-0" data-i18n="nextDashboardBody">2台同時の数値ダッシュボード・L/R自動マッピング</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../step-analysis/index.html">
+            <img class="next-thumb" src="./assets/thumbs/step-analysis.svg" alt="Step Analysis">
+            <div class="next-body">
+              <strong>Step Analysis</strong>
+              <p class="small mb-0" data-i18n="nextStepAnalysisBody">FWが計算する歩容パラメーターの詳細可視化</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../gait-report/index.html">
+            <img class="next-thumb" src="./assets/thumbs/gait-report.svg" alt="Gait Report">
+            <div class="next-body">
+              <strong>Gait Report</strong>
+              <p class="small mb-0" data-i18n="nextGaitReportBody">歩行計測レポートの自動生成</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../fifo-guide/index.html">
+            <img class="next-thumb" src="./assets/thumbs/fifo-guide.svg" alt="FIFO Guide">
+            <div class="next-body">
+              <strong>FIFO Guide</strong>
+              <p class="small mb-0" data-i18n="nextFifoGuideBody">欠損のないロスレス収録の入門ガイド</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../balance-sway/index.html">
+            <img class="next-thumb" src="./assets/thumbs/balance-sway.svg" alt="Balance Sway">
+            <div class="next-body">
+              <strong>Balance Sway</strong>
+              <p class="small mb-0" data-i18n="nextBalanceSwayBody">重心動揺（CoP軌跡）の可視化・記録</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../hula-motion-sonifier/index.html">
+            <img class="next-thumb" src="./assets/thumbs/sonifier.svg" alt="Hula Motion Sonifier">
+            <div class="next-body">
+              <strong>Hula Motion Sonifier</strong>
+              <p class="small mb-0" data-i18n="nextSonifierBody">Web Audio による動作の可聴化</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <a class="next-card" href="../terminal/index.html">
+            <img class="next-thumb" src="./assets/thumbs/terminal.svg" alt="Terminal">
+            <div class="next-body">
+              <strong>Terminal</strong>
+              <p class="small mb-0" data-i18n="nextTerminalBody">生データ・BLEプロトコルのデバッグ</p>
+            </div>
+          </a>
+        </div>
+      </div>
+      <p class="small text-muted mt-3">
+        <a href="../index.html" data-i18n="nextAllExamples">すべての examples を見る（index）</a> /
+        <a href="https://github.com/Orphe-OSS/ORPHE-INSOLE.js" target="_blank" rel="noopener">GitHub: ORPHE-INSOLE.js</a> /
+        <a href="https://orphe-oss.github.io/ORPHE-INSOLE.js/docs/" target="_blank" rel="noopener" data-i18n="apiDocs">API ドキュメント</a>
+      </p>
+    </section>
+
+    <div class="text-center py-4 border-top border-secondary">
+      <a class="btn btn-outline-light" href="../index.html">
+        <i class="bi bi-house"></i> <span data-i18n="backToIndex">index（examples一覧）に戻る</span>
+      </a>
+    </div>
+
+    <footer class="text-center small pb-4">
+      <p class="text-muted mb-2" style="font-size: 12px;">
+        本ページおよびデモは医療機器ではなく、疾病の診断・治療・予防を目的としていません。<br>
+        This page and its demos are not medical devices and are not intended for diagnosis, treatment, or prevention of disease.
+      </p>
+      &copy; 2026 ORPHE Inc.
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.0/chart.min.js"
+    integrity="sha512-R60W3LgKdvvfwbGbqKusRu/434Snuvr9/Flhtoq9cj1LQ9P4HFKParULqOCAisHk/J4zyaEWWjiWIMuP13vXEg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toxiclibsjs/0.1.3/toxiclibs.min.js"
+    integrity="sha512-XXs22VoCpwSw/DSIaY5YXMBLEp2CFA7vQO+GzNxFk8kmhabcHgXYpU7gFDij7+VLmoDfW3F3y5bu0O9r7REP2A=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+
+  <!-- ORPHE Libraries (REQUIRED ORDER) -->
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+
+  <script src="./i18n.js"></script>
+  <script src="./demo-data.js"></script>
+  <script src="./viz-pressure.js"></script>
+  <script src="./viz-imu.js"></script>
+  <script src="./viz-3d.js"></script>
+  <script src="./app.js"></script>
+
+</body>
+
+</html>

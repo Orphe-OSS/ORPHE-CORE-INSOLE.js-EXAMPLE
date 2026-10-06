@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sensor Dashboard — ORPHE CORE / INSOLE</title>
+    <link rel="stylesheet" href="../assets/css/orphe_insole.css">
+    <script src="../assets/js/site-analytics.js"></script>
+    <style>
+        .side-selector,
+        .device-slot-kind {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        .side-selector:hover,
+        .device-slot-kind:hover {
+            background-color: #444;
+        }
+
+        .side-selector option,
+        .device-slot-kind option {
+            background-color: #333;
+        }
+
+        .side-selector:disabled,
+        .device-slot-kind:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* スロット単位の操作パネル（種別・接続・左右・CORE 専用操作） */
+        .slot-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .slot-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .slot-row button.reset-attitude {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        /* p5 WEBGL の靴 3D 表示 */
+        #canvas_placeholder {
+            max-width: 900px;
+            margin: 0 auto 40px;
+            border: 1px solid #333;
+        }
+
+        #canvas_placeholder canvas {
+            display: block;
+        }
+
+        /* 種別ごとの表示切り替え（.sensor-side / .slot-panel の data-kind で決める） */
+        [data-kind="core"] .insole-only,
+        [data-kind="insole"] .core-only {
+            display: none !important;
+        }
+
+        /* CORE は STATUS カードが最終行に単独で残るので全幅にする */
+        .sensor-side[data-kind="core"] .status-card {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <a href="../index.html" aria-label="Back to examples">
+                <img src="../assets/images/orphe.svg" alt="ORPHE" style="height: 40px; margin-bottom: 10px;">
+            </a>
+            <div class="subtitle">ORPHE-CORE-INSOLE.js - Sensor Dashboard</div>
+        </header>
+
+        <div class="main-content dashboard-layout">
+            <!-- 接続操作（スロットごと） -->
+            <div class="connection-controls">
+                <div class="slot-panel" id="slot-panel-0">
+                    <div class="slot-row">
+                        <div id="slot0"></div>
+                        <select id="side-selector-0" class="side-selector" onchange="updateDeviceSide(0, this.value)">
+                            <option value="0">Left Foot</option>
+                            <option value="1">Right Foot</option>
+                        </select>
+                    </div>
+                    <button onclick="connectDevice(0);" id="connect-btn-0" class="device-connection-button">
+                        <div class="device-name-display">
+                            <span class="status-indicator" id="status-indicator-0"></span>
+                            <span>DEVICE 1</span>
+                        </div>
+                        <div id="connection-status-info-0" class="connection-status-text">Not Connected</div>
+                        <div id="device-side-info-0" class="device-position-info">
+                            Position: <span id="device-position-0">—</span>
+                        </div>
+                    </button>
+                    <div class="slot-row core-only">
+                        <select id="char0" class="side-selector" aria-label="notification type">
+                            <option selected value="STEP_ANALYSIS">STEP_ANALYSIS</option>
+                            <option value="SENSOR_VALUES">SENSOR_VALUES</option>
+                            <option value="STEP_ANALYSIS_AND_SENSOR_VALUES">STEP_ANALYSIS_AND_SENSOR_VALUES</option>
+                        </select>
+                        <button id="reset_button0" class="reset-attitude" onclick="resetAttitude(0);" disabled>Reset
+                            Attitude</button>
+                    </div>
+                </div>
+
+                <div class="slot-panel" id="slot-panel-1">
+                    <div class="slot-row">
+                        <div id="slot1"></div>
+                        <select id="side-selector-1" class="side-selector" onchange="updateDeviceSide(1, this.value)">
+                            <option value="0">Left Foot</option>
+                            <option value="1" selected>Right Foot</option>
+                        </select>
+                    </div>
+                    <button onclick="connectDevice(1);" id="connect-btn-1" class="device-connection-button">
+                        <div class="device-name-display">
+                            <span class="status-indicator" id="status-indicator-1"></span>
+                            <span>DEVICE 2</span>
+                        </div>
+                        <div id="connection-status-info-1" class="connection-status-text">Not Connected</div>
+                        <div id="device-side-info-1" class="device-position-info">
+                            Position: <span id="device-position-1">—</span>
+                        </div>
+                    </button>
+                    <div class="slot-row core-only">
+                        <select id="char1" class="side-selector" aria-label="notification type">
+                            <option selected value="STEP_ANALYSIS">STEP_ANALYSIS</option>
+                            <option value="SENSOR_VALUES">SENSOR_VALUES</option>
+                            <option value="STEP_ANALYSIS_AND_SENSOR_VALUES">STEP_ANALYSIS_AND_SENSOR_VALUES</option>
+                        </select>
+                        <button id="reset_button1" class="reset-attitude" onclick="resetAttitude(1);" disabled>Reset
+                            Attitude</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 靴の 3D 表示（左: Left Foot / 右: Right Foot） -->
+            <div id="canvas_placeholder"></div>
+
+            <!-- センサー表示（左右 2 カラム。カードは sketch.js が生成する） -->
+            <div class="sensor-display-container">
+                <div class="sensor-side" id="side-0">
+                    <div class="side-title">Left Foot</div>
+                    <div class="sensor-grid" id="sensor-grid-0"></div>
+                </div>
+                <div class="sensor-side" id="side-1">
+                    <div class="side-title">Right Foot</div>
+                    <div class="sensor-grid" id="sensor-grid-1"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+    <script src="../assets/js/device-slot.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toxiclibsjs/0.1.3/toxiclibs.min.js"
+        integrity="sha512-XXs22VoCpwSw/DSIaY5YXMBLEp2CFA7vQO+GzNxFk8kmhabcHgXYpU7gFDij7+VLmoDfW3F3y5bu0O9r7REP2A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="../assets/js/p5.js"></script>
+    <script src="./sketch.js"></script>
+</body>
+
+</html>

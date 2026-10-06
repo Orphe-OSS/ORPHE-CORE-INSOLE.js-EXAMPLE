@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+</head>
+<body>
+    <button onclick="mystart();">connect</button>
+    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+    <script>
+        var core;
+        window.onload = function () {
+            core = new Orphe(0);
+            core.setup();                
+        }
+        function mystart() {
+          core.begin('SENSOR_VALUES');
+          core.gotAcc = function (acc) {
+              console.log(acc);
+          }
+      }
+    </script>
+</body>
+</html>

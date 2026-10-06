@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>Dynamic Sound Waveform Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    
+
+    <style>
+        
+
+    </style>
+<script src="../assets/js/site-analytics.js"></script>
+</head>
+<body>
+    <div >
+        <div id="content">
+        <img id = "rogo"  src="rogo.png" widht="500px" height="25px">
+        <h1>ORPHE CORE Gesture Drum</h1>
+
+        <div id="toolkit_placeholder1" class="my-4"></div>
+        <div id="toolkit_placeholder2" class="my-4"></div>
+      <div id="ble-support-message" class="alert alert-warning mx-4" style="display:none;">
+        Web Bluetooth is disabled in this browser. Open this page in Chrome to connect ORPHE CORE.
+      </div>
+        <div id="p5Canvas"></div> <!-- p5.jsのキャンバスがここに挿入されます -->
+
+        <!-- 現在のジェスチャー内容を表示 -->
+        <div id="gesture_status" style="font-size:1.5em; color:#fff; margin: 40px 0 10px 0;"></div>
+
+        <!-- 説明文をUIの下に移動 -->
+        <div id="description" style="margin-top: 400px;">
+          <p id ="en">
+            This interactive application lets you play drum sounds using two ORPHE CORE devices and your own gestures.<br>
+            The app detects acceleration and Euler angles to trigger various sounds and visualizations, creating a unique musical experience.<br>
+            <b>[How gestures trigger sounds]</b><br>
+            - Swing your feet or hands in the "forward/backward", "left/right", or "up/down" directions. The app analyzes the acceleration and angles (pitch, roll, yaw) to play different drum sounds:<br>
+            &emsp;- Large movement on the X axis (forward/backward): Depending on the pitch angle, different sounds (e.g., snare, high tom) are played.<br>
+            &emsp;- Large movement on the Y axis (left/right): Depending on the roll angle, different sounds (e.g., hi-hat, crash) are played.<br>
+            &emsp;- Large movement on the Z axis (up/down): Depending on the yaw angle, different sounds (e.g., bass drum, floor tom) are played.<br>
+            - The sound changes according to the timing and angle of your gesture.<br>
+            Connect your devices as instructed on the screen and enjoy making rhythms with your movements!
+          </p>
+        </div>
+        </div>
+
+    </div>
+
+    <script src="scripts.js" defer ></script>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        
+
+
+        
+    </script>
+            <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+    
+
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js"
+        integrity="sha384-IDwe1+LCz02ROU9k972gdyvl+AESN10+x7tBKgc9I5HFtuNz0wWnPclzo6p9vxnk"
+        crossorigin="anonymous"></script>
+
+
+</body>
+</html>

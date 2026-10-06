@@ -1,0 +1,1838 @@
+{
+  "schema_version": "0.3.0",
+  "updated": "2026-10-06",
+  "purpose": "Catalog of ORPHE CORE / ORPHE INSOLE examples built on ORPHE-CORE-INSOLE.js (orphe-core-insole.js). Paths are relative to the repository root.",
+  "status_definitions": {
+    "public": "Worth keeping in public navigation. Device verification can still be tracked separately.",
+    "public-candidate": "Valuable, but needs copy, thumbnail, validation, or small cleanup before promotion.",
+    "needs-fix": "Known broken path, stale dependency, or behavior issue.",
+    "needs-review": "Likely valuable, but purpose, audience, or device behavior needs review.",
+    "internal": "QA or maintenance tool. Not counted as a public example.",
+    "overlap": "Useful as part of a family, but confusing if presented as a separate top-level example."
+  },
+  "entries": [
+    {
+      "id": "terminal",
+      "title": "Terminal",
+      "path": "TERMINAL/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Read device information, read/write BLE characteristics, and watch raw notification bytes for ORPHE CORE or ORPHE INSOLE.",
+      "topics": [
+        "device-information",
+        "raw-data",
+        "debug"
+      ],
+      "data": [
+        "deviceInformation",
+        "raw"
+      ],
+      "devices": 1,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "getting-started",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-terminal.jpg",
+      "sort_order": 10,
+      "links": {
+        "demo": "TERMINAL/index.html",
+        "source": "TERMINAL/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "both"
+    },
+    {
+      "id": "visualize",
+      "title": "VISUALIZE",
+      "path": "VISUALIZE/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Chart.js time-series charts for up to two devices. Choose CORE or INSOLE per slot; INSOLE adds 6ch pressure.",
+      "topics": [
+        "chart",
+        "sensor-values"
+      ],
+      "data": [
+        "acc",
+        "gyro",
+        "quat",
+        "euler",
+        "press"
+      ],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "sensor-basics",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/visualize.png",
+      "sort_order": 40,
+      "links": {
+        "demo": "VISUALIZE/index.html",
+        "source": "VISUALIZE/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "both"
+    },
+    {
+      "id": "sensor-dashboard",
+      "title": "Sensor Dashboard",
+      "path": "SENSOR-DASHBOARD/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Inspect sensor values, a 3D shoe view, and left/right assignment for two devices. CORE adds gait tables, INSOLE adds pressure.",
+      "topics": [
+        "dashboard",
+        "3d"
+      ],
+      "data": [
+        "acc",
+        "gyro",
+        "quat",
+        "euler",
+        "gait",
+        "press"
+      ],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "sensor-basics",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "SENSOR-DASHBOARD/data-viewer.gif",
+      "sort_order": 45,
+      "links": {
+        "demo": "SENSOR-DASHBOARD/index.html",
+        "source": "SENSOR-DASHBOARD/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "both"
+    },
+    {
+      "id": "udon",
+      "title": "UDON",
+      "path": "UDON/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Knead udon dough by stepping in place. INSOLE uses IMU + pressure, CORE uses IMU impact. Demo plays while disconnected.",
+      "topics": [
+        "game",
+        "steps"
+      ],
+      "data": [
+        "acc",
+        "gyro",
+        "press"
+      ],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "playable-app",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/udon.png",
+      "sort_order": 200,
+      "links": {
+        "demo": "UDON/index.html",
+        "source": "UDON/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "both"
+    },
+    {
+      "id": "light",
+      "title": "LED Control",
+      "path": "LIGHT/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "beginner"
+      ],
+      "value": "Hello World for ORPHE CORE: connect and control the LED.",
+      "topics": [
+        "led",
+        "connection"
+      ],
+      "data": [],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "category": "getting-started",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "LIGHT/teaser.gif",
+      "sort_order": 20,
+      "links": {
+        "demo": "LIGHT/index.html",
+        "source": "LIGHT/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "coretoolkit-starter",
+      "title": "CoreToolkit Starter",
+      "path": "CORETOOLKIT-STARTER/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "beginner",
+        "app-developer"
+      ],
+      "value": "Use CoreToolkit.js to connect and monitor ORPHE CORE modules quickly.",
+      "topics": [
+        "CoreToolkit",
+        "sensor-monitor",
+        "two-devices"
+      ],
+      "data": [
+        "quat",
+        "euler",
+        "delta",
+        "gyro",
+        "convertedAcc",
+        "gait",
+        "stride",
+        "footAngle",
+        "pronation",
+        "landingImpact"
+      ],
+      "devices": 2,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "category": "getting-started",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/coretoolkit-starter.png",
+      "sort_order": 30,
+      "links": {
+        "demo": "CORETOOLKIT-STARTER/index.html",
+        "source": "CORETOOLKIT-STARTER/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "foot-angle",
+      "title": "Foot Angle",
+      "path": "FOOT-ANGLE/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "research",
+        "sports-tech"
+      ],
+      "value": "Visualize foot angle from ORPHE gait analysis.",
+      "topics": [
+        "gait-analysis",
+        "foot-angle",
+        "visualization"
+      ],
+      "data": [
+        "footAngle",
+        "stride",
+        "gait"
+      ],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "Directory name contains a space"
+      ],
+      "category": "gait-analysis",
+      "difficulty": "intermediate",
+      "featured": true,
+      "thumbnail": "_thumbnails/foot-angle.png",
+      "sort_order": 60,
+      "links": {
+        "demo": "FOOT-ANGLE/index.html",
+        "source": "FOOT-ANGLE/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "pronation",
+      "title": "Pronation",
+      "path": "PRONATION/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "research",
+        "sports-tech"
+      ],
+      "value": "Visualize pronation and landing-related gait data.",
+      "topics": [
+        "gait-analysis",
+        "pronation",
+        "landing-impact"
+      ],
+      "data": [
+        "pronation",
+        "landingImpact",
+        "gait"
+      ],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "category": "gait-analysis",
+      "difficulty": "intermediate",
+      "featured": true,
+      "thumbnail": "_thumbnails/pronation.png",
+      "sort_order": 70,
+      "links": {
+        "demo": "PRONATION/index.html",
+        "source": "PRONATION/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "airwalker",
+      "title": "Air Walker",
+      "path": "AIRWALKER/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "creative-coder",
+        "sports-tech"
+      ],
+      "value": "Show steps, motion, and activity in a visual dashboard.",
+      "topics": [
+        "gait",
+        "activity",
+        "dashboard"
+      ],
+      "data": [
+        "convertedAcc",
+        "stepsNumber"
+      ],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "category": "gait-analysis",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/airwalker.png",
+      "sort_order": 80,
+      "links": {
+        "demo": "AIRWALKER/index.html",
+        "source": "AIRWALKER/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "pose",
+      "title": "Pose",
+      "path": "POSE/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "creative-coder",
+        "research"
+      ],
+      "value": "Combine body pose estimation with ORPHE CORE data.",
+      "topics": [
+        "pose",
+        "MediaPipe",
+        "visualization"
+      ],
+      "data": [
+        "stepsNumber",
+        "quat"
+      ],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-browser-validation"
+      ],
+      "issues": [
+        "Loads MediaPipe runtime/model assets from jsDelivr"
+      ],
+      "category": "creative-coding",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": "_thumbnails/pose.png",
+      "sort_order": 90,
+      "links": {
+        "demo": "POSE/index.html",
+        "source": "POSE/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "oh1",
+      "title": "OH1 Heart Rate",
+      "path": "OH1/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "research",
+        "integration"
+      ],
+      "value": "Display BLE heart-rate data and ORPHE CORE motion data in one web app.",
+      "topics": [
+        "BLE",
+        "heart-rate",
+        "integration"
+      ],
+      "data": [
+        "heart-rate",
+        "acc",
+        "quat",
+        "stride"
+      ],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "requires an external BLE heart-rate sensor; current UI has two ORPHE CORE slots"
+      ],
+      "category": "research-integration",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": "_thumbnails/oh1.png",
+      "sort_order": 100,
+      "links": {
+        "demo": "OH1/index.html",
+        "source": "OH1/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "sensor-calibration",
+      "title": "Sensor Calibration",
+      "path": "SENSOR-CALIBRATION/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "research",
+        "debugging"
+      ],
+      "value": "Record and inspect sensor data for calibration workflows.",
+      "topics": [
+        "recording",
+        "calibration",
+        "analysis"
+      ],
+      "data": [
+        "convertedAcc",
+        "gyro",
+        "euler",
+        "gait"
+      ],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "category": "recording-analysis",
+      "difficulty": "intermediate",
+      "featured": true,
+      "thumbnail": "_thumbnails/sensor-calibration.png",
+      "sort_order": 110,
+      "links": {
+        "demo": "SENSOR-CALIBRATION/index.html",
+        "source": "SENSOR-CALIBRATION/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "gesture-demo",
+      "title": "Gesture Demo",
+      "path": "GESTURE-DEMO/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "app-developer",
+        "creative-coder"
+      ],
+      "value": "Starting point for gesture detection using ORPHE data.",
+      "topics": [
+        "gesture",
+        "recognition"
+      ],
+      "data": [
+        "euler",
+        "acc",
+        "gyro"
+      ],
+      "devices": 1,
+      "validation": [
+        "existing-public-link",
+        "needs-device-verification"
+      ],
+      "category": "sensor-basics",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/gesture-demo.png",
+      "sort_order": 120,
+      "links": {
+        "demo": "GESTURE-DEMO/index.html",
+        "source": "GESTURE-DEMO/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-hurdle",
+      "title": "110m Hurdle Game",
+      "path": "GAME-HURDLE/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "beginner",
+        "game-player"
+      ],
+      "value": "Flagship virtual sports example: a 110m hurdle race controlled by gait and motion input.",
+      "topics": [
+        "game",
+        "virtual sports",
+        "running",
+        "track",
+        "hurdle",
+        "gait"
+      ],
+      "data": [
+        "convertedAcc",
+        "euler",
+        "gait"
+      ],
+      "devices": 2,
+      "validation": [
+        "existing-public-link",
+        "thumbnail-exists",
+        "owner-real-device-check"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/hurdle-110m.png",
+      "sort_order": 200,
+      "links": {
+        "demo": "GAME-HURDLE/index.html",
+        "source": "GAME-HURDLE/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": false,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "game-sprint-100m-vs",
+      "title": "100m Sprint VS",
+      "path": "GAME-SPRINT-100M-VS/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "educator"
+      ],
+      "value": "Two-player virtual sprint race candidate for the Virtual Sports category.",
+      "topics": [
+        "game",
+        "virtual sports",
+        "running",
+        "track",
+        "sprint",
+        "versus"
+      ],
+      "data": [
+        "sensorValues",
+        "convertedAcc"
+      ],
+      "devices": 2,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "owner-real-device-check"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/sprint-100m-vs.png",
+      "sort_order": 210,
+      "links": {
+        "demo": "GAME-SPRINT-100M-VS/index.html",
+        "source": "GAME-SPRINT-100M-VS/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-hurdle-400m-vs",
+      "title": "400m Hurdles VS",
+      "path": "GAME-HURDLE-400M-VS/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "educator"
+      ],
+      "value": "Two-player 400m hurdles candidate that expands Virtual Sports beyond the 110m race.",
+      "topics": [
+        "game",
+        "virtual sports",
+        "running",
+        "track",
+        "hurdle",
+        "versus"
+      ],
+      "data": [
+        "sensorValues",
+        "convertedAcc",
+        "euler"
+      ],
+      "devices": 2,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "owner-real-device-check"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/hurdle-400m-vs.png",
+      "sort_order": 220,
+      "links": {
+        "demo": "GAME-HURDLE-400M-VS/index.html",
+        "source": "GAME-HURDLE-400M-VS/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "move-your-feet",
+      "title": "Move Your Feet",
+      "path": "MOVEYOURFEET/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "fitness"
+      ],
+      "value": "Exercise-style game using foot movement.",
+      "topics": [
+        "game",
+        "fitness",
+        "sound"
+      ],
+      "data": [
+        "convertedAcc"
+      ],
+      "devices": 2,
+      "validation": [
+        "existing-public-link",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "playable-app",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/move-your-feet.png",
+      "sort_order": 220,
+      "links": {
+        "demo": "MOVEYOURFEET/index.html",
+        "source": "MOVEYOURFEET/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "game-pingpong",
+      "title": "Ping Pong Game",
+      "path": "GAME-PINGPONG/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player"
+      ],
+      "value": "Simple competitive game concept using ORPHE input.",
+      "topics": [
+        "game",
+        "two-player"
+      ],
+      "data": [
+        "euler",
+        "convertedAcc"
+      ],
+      "devices": 2,
+      "validation": [
+        "existing-public-link",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "test.html has a broken local SDK path; fix is proposed in PR #40"
+      ],
+      "category": "playable-app",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/pingpong.png",
+      "sort_order": 230,
+      "links": {
+        "demo": "GAME-PINGPONG/index.html",
+        "source": "GAME-PINGPONG/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "drum-test",
+      "title": "Drum Game",
+      "path": "drum_test/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "creative-coder",
+        "game-player"
+      ],
+      "value": "Sound interaction driven by body motion.",
+      "topics": [
+        "sound",
+        "game",
+        "creative-coding"
+      ],
+      "data": [
+        "convertedAcc"
+      ],
+      "devices": 2,
+      "validation": [
+        "existing-public-link",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "Directory name reads like a test rather than a public app"
+      ],
+      "category": "playable-app",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/drum.png",
+      "sort_order": 240,
+      "links": {
+        "demo": "drum_test/index.html",
+        "source": "drum_test/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "orphe-piano",
+      "title": "Orphe Piano",
+      "path": "ORPHE-PIANO/",
+      "type": "web-app",
+      "status": "public-candidate",
+      "audience": [
+        "creative-coder",
+        "game-player",
+        "musician"
+      ],
+      "value": "Browser port of the original Orphe Piano iOS/libpd work using ORPHE CORE motion, StepSUM scenes, and the copied piano sample bank.",
+      "topics": [
+        "sound",
+        "music",
+        "creative-coding",
+        "gesture"
+      ],
+      "data": [
+        "euler",
+        "gyro",
+        "convertedAcc",
+        "stepsNumber",
+        "gait",
+        "landingImpact"
+      ],
+      "devices": 2,
+      "validation": [
+        "source-project-analyzed",
+        "pd-scene-tables-ported",
+        "sample-bank-copied",
+        "browser-static-validation",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "KICK is reconstructed from ORPHE-CORE.js motion callbacks instead of the original Swift gesture enum",
+        "Needs two-device threshold tuning in Chrome"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/orphe-piano.svg",
+      "sort_order": 245,
+      "links": {
+        "demo": "ORPHE-PIANO/index.html",
+        "source": "ORPHE-PIANO/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-boxing",
+      "title": "Boxing Game",
+      "path": "GAME-BOXING/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player"
+      ],
+      "value": "Playable action game with clear body-motion mapping.",
+      "topics": [
+        "game",
+        "action"
+      ],
+      "data": [
+        "convertedAcc"
+      ],
+      "devices": 2,
+      "validation": [
+        "existing-public-link",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": true,
+      "thumbnail": "_thumbnails/boxing.png",
+      "sort_order": 250,
+      "links": {
+        "demo": "GAME-BOXING/index.html",
+        "source": "GAME-BOXING/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "game-ddr",
+      "title": "DDR Game",
+      "path": "GAME-DDR/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "creative-coder"
+      ],
+      "value": "Music game with chart, audio, player, and rendering modules.",
+      "topics": [
+        "game",
+        "music",
+        "rhythm"
+      ],
+      "data": [
+        "gait"
+      ],
+      "devices": 2,
+      "validation": [
+        "existing-public-link",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "Many internal docs may be too noisy for learners"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": true,
+      "thumbnail": "_thumbnails/ddr.png",
+      "sort_order": 260,
+      "links": {
+        "demo": "GAME-DDR/index.html",
+        "source": "GAME-DDR/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
+      "id": "core-time-sync",
+      "title": "Core Time Sync",
+      "path": "CORE_TIME_SYNC/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "developer",
+        "research",
+        "recording"
+      ],
+      "value": "Developer and recording utility for checking ORPHE CORE DateTime reads, time-sync round trips, and connection sanity.",
+      "topics": [
+        "time-sync",
+        "recording",
+        "debugging"
+      ],
+      "data": [
+        "convertedAcc"
+      ],
+      "devices": 1,
+      "validation": [
+        "owner-real-device-validation",
+        "date-time-read-ok",
+        "sync-core-time-ok"
+      ],
+      "category": "developer-tool",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": "_thumbnails/core-time-sync.svg",
+      "sort_order": null,
+      "links": {
+        "demo": "CORE_TIME_SYNC/index.html",
+        "source": "CORE_TIME_SYNC/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": false,
+      "public_navigation": "hidden",
+      "device": "core"
+    },
+    {
+      "id": "game-mario",
+      "title": "2D Action Game",
+      "path": "GAME-MARIO/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player"
+      ],
+      "value": "Playable 2D action game controlled by one ORPHE CORE.",
+      "topics": [
+        "game",
+        "action"
+      ],
+      "data": [
+        "acc",
+        "euler"
+      ],
+      "devices": 1,
+      "validation": [
+        "real-device-validated"
+      ],
+      "issues": [
+        "test.html broken local SDK path was fixed in PR #40"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/game-mario.png",
+      "sort_order": 320,
+      "links": {
+        "demo": "GAME-MARIO/index.html",
+        "source": "GAME-MARIO/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-pk",
+      "title": "Penalty Kick Game",
+      "path": "GAME-PK/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player"
+      ],
+      "value": "Penalty kick game that maps acceleration and direction changes to shot power and aim.",
+      "topics": [
+        "game",
+        "kick",
+        "3d"
+      ],
+      "data": [
+        "convertedAcc",
+        "euler"
+      ],
+      "devices": 1,
+      "validation": [
+        "real-device-validated"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/game-pk.png",
+      "sort_order": 330,
+      "links": {
+        "demo": "GAME-PK/index.html",
+        "source": "GAME-PK/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-rhythm",
+      "title": "Rhythm Game",
+      "path": "GAME-RHYTHM/",
+      "type": "web-app",
+      "status": "needs-review",
+      "audience": [
+        "creative-coder",
+        "game-player"
+      ],
+      "value": "Potential sound/rhythm example.",
+      "topics": [
+        "game",
+        "sound",
+        "rhythm"
+      ],
+      "data": [
+        "unknown"
+      ],
+      "devices": 1,
+      "validation": [
+        "needs-browser-validation",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "Contains a frozen local ORPHE-CORE.js copy"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": null,
+      "links": {
+        "demo": "GAME-RHYTHM/index.html",
+        "source": "GAME-RHYTHM/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "hidden",
+      "device": "core"
+    },
+    {
+      "id": "game-shooting",
+      "title": "Shooting Game",
+      "path": "GAME-SHOOTING/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player"
+      ],
+      "value": "Simple shooting game controlled by ORPHE CORE tilt and acceleration.",
+      "topics": [
+        "game",
+        "shooting"
+      ],
+      "data": [
+        "euler",
+        "acc"
+      ],
+      "devices": 1,
+      "validation": [
+        "real-device-validated"
+      ],
+      "issues": [
+        "Relationship with GAME-SHOOTING2 is still unclear"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/game-shooting.png",
+      "sort_order": 340,
+      "links": {
+        "demo": "GAME-SHOOTING/index.html",
+        "source": "GAME-SHOOTING/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-shooting2",
+      "title": "3D Shooting Game",
+      "path": "GAME-SHOOTING2/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player"
+      ],
+      "value": "3D shooting game controlled by ORPHE CORE tilt and motion.",
+      "topics": [
+        "game",
+        "shooting",
+        "3d"
+      ],
+      "data": [
+        "euler",
+        "acceleration"
+      ],
+      "devices": 1,
+      "validation": [
+        "real-device-validated"
+      ],
+      "category": "playable-app",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/game-shooting2.png",
+      "sort_order": 350,
+      "links": {
+        "demo": "GAME-SHOOTING2/index.html",
+        "source": "GAME-SHOOTING2/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "workshop-07",
+      "title": "Fourier / DFT Workshop",
+      "path": "WORKSHOP_07/",
+      "type": "workshop",
+      "status": "public",
+      "audience": [
+        "advanced",
+        "workshop"
+      ],
+      "value": "ORPHE CORE WS YouTube material for learning Fourier, DFT, and FFT with sensor data.",
+      "topics": [
+        "Fourier",
+        "DFT",
+        "FFT",
+        "YouTube workshop",
+        "teaching material"
+      ],
+      "data": [
+        "acc"
+      ],
+      "devices": 1,
+      "validation": [
+        "owner-placement-decision",
+        "youtube-workshop-material"
+      ],
+      "category": "workshop-archive",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": "_thumbnails/workshop-07.png",
+      "sort_order": 400,
+      "links": {
+        "demo": "WORKSHOP_07/index.html",
+        "source": "WORKSHOP_07/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": false,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "fsr-visualise",
+      "title": "FSR Visualise",
+      "path": "p5.ORPHE.FSR_visualise_0327_submit/",
+      "type": "web-app",
+      "status": "needs-review",
+      "audience": [
+        "research"
+      ],
+      "value": "Potential pressure/FSR visualization example.",
+      "topics": [
+        "FSR",
+        "visualization"
+      ],
+      "data": [
+        "quat"
+      ],
+      "devices": 1,
+      "validation": [
+        "needs-domain-review",
+        "needs-device-verification"
+      ],
+      "issues": [
+        "May be ORPHE INSOLE-specific rather than ORPHE CORE.js general"
+      ],
+      "category": "research-integration",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": null,
+      "links": {
+        "demo": "p5.ORPHE.FSR_visualise_0327_submit/index.html",
+        "source": "p5.ORPHE.FSR_visualise_0327_submit/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "hidden",
+      "device": "core"
+    },
+    {
+      "id": "showcase",
+      "title": "Showcase",
+      "path": "showcase/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Product specs, 6ch pressure heatmap, IMU charts, quaternion 3D view, CSV recording, and code snippets. Works without a device (demo playback).",
+      "topics": [],
+      "data": [],
+      "devices": 1,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "getting-started",
+      "difficulty": "beginner",
+      "featured": true,
+      "thumbnail": "_thumbnails/insole-showcase.jpg",
+      "sort_order": 15,
+      "links": {
+        "demo": "showcase/index.html",
+        "source": "showcase/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "exhibition",
+      "title": "Exhibition Display",
+      "path": "exhibition/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "An overview page for exhibitions on a 16:9 display: pressure map, total pressure gauge, IMU charts, 3D attitude, and Step Analysis. Demo data while disconnected.",
+      "topics": [],
+      "data": [],
+      "devices": 1,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "getting-started",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-exhibition.svg",
+      "sort_order": 16,
+      "links": {
+        "demo": "exhibition/index.html",
+        "source": "exhibition/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "calibrated-pressure",
+      "title": "Calibrated Pressure",
+      "path": "calibrated-pressure/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "A minimal sample that charts all six pressure channels as load in newtons, using the calibration values read from each insole on connect.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "sensor-basics",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-calibrated-pressure.svg",
+      "sort_order": 50,
+      "links": {
+        "demo": "calibrated-pressure/index.html",
+        "source": "calibrated-pressure/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "step-analysis",
+      "title": "Step Analysis + RAW Data",
+      "path": "step-analysis/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Visualize left and right gait results one step at a time, with last-10-step trends and realtime raw sensor charts.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "gait-analysis",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-step-analysis.svg",
+      "sort_order": 85,
+      "links": {
+        "demo": "step-analysis/index.html",
+        "source": "step-analysis/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "gait-report",
+      "title": "Gait Report",
+      "path": "gait-report/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Record 20 steps per foot from Step Analysis and build a live-updating gait report with mean ± SD, left/right asymmetry, variability, and foot-strike breakdown.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "gait-analysis",
+      "difficulty": "intermediate",
+      "featured": true,
+      "thumbnail": "_thumbnails/insole-gait-report.svg",
+      "sort_order": 86,
+      "links": {
+        "demo": "gait-report/index.html",
+        "source": "gait-report/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "fifo-guide",
+      "title": "FIFO Guide",
+      "path": "fifo-guide/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Start here for FIFO: how it differs from Realtime, why the device buffer holds about 30 seconds, and how to read serial continuity and missing ranges.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "recording-analysis",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-fifo-guide.svg",
+      "sort_order": 112,
+      "links": {
+        "demo": "fifo-guide/index.html",
+        "source": "fifo-guide/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "fifo-vs-realtime",
+      "title": "FIFO vs Realtime",
+      "path": "fifo-vs-realtime/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Measure push (Realtime) vs pull (FIFO) delivery side by side: loss rate, serial continuity map, and droppedCount.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "recording-analysis",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": 113,
+      "links": {
+        "demo": "fifo-vs-realtime/index.html",
+        "source": "fifo-vs-realtime/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "lab-recorder",
+      "title": "Lab Recorder",
+      "path": "lab-recorder/",
+      "type": "web-app",
+      "status": "public-candidate",
+      "audience": [],
+      "value": "Experimental lab recorder on FIFO: sync markers, impulse candidates, trial metadata, provenance columns, loss report, and data dictionary.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "recording-analysis",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": 114,
+      "links": {
+        "demo": "lab-recorder/index.html",
+        "source": "lab-recorder/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "insole-core-combo",
+      "title": "INSOLE + CORE Combo",
+      "path": "insole-core-combo/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Connect two INSOLEs and one CORE at the same time and record a synchronized CSV for research.",
+      "topics": [],
+      "data": [],
+      "devices": 3,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "research-integration",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": 101,
+      "links": {
+        "demo": "insole-core-combo/index.html",
+        "source": "insole-core-combo/"
+      },
+      "requires_device": true,
+      "device_count": 3,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "both"
+    },
+    {
+      "id": "balance-sway",
+      "title": "Balance Sway",
+      "path": "balance-sway/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Center-of-pressure trajectory, sway metrics, and left/right weight bearing with a built-in demo stream. Not a medical device.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "creative-coding",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-balance-sway.jpg",
+      "sort_order": 95,
+      "links": {
+        "demo": "balance-sway/index.html",
+        "source": "balance-sway/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "balance-tuner",
+      "title": "Balance Tuner",
+      "path": "balance-tuner/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Turn estimated load center and left/right balance into pitch, pan, consonance, and controlled dissonance.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "creative-coding",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-balance-tuner.jpg",
+      "sort_order": 96,
+      "links": {
+        "demo": "balance-tuner/index.html",
+        "source": "balance-tuner/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "hula-motion-sonifier",
+      "title": "Hula Motion Sonifier",
+      "path": "hula-motion-sonifier/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Detect hula steps from combined pressure and IMU signals and turn state changes into sound.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "creative-coding",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-hula-motion-sonifier.jpg",
+      "sort_order": 97,
+      "links": {
+        "demo": "hula-motion-sonifier/index.html",
+        "source": "hula-motion-sonifier/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "music-shoe",
+      "title": "Music Shoe",
+      "path": "music-shoe/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Hold the insole in your hand and play it: orientation-gated hits, loop station, and a gesture-recording lab. Playable with mouse/keyboard too.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "creative-coding",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/insole-music-shoe.jpg",
+      "sort_order": 98,
+      "links": {
+        "demo": "music-shoe/index.html",
+        "source": "music-shoe/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "insole"
+    },
+    {
+      "id": "device-test",
+      "title": "Device Test",
+      "path": "device-test/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Pre-release checklist for real devices: read/write during notify, mode switching, and automatic pass/fail checks.",
+      "topics": [],
+      "data": [],
+      "devices": 1,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "developer-tool",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": 500,
+      "links": {
+        "demo": "device-test/index.html",
+        "source": "device-test/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "hidden",
+      "device": "insole"
+    },
+    {
+      "id": "quaternion-validation",
+      "title": "Quaternion Validation",
+      "path": "quaternion-validation/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Long-run validation of quaternion output: norm, yaw drift, and loss rate with incremental CSV and a numeric report.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "developer-tool",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": 510,
+      "links": {
+        "demo": "quaternion-validation/index.html",
+        "source": "quaternion-validation/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "hidden",
+      "device": "insole"
+    },
+    {
+      "id": "data-modes",
+      "title": "Data Mode Inspector",
+      "path": "data-modes/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Engineering tool to inspect profile transitions and the measurement API across data modes.",
+      "topics": [],
+      "data": [],
+      "devices": 1,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "developer-tool",
+      "difficulty": "advanced",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": 520,
+      "links": {
+        "demo": "data-modes/index.html",
+        "source": "data-modes/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "hidden",
+      "device": "insole"
+    },
+    {
+      "id": "game-hurdle-vs",
+      "title": "110m Hurdle VS",
+      "path": "GAME-HURDLE-VS/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Two-player hurdle race controlled by stepping with ORPHE CORE.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/hurdle-110m.png",
+      "sort_order": 201,
+      "links": {
+        "demo": "GAME-HURDLE-VS/index.html",
+        "source": "GAME-HURDLE-VS/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-hurdle-vs-advance",
+      "title": "110m Hurdle VS Advance",
+      "path": "GAME-HURDLE-VS-advance/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Two-player hurdle race controlled by stepping with ORPHE CORE.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/hurdle-110m.png",
+      "sort_order": 202,
+      "links": {
+        "demo": "GAME-HURDLE-VS-advance/index.html",
+        "source": "GAME-HURDLE-VS-advance/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-hurdle-2d-vs",
+      "title": "2D Hurdle VS",
+      "path": "GAME-HURDLE-2D-VS/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [],
+      "value": "Two-player hurdle race controlled by stepping with ORPHE CORE.",
+      "topics": [],
+      "data": [],
+      "devices": 2,
+      "validation": [
+        "needs-device-verification"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": null,
+      "sort_order": 203,
+      "links": {
+        "demo": "GAME-HURDLE-2D-VS/index.html",
+        "source": "GAME-HURDLE-2D-VS/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    }
+  ],
+  "display_schema": {
+    "category": [
+      "getting-started",
+      "sensor-basics",
+      "gait-analysis",
+      "recording-analysis",
+      "virtual-sports",
+      "playable-app",
+      "creative-coding",
+      "research-integration",
+      "workshop-archive",
+      "developer-tool",
+      "internal-test"
+    ],
+    "difficulty": [
+      "beginner",
+      "intermediate",
+      "advanced"
+    ],
+    "public_navigation": [
+      "featured",
+      "listed",
+      "hidden"
+    ],
+    "thumbnail": "Path to an existing preview image, or null when one still needs to be prepared.",
+    "sort_order": "Integer used for stable public navigation ordering. Required when public_navigation is featured.",
+    "links": "Entry points for demos, source directories, docs, or API pages.",
+    "requires_device": "True when the example is only meaningful with ORPHE CORE hardware or a compatible BLE device.",
+    "device_count": "Expected number of ORPHE CORE modules. Mirrors devices while making display code explicit.",
+    "needs_real_device_validation": "True when the catalog entry still needs physical ORPHE CORE verification.",
+    "device": "core | insole | both — which device the example targets"
+  }
+}

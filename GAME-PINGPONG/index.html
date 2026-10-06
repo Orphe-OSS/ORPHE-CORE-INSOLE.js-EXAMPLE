@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>ORPHE Ping Pong (2P)</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css">
+<script src="../assets/js/site-analytics.js"></script>
+</head>
+<body> <img id = "rogo"  src="rogo.png" widht="500px" height="25px">
+
+      <h1>ping pong game</h1>
+      
+      <div id="toolkit_placeholder1" class="my-4"></div>
+      <div id="toolkit_placeholder2" class="my-4"></div>
+      <div id="ble-support-message" class="alert alert-warning mx-4" style="display:none;">
+        Web Bluetooth is disabled in this browser. Open this page in Chrome to connect ORPHE CORE.
+      </div>
+
+  
+  <div id="p5Canvas"  ></div> <!-- p5.jsのキャンバスがここに挿入されます -->
+
+
+  <p id="setumei">ORPHE COREを使った3点制のピンポンゲームです。</title> </p>
+    <p id ="en"> This is a 3-point ping pong game using ORPHE CORE. </p> 
+  
+  
+    <p id="setumei">左右2人に分かれてORPHE COREを接続します。ORPHE COREを回転させてプレイヤーを操作し、相手自陣にボールを入れましょう。</title> </p>
+    <p id ="en"> Divide into two people on the left and right and connect the ORPHE CORE. Rotate the ORPHE CORE to control the player and send the ball into the opponent's own territory.</p> 
+  
+  <!-- ゲーム設定用のコントロールパネル -->
+  <div id="config-panel" style="margin: 20px auto; padding: 20px; background-color: #353434; border-radius: 10px; max-width: 800px;">
+    <h3 style="text-align: center; margin-bottom: 20px;">ゲーム設定 / Game Settings</h3>
+    
+    <div class="config-item" style="margin-bottom: 15px;">
+      <label for="ballSpeed" style="display: inline-block; width: 200px;">ボール速度 / Ball Speed:</label>
+      <input type="range" id="ballSpeed" min="2" max="10" value="4" step="0.5" style="width: 300px;">
+      <span id="ballSpeedValue" style="margin-left: 10px;">4</span>
+    </div>
+    
+    <div class="config-item" style="margin-bottom: 15px;">
+      <label for="ballSize" style="display: inline-block; width: 200px;">ボールサイズ / Ball Size:</label>
+      <input type="range" id="ballSize" min="10" max="40" value="20" step="5" style="width: 300px;">
+      <span id="ballSizeValue" style="margin-left: 10px;">20</span>
+    </div>
+    
+    <hr style="margin: 20px 0; border-color: #555;">
+    
+    <h4 style="margin-bottom: 15px;">左プレイヤー設定 / Left Player Settings</h4>
+    
+    <div class="config-item" style="margin-bottom: 15px;">
+      <label for="leftPaddleSize" style="display: inline-block; width: 200px;">左パドルサイズ / Left Paddle:</label>
+      <input type="range" id="leftPaddleSize" min="30" max="120" value="60" step="10" style="width: 300px;">
+      <span id="leftPaddleSizeValue" style="margin-left: 10px;">60</span>
+    </div>
+    
+    <div class="config-item" style="margin-bottom: 15px;">
+      <label for="leftSensitivity" style="display: inline-block; width: 200px;">左センサー感度 / Left Sensitivity:</label>
+      <input type="range" id="leftSensitivity" min="0.5" max="2" value="1" step="0.1" style="width: 300px;">
+      <span id="leftSensitivityValue" style="margin-left: 10px;">1.0</span>
+    </div>
+    
+    <hr style="margin: 20px 0; border-color: #555;">
+    
+    <h4 style="margin-bottom: 15px;">右プレイヤー設定 / Right Player Settings</h4>
+    
+    <div class="config-item" style="margin-bottom: 15px;">
+      <label for="rightPaddleSize" style="display: inline-block; width: 200px;">右パドルサイズ / Right Paddle:</label>
+      <input type="range" id="rightPaddleSize" min="30" max="120" value="60" step="10" style="width: 300px;">
+      <span id="rightPaddleSizeValue" style="margin-left: 10px;">60</span>
+    </div>
+    
+    <div class="config-item" style="margin-bottom: 15px;">
+      <label for="rightSensitivity" style="display: inline-block; width: 200px;">右センサー感度 / Right Sensitivity:</label>
+      <input type="range" id="rightSensitivity" min="0.5" max="2" value="1" step="0.1" style="width: 300px;">
+      <span id="rightSensitivityValue" style="margin-left: 10px;">1.0</span>
+    </div>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.1/p5.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js"
+  integrity="sha384-IDwe1+LCz02ROU9k972gdyvl+AESN10+x7tBKgc9I5HFtuNz0wWnPclzo6p9vxnk"
+  crossorigin="anonymous"></script>
+  
+
+  <script>
+    // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言すると Toolkit が接続する実体と別物になるため宣言しない
+    bles[0].setup();
+    buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
+    bles[1].setup();
+    buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
+    guardCoreToolkitBluetooth({
+      coreIds: [0, 1],
+      messageElement: '#ble-support-message'
+    });
+    var connectedDevices = 0;
+    var gamestage = 0;
+
+    /*
+    ble1.onConnect = function () {
+        console.log('ble1 connected');
+        if (connectedDevices == 3) {
+          mystart(ble1);
+          mystart(ble2);
+        }
+        connectedDevices++;
+      };
+    ble2.onConnect = function () {
+        console.log('ble1 connected');
+        if (connectedDevices == 3) {
+          mystart(ble1);
+          mystart(ble2);
+        }
+        connectedDevices++;
+      };
+
+      */
+      for (let ble of bles) {
+        ble.onConnect = function () {
+
+            connectedDevices++;
+            // STEP_ANALYSIS_AND_SENSOR_VALUES では onConnect が
+            // 1 デバイスにつき 2 回発火する (各 characteristic ごと)。
+            // 2 デバイス × 2 characteristic = 4 回で完全接続完了。
+            // 旧コードは === 3 で「片方が中途半端な状態」で start していたため修正。
+            if (connectedDevices === 4) {
+            //接続されたときの処理
+
+            mystart(bles[0]);
+            mystart(bles[1]);
+
+            gamestage = 1;
+
+
+            }
+
+      }
+    }
+
+
+    var devices = {
+      0: {
+        quats: { w: 0, x: 0, y: 0, z: 0 },
+        eulers: { pitch: 0, roll: 0, yaw: 0 },
+        gaits: {
+          type: 0,
+          direction: 0,
+          calorie: 0,
+          distance: 0,
+          steps: 0,
+          standing_phase_duration: 0,
+          swing_phase_duration: 0,
+        },
+        strides: { x: 0, y: 0, z: 0 },
+        stride_length: [0, 0, 0, 0, 0],
+        ave_stride_length: 0,
+        foot_angles: 0,
+        pronations: { landing_impact: 0, x: 0, y: 0, z: 0 },
+        duration: [0, 0, 0, 0, 0],
+        cadence: [0, 0, 0, 0, 0],
+        pace: [0, 0, 0, 0, 0],
+        speed: [0, 0, 0, 0, 0],
+        ave_duration: 0,
+        ave_cadence: 0,
+        ave_pace: 0,
+        ave_speed: 0,
+      },
+      1: {
+        quats: { w: 0, x: 0, y: 0, z: 0 },
+        eulers: { pitch: 0, roll: 0, yaw: 0 },
+        gaits: {
+          type: 0,
+          direction: 0,
+          calorie: 0,
+          distance: 0,
+          steps: 0,
+          standing_phase_duration: 0,
+          swing_phase_duration: 0,
+        },
+        strides: { x: 0, y: 0, z: 0 },
+        stride_length: [0, 0, 0, 0, 0],
+        ave_stride_length: 0,
+        foot_angles: 0,
+        pronations: { landing_impact: 0, x: 0, y: 0, z: 0 },
+        duration: [0, 0, 0, 0, 0],
+        cadence: [0, 0, 0, 0, 0],
+        pace: [0, 0, 0, 0, 0],
+        speed: [0, 0, 0, 0, 0],
+        ave_duration: 0,
+        ave_cadence: 0,
+        ave_pace: 0,
+        ave_speed: 0,
+      }
+    };
+
+
+    function mystart(ble_device) {
+      ble_device.gotQuat = function (_quat) {
+        devices[this.id].quats = _quat;
+      };
+      ble_device.gotEuler = function (_euler) {
+        devices[this.id].eulers = _euler;
+      };
+      ble_device.gotGait = function (_gait) {
+        devices[this.id].gaits = _gait;
+        updateMetrics(this.id, _gait);
+      };
+      ble_device.gotStride = function (_stride) {
+        devices[this.id].strides = _stride;
+        updateStrideLength(this.id, _stride);
+      };
+      ble_device.gotFootAngle = function (_foot_angle) {
+        devices[this.id].foot_angles = _foot_angle.value;
+      };
+      ble_device.gotPronation = function (_pronation) {
+        devices[this.id].pronations = _pronation;
+      };
+      // gotDuration は SDK に存在しないコールバックのため削除
+    }
+    
+    // スライダーの値変更イベントリスナー
+    document.getElementById('ballSpeed').addEventListener('input', function(e) {
+      document.getElementById('ballSpeedValue').textContent = e.target.value;
+      if (typeof updateBallSpeed === 'function') {
+        updateBallSpeed(parseFloat(e.target.value));
+      }
+    });
+    
+    document.getElementById('ballSize').addEventListener('input', function(e) {
+      document.getElementById('ballSizeValue').textContent = e.target.value;
+      if (typeof updateBallSize === 'function') {
+        updateBallSize(parseInt(e.target.value));
+      }
+    });
+    
+    document.getElementById('leftPaddleSize').addEventListener('input', function(e) {
+      document.getElementById('leftPaddleSizeValue').textContent = e.target.value;
+      if (typeof updateLeftPaddleSize === 'function') {
+        updateLeftPaddleSize(parseInt(e.target.value));
+      }
+    });
+    
+    document.getElementById('rightPaddleSize').addEventListener('input', function(e) {
+      document.getElementById('rightPaddleSizeValue').textContent = e.target.value;
+      if (typeof updateRightPaddleSize === 'function') {
+        updateRightPaddleSize(parseInt(e.target.value));
+      }
+    });
+    
+    document.getElementById('leftSensitivity').addEventListener('input', function(e) {
+      document.getElementById('leftSensitivityValue').textContent = parseFloat(e.target.value).toFixed(1);
+      if (typeof updateLeftSensitivity === 'function') {
+        updateLeftSensitivity(parseFloat(e.target.value));
+      }
+    });
+    
+    document.getElementById('rightSensitivity').addEventListener('input', function(e) {
+      document.getElementById('rightSensitivityValue').textContent = parseFloat(e.target.value).toFixed(1);
+      if (typeof updateRightSensitivity === 'function') {
+        updateRightSensitivity(parseFloat(e.target.value));
+      }
+    });
+  </script>
+<script src="sketch.js"></script>
+</body>
+</html>
