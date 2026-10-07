@@ -67,10 +67,11 @@
             mode4Use: '全データ（デフォルト）',
             connectBrowserNote: '対応ブラウザ: Chrome / Edge / Opera（Web Bluetooth API が必要）。Firefox / Safari では接続できませんが、このページの閲覧とデモ再生は可能です。',
             snippetMinimalTitle: '最小コード',
-            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
+            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
 &lt;script&gt;
-  var insole = new OrpheInsole(0);  // id: 0 or 1 (最大2台)
-  insole.setup();                   // begin の前に必須
+  const { OrpheCoreInsole, insoleProfile } = OrpheCoreInsoleJS;
+  // id: 0 or 1 (最大2台)
+  const insole = new OrpheCoreInsole({ profile: insoleProfile(), id: 0 });
 
   // ボタンクリック等のユーザー操作から呼ぶ
   async function connect() {
@@ -80,9 +81,9 @@
     });
   }
 
-  insole.gotPress = function (press) {
-    console.log(this.id, press.values);  // 6ch の ADC 生値
-  };
+  insole.on('press', (press) =&gt; {
+    console.log(insole.id, press.values);  // 6ch の ADC 生値
+  });
 &lt;/script&gt;`,
             connectToolkitNote: 'このページのように接続UIごと使いたい場合は <code>orphe-core-insole-toolkit.js</code> の <code>buildInsoleToolkit()</code> が便利です（トグル・再接続・モード切替UIを自動生成）。',
             pressureTitle: '圧力センサ（6ch × 左右）',
@@ -94,20 +95,20 @@
             pressureLeftLabel: '左足',
             pressureRightLabel: '右足',
             snippetPressureTitle: '圧力データの取得',
-            snippetPressureCode: `insole.gotPress = function (press) {
+            snippetPressureCode: `insole.on('press', (press) =&gt; {
   // press.values: [p0..p5] 6ch の ADC 生値 (uint16)
   const total = press.values.reduce((a, b) =&gt; a + b, 0);
-};`,
+});`,
             pressureNote: '<i class="bi bi-exclamation-triangle"></i> 値は ADC 生値です。荷重[N]などの物理量が必要な場合は、無負荷時・既知荷重時のサンプリングによるキャリブレーションをアプリ側で行ってください。チャネルの物理配置はモデルにより異なる場合があります。',
             imuTitle: 'IMU: 加速度・ジャイロ',
-            imuDesc: '3軸加速度（±16G）と3軸角速度（±2000dps）。<code>gotAcc</code>/<code>gotGyro</code> は -1..1 の正規化値、<code>gotConvertedAcc</code>/<code>gotConvertedGyro</code> は実値（G / deg/s）を返します。下のチャートは実値です。',
+            imuDesc: '3軸加速度（±16G）と3軸角速度（±2000dps）。<code>on(\'acc\')</code>/<code>on(\'gyro\')</code> は -1..1 の正規化値、<code>on(\'converted_acc\')</code>/<code>on(\'converted_gyro\')</code> は実値（G / deg/s）を返します。下のチャートは実値です。',
             snippetImuTitle: 'IMUデータの取得',
-            snippetImuCode: `insole.gotConvertedAcc = function (acc) {
+            snippetImuCode: `insole.on('converted_acc', (acc) =&gt; {
   // {x, y, z} 単位: G
-};
-insole.gotConvertedGyro = function (gyro) {
+});
+insole.on('converted_gyro', (gyro) =&gt; {
   // {x, y, z} 単位: deg/s
-};`,
+});`,
             attitudeTitle: '姿勢: クォータニオン → 3D',
             attitudeDesc: 'センサ内部で融合計算されたクォータニオン（姿勢）を取得できます。下のCGは受信したクォータニオンを左右それぞれの3Dモデルに適用したものです。実機をつま先上げ・かかと上げ・ひねりの方向に動かしてみてください。',
             noticeQuat: '現在のモード(3)ではクォータニオンは配信されません — ギアからモード1/4へ',
@@ -119,12 +120,12 @@ insole.gotConvertedGyro = function (gyro) {
             statoTitle: '左右荷重分布の推定中心軌跡',
             statoDesc: '左右それぞれ6点のADC生値から求めた推定中心を、荷重比で合成した30秒軌跡。',
             snippetAttitudeTitle: '姿勢データの取得（モード1/4）',
-            snippetAttitudeCode: `insole.gotQuat = function (quat) {
+            snippetAttitudeCode: `insole.on('quat', (quat) =&gt; {
   // {w, x, y, z}
-};
-insole.gotEuler = function (euler) {
+});
+insole.on('euler', (euler) =&gt; {
   // {pitch, roll, yaw} 単位: rad
-};`,
+});`,
             recordTitle: 'データ記録（CSV）',
             recordDesc: 'ストリーミング中のデータ（接続中の全デバイス）をCSVとして保存できます。列: <code class="small">device, timestamp, serial_number, press0..5, acc_x/y/z[G], gyro_x/y/z[dps], quat_w/x/y/z, euler_pitch/roll/yaw[rad]</code>（モードにより配信されない列は空欄）。保存したCSVは下の「CSVを読み込んでデモ再生」からループ再生でき、このページのデモ用歩行データとしても利用されます。',
             recordStart: '記録開始',
@@ -204,9 +205,9 @@ insole.gotEuler = function (euler) {
             programTitle: 'プログラムを自作する',
             programDesc: '独自アプリでは <code>orphe-core-insole.js</code> を読み込み、ユーザー操作から <code>begin()</code> を呼びます。このShowcaseのような接続UIごと使いたい場合は <code>orphe-core-insole-toolkit.js</code> の <code>buildInsoleToolkit()</code> が便利です。',
             programStepsTitle: '実装の流れ',
-            programStep1: '<code>new OrpheInsole(id)</code> でインスタンスを作る。',
-            programStep2: '<code>setup()</code> を呼び、ボタン操作などから <code>begin()</code> で接続する。',
-            programStep3: '<code>gotPress</code>, <code>gotConvertedAcc</code>, <code>gotConvertedGyro</code>, <code>gotQuat</code> を必要に応じて実装する。',
+            programStep1: '<code>new OrpheCoreInsole({ profile: insoleProfile(), id })</code> でインスタンスを作る。',
+            programStep2: 'ボタン操作などから <code>begin()</code> で接続する。',
+            programStep3: '<code>on(\'press\')</code>, <code>on(\'converted_acc\')</code>, <code>on(\'converted_gyro\')</code>, <code>on(\'quat\')</code> で必要なデータを購読する。',
             programStep4: '接続UIも必要なら <code>buildInsoleToolkit()</code> を使う。',
             contactTitle: '購入・お問い合わせ',
             contactDesc: 'ORPHE のセンサー製品・スマートシューズは ORPHE Official Store で購入できます。<br>ORPHE INSOLE の評価キット・共同開発パッケージ、研究・事業でのご利用のご相談は製品ページのお問い合わせフォームからご連絡ください。',
@@ -281,10 +282,11 @@ insole.gotEuler = function (euler) {
             mode4Use: 'All data (default)',
             connectBrowserNote: 'Supported browsers: Chrome / Edge / Opera with the Web Bluetooth API. Firefox and Safari cannot connect to devices, but the page and demo playback still work.',
             snippetMinimalTitle: 'Minimal Code',
-            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
+            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
 &lt;script&gt;
-  var insole = new OrpheInsole(0);  // id: 0 or 1, up to two devices
-  insole.setup();                   // required before begin()
+  const { OrpheCoreInsole, insoleProfile } = OrpheCoreInsoleJS;
+  // id: 0 or 1, up to two devices
+  const insole = new OrpheCoreInsole({ profile: insoleProfile(), id: 0 });
 
   // Call from a user gesture such as a button click.
   async function connect() {
@@ -294,9 +296,9 @@ insole.gotEuler = function (euler) {
     });
   }
 
-  insole.gotPress = function (press) {
-    console.log(this.id, press.values);  // 6ch raw ADC values
-  };
+  insole.on('press', (press) =&gt; {
+    console.log(insole.id, press.values);  // 6ch raw ADC values
+  });
 &lt;/script&gt;`,
             connectToolkitNote: 'To use the same connection UI as this page, <code>buildInsoleToolkit()</code> from <code>orphe-core-insole-toolkit.js</code> generates the toggle, reconnect, and mode controls for you.',
             pressureTitle: 'Pressure Sensors (6ch × Left/Right)',
@@ -308,20 +310,20 @@ insole.gotEuler = function (euler) {
             pressureLeftLabel: 'Left',
             pressureRightLabel: 'Right',
             snippetPressureTitle: 'Read Pressure Data',
-            snippetPressureCode: `insole.gotPress = function (press) {
+            snippetPressureCode: `insole.on('press', (press) =&gt; {
   // press.values: [p0..p5] 6ch raw ADC values (uint16)
   const total = press.values.reduce((a, b) =&gt; a + b, 0);
-};`,
+});`,
             pressureNote: '<i class="bi bi-exclamation-triangle"></i> Values are raw ADC readings. If you need physical units such as load [N], calibrate in your application by sampling unloaded and known-load states. Physical channel placement may differ by model.',
             imuTitle: 'IMU: Acceleration & Gyroscope',
-            imuDesc: '3-axis acceleration (±16G) and 3-axis angular velocity (±2000 dps). <code>gotAcc</code>/<code>gotGyro</code> return normalized -1..1 values, while <code>gotConvertedAcc</code>/<code>gotConvertedGyro</code> return physical values in G and deg/s. The charts below use the converted values.',
+            imuDesc: '3-axis acceleration (±16G) and 3-axis angular velocity (±2000 dps). <code>on(\'acc\')</code>/<code>on(\'gyro\')</code> deliver normalized -1..1 values, while <code>on(\'converted_acc\')</code>/<code>on(\'converted_gyro\')</code> deliver physical values in G and deg/s. The charts below use the converted values.',
             snippetImuTitle: 'Read IMU Data',
-            snippetImuCode: `insole.gotConvertedAcc = function (acc) {
+            snippetImuCode: `insole.on('converted_acc', (acc) =&gt; {
   // {x, y, z}, unit: G
-};
-insole.gotConvertedGyro = function (gyro) {
+});
+insole.on('converted_gyro', (gyro) =&gt; {
   // {x, y, z}, unit: deg/s
-};`,
+});`,
             attitudeTitle: 'Attitude: Quaternion → 3D',
             attitudeDesc: 'The SDK can receive quaternions calculated by the sensor fusion process inside the device. The 3D view applies the received quaternion to each left/right model. Try lifting the toe, lifting the heel, or twisting the physical device.',
             noticeQuat: 'Mode 3 does not stream quaternions — switch to mode 1 or 4 from the gear menu.',
@@ -333,12 +335,12 @@ insole.gotConvertedGyro = function (gyro) {
             statoTitle: 'Estimated Center of Left/Right Load Distribution',
             statoDesc: '30-second trace synthesized from each foot’s six-channel raw ADC weighted center and the left/right load ratio.',
             snippetAttitudeTitle: 'Read Attitude Data (Mode 1/4)',
-            snippetAttitudeCode: `insole.gotQuat = function (quat) {
+            snippetAttitudeCode: `insole.on('quat', (quat) =&gt; {
   // {w, x, y, z}
-};
-insole.gotEuler = function (euler) {
+});
+insole.on('euler', (euler) =&gt; {
   // {pitch, roll, yaw}, unit: rad
-};`,
+});`,
             recordTitle: 'Data Recording (CSV)',
             recordDesc: 'Save streaming data from all connected devices as CSV. Columns: <code class="small">device, timestamp, serial_number, press0..5, acc_x/y/z[G], gyro_x/y/z[dps], quat_w/x/y/z, euler_pitch/roll/yaw[rad]</code>. Columns not streamed by the selected mode are left blank. Saved CSV files can be loaded below for looped demo playback and used as this page’s demo walking data.',
             recordStart: 'Start Recording',
@@ -418,9 +420,9 @@ insole.gotEuler = function (euler) {
             programTitle: 'Build Your Own Program',
             programDesc: 'For a custom app, load <code>orphe-core-insole.js</code> and call <code>begin()</code> from a user action. To reuse the connection UI from this Showcase, use <code>buildInsoleToolkit()</code> from <code>orphe-core-insole-toolkit.js</code>.',
             programStepsTitle: 'Implementation Flow',
-            programStep1: 'Create an instance with <code>new OrpheInsole(id)</code>.',
-            programStep2: 'Call <code>setup()</code>, then connect with <code>begin()</code> from a button or other user action.',
-            programStep3: 'Implement <code>gotPress</code>, <code>gotConvertedAcc</code>, <code>gotConvertedGyro</code>, and <code>gotQuat</code> as needed.',
+            programStep1: 'Create an instance with <code>new OrpheCoreInsole({ profile: insoleProfile(), id })</code>.',
+            programStep2: 'Connect with <code>begin()</code> from a button or other user action.',
+            programStep3: 'Subscribe to <code>on(\'press\')</code>, <code>on(\'converted_acc\')</code>, <code>on(\'converted_gyro\')</code>, and <code>on(\'quat\')</code> as needed.',
             programStep4: 'Use <code>buildInsoleToolkit()</code> when you also need connection UI.',
             contactTitle: 'Purchase / Contact',
             contactDesc: 'ORPHE sensor products and smart shoes are available through the ORPHE Official Store.<br>For ORPHE INSOLE Evaluation Kits, co-development packages, research, or business use, contact us through the product page.',

@@ -303,7 +303,6 @@
     onDataLoss(info) { logLoss(info); }
   }
 });
-insoles[0].setup();   // required: buildInsoleToolkit does not call setup()
 const session = getInsoleToolkitSession(0);
 
 // Start FIFO recording. The SDK handles the read-mode switch,
@@ -351,8 +350,8 @@ const csv = insoleToolkitMeasurementToCSV(result, "raw");</code></pre>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
   <script src="./continuity.js?v=20260725-fifo-guide"></script>
   <script src="./i18n.js?v=20260725-fifo-guide"></script>
   <script src="./app.js?v=20260725-fifo-guide"></script>

@@ -111,7 +111,7 @@ class ChartFeed {
 //--------------------------------------------------
 function computeFootPressureState(values, side) {
     if (!Array.isArray(values)) return null;
-    const layout = OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE;
+    const layout = OrpheCoreInsoleJS.OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE;
     let load = 0, x = 0, y = 0;
     values.slice(0, 6).forEach((raw, index) => {
         const value = Math.max(0, Number(raw) || 0);
@@ -452,7 +452,7 @@ function enableStepAnalysisWhenReady(deviceId, tries = 12) {
 
 /** device_information は接続処理の中で取得されるため、入るまで短時間ポーリングする */
 function applyMountPositionWhenReady(insole, tries = 20) {
-    const info = insole.device_information;
+    const info = insole.profile.device_information;
     if (info && typeof info.mount_position !== 'undefined') {
         applySide(insole.id, (info.mount_position & 0b1) === 1 ? 'R' : 'L');
         return;
@@ -509,39 +509,37 @@ window.onload = function () {
         );
 
         const insole = insoles[id];
-        insole.setup();
-
-        insole.gotQuat = function (quat) {
-            notePending(this.id, quat);
-            pendings[this.id].quat = { w: quat.w, x: quat.x, y: quat.y, z: quat.z };
-        };
-        insole.gotEuler = function (euler) {
-            pendings[this.id].euler = { pitch: euler.pitch, roll: euler.roll, yaw: euler.yaw };
-            if (this.streaming_mode === 1) commitLiveFrame(this.id);
-        };
-        insole.gotConvertedAcc = function (acc) {
-            notePending(this.id, acc);
-            pendings[this.id].acc = { x: acc.x, y: acc.y, z: acc.z };
-        };
-        insole.gotConvertedGyro = function (gyro) {
-            notePending(this.id, gyro);
-            pendings[this.id].gyro = { x: gyro.x, y: gyro.y, z: gyro.z };
-            if (this.streaming_mode === 1 && typeof Quaternion === 'undefined') commitLiveFrame(this.id);
-        };
-        insole.gotPress = function (press) {
-            notePending(this.id, press);
-            pendings[this.id].press = press.values.slice(0, 6);
+        insole.on('quat', (quat) => {
+            notePending(id, quat);
+            pendings[id].quat = { w: quat.w, x: quat.x, y: quat.y, z: quat.z };
+        });
+        insole.on('euler', (euler) => {
+            pendings[id].euler = { pitch: euler.pitch, roll: euler.roll, yaw: euler.yaw };
+            if (insole.profile.streaming_mode === 1) commitLiveFrame(id);
+        });
+        insole.on('converted_acc', (acc) => {
+            notePending(id, acc);
+            pendings[id].acc = { x: acc.x, y: acc.y, z: acc.z };
+        });
+        insole.on('converted_gyro', (gyro) => {
+            notePending(id, gyro);
+            pendings[id].gyro = { x: gyro.x, y: gyro.y, z: gyro.z };
+            if (insole.profile.streaming_mode === 1 && typeof Quaternion === 'undefined') commitLiveFrame(id);
+        });
+        insole.on('press', (press) => {
+            notePending(id, press);
+            pendings[id].press = press.values.slice(0, 6);
             // モード3/4は press が各サンプルの最後に呼ばれる（SDKのコールバック順）
-            commitLiveFrame(this.id);
-        };
-        insole.onConnect = function () {
-            applyMountPositionWhenReady(this);
-            enableStepAnalysisWhenReady(this.id);
-        };
-        insole.onReconnectSuccess = function () {
-            applyMountPositionWhenReady(this);
-            enableStepAnalysisWhenReady(this.id);
-        };
+            commitLiveFrame(id);
+        });
+        insole.onEvent('onConnect', () => {
+            applyMountPositionWhenReady(insole);
+            enableStepAnalysisWhenReady(id);
+        });
+        insole.onEvent('onReconnectSuccess', () => {
+            applyMountPositionWhenReady(insole);
+            enableStepAnalysisWhenReady(id);
+        });
     }
 
     applySide(0, 'L');

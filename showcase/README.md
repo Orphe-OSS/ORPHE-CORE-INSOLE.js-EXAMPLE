@@ -8,7 +8,7 @@ ORPHE INSOLE の**製品紹介・データ理解・SDKの使い方が1ページ�
 - クォータニオン → 左右の3D靴モデルの姿勢表示（ORPHE-CORE.js examples/VIEW から移植）
 - 各データを取得する最小コードスニペット
 - データのCSV記録と、記録したCSVのデモ再生
-- **ロスレス収録（FIFO）**: FWバッファから欠損なくデータを回収し、参照実装互換CSVで保存（`OrpheInsoleFifo`）
+- **ロスレス収録（FIFO）**: FWバッファから欠損なくデータを回収し、参照実装互換CSVで保存（`FifoRecorder`。toolkit セッションの `session.fifo`）
 - index（examples一覧）との相互動線: ヘッダーのタイトルとページ末尾の「indexに戻る」ボタンがトップページへ戻り、
   各セクション末尾の「関連 examples」チップと「次のステップ」の8枚のカードが関連する example へつながります
 
