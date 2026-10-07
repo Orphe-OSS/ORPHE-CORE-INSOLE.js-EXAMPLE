@@ -14,12 +14,12 @@ Use CoreToolkit.js to connect and monitor ORPHE CORE modules quickly.
 - オイラー角 (euler)
 - デルタ (delta)
 - ジャイロ (gyro)
-- 加速度 (gotConvertedAcc, 実Gスケール)
+- 加速度 (converted_acc, 実Gスケール)
 - 歩行 (gait)
 - ストライド (stride)
-- 足角度 (footAngle)
+- 足角度 (foot_angle)
 - プロネーション (pronation)
-- 接地衝撃 (landingImpact)
+- 接地衝撃 (landing_impact)
 
 ## 必要なORPHE CORE数
 

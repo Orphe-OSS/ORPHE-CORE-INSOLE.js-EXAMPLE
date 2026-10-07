@@ -98,7 +98,7 @@
       this.currentPitch = 0;  // degrees
     }
 
-    // Update Euler pitch (call this from gotEuler callback)
+    // Update Euler pitch (call this from on('euler') callback)
     updateEuler(euler) {
       // Convert radians to degrees
       this.currentPitch = euler.pitch * 180 / Math.PI;
@@ -372,56 +372,52 @@
   // ORPHE CALLBACKS
   // ============================================================================
   function setupOrpheCallbacks(ble) {
-    const originalOnConnect = ble.onConnect;
-    const originalOnDisconnect = ble.onDisconnect;
-
-    ble.onConnect = function() {
+    // onEvent() は既存の購読を置き換えずに追加されるため、元のハンドラを保存して呼び直す必要はない
+    ble.onEvent('onConnect', function() {
       console.log('[GestureDemo] Connected');
       isConnected = true;
       updateConnectionStatus(true);
       showGesture('idle');
       document.getElementById('gesture-jp').textContent = 'ジェスチャーをしてください';
-      if (originalOnConnect) originalOnConnect.call(this);
-    };
+    });
 
-    ble.onDisconnect = function() {
+    ble.onEvent('onDisconnect', function() {
       console.log('[GestureDemo] Disconnected');
       isConnected = false;
       updateConnectionStatus(false);
       document.getElementById('gesture-name').textContent = 'WAITING';
       document.getElementById('gesture-jp').textContent = 'COREを接続してください';
-      if (originalOnDisconnect) originalOnDisconnect.call(this);
-    };
+    });
 
     // Acceleration callback
-    ble.gotAcc = function(acc) {
+    ble.on('acc', function(acc) {
       currentAcc = acc;
       dataCount++;
       processGesture();
-    };
+    });
 
     // Gyroscope callback
-    ble.gotGyro = function(gyro) {
+    ble.on('gyro', function(gyro) {
       currentGyro = gyro;
       processGesture();
-    };
+    });
 
     // Euler callback - needed for pitch-based detection
-    ble.gotEuler = function(euler) {
+    ble.on('euler', function(euler) {
       detector.updateEuler(euler);
-    };
+    });
 
     // Also support converted values
-    ble.gotConvertedAcc = function(acc) {
+    ble.on('converted_acc', function(acc) {
       currentAcc = acc;
       dataCount++;
       processGesture();
-    };
+    });
 
-    ble.gotConvertedGyro = function(gyro) {
+    ble.on('converted_gyro', function(gyro) {
       currentGyro = gyro;
       processGesture();
-    };
+    });
   }
 
   function processGesture() {

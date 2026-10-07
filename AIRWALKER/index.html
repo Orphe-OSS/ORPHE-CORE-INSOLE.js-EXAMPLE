@@ -36,9 +36,9 @@
     </nav>
 
     <!-- <div class="col-12 mt-4">
-      <button class="btn btn-outline-primary" onclick="ble.begin('SENSOR_VALUES');" hidden>connect</button>
-      <button class="btn btn-outline-primary" onclick="ble.stopNotify();" hidden>stop Notify</button>
-      <button class="btn btn-outline-primary" onclick="ble.startNotify();" hidden>start Notify</button>
+      <button class="btn btn-outline-primary" onclick="bles[0].begin('SENSOR_VALUES');" hidden>connect</button>
+      <button class="btn btn-outline-primary" onclick="bles[0].transport.stopNotify('SENSOR_VALUES').catch(() => {});" hidden>stop Notify</button>
+      <button class="btn btn-outline-primary" onclick="bles[0].transport.startNotify('SENSOR_VALUES');" hidden>start Notify</button>
     </div> -->
 
 
@@ -265,8 +265,8 @@
 
 
 
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 
   <script src="chart.min.js"
     integrity="sha512-R60W3LgKdvvfwbGbqKusRu/434Snuvr9/Flhtoq9cj1LQ9P4HFKParULqOCAisHk/J4zyaEWWjiWIMuP13vXEg=="

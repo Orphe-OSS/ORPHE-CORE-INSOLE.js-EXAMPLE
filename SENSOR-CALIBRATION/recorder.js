@@ -169,18 +169,8 @@
 
     if (typeof bles !== 'undefined' && bles[0] && isConnected) {
       try {
-        // Convert to index values (2=0, 4=1, 8=2, 16=3)
-        const accRangeIndex = { 2: 0, 4: 1, 8: 2, 16: 3 }[userDeviceConfig.accRange] || 3;
-        const gyroRangeIndex = { 250: 0, 500: 1, 1000: 2, 2000: 3 }[userDeviceConfig.gyroRange] || 3;
-
-        // レンジは device information の書き込みで変更する（lr=0xFF は左右設定を変えない指定）
-        bles[0].getDeviceInformation()
-          .then((info) => {
-            info.range.acc = accRangeIndex;
-            info.range.gyro = gyroRangeIndex;
-            info.lr = 0xFF;
-            return bles[0].setDeviceInformation(info);
-          })
+        // レンジは物理値（acc: 2/4/8/16 G、gyro: 250/500/1000/2000 °/s）で指定する（左右設定は変えない）
+        bles[0].commands.setRange({ acc: userDeviceConfig.accRange, gyro: userDeviceConfig.gyroRange })
           .catch((e) => console.error('[Recorder] Failed to set sensor range:', e));
         console.log(`[Recorder] Sensor range set - Acc: ±${userDeviceConfig.accRange}G, Gyro: ±${userDeviceConfig.gyroRange}°/s`);
       } catch (e) {
@@ -272,41 +262,33 @@
   // ORPHE CALLBACKS
   // ============================================================================
   function setupOrpheCallbacks(ble) {
-    // Don't call ble.setup() here - CoreToolkit already does this
-    // Instead, extend/wrap existing callbacks
-
-    // Store original callbacks if they exist
-    const originalOnConnect = ble.onConnect;
-    const originalOnDisconnect = ble.onDisconnect;
+    // bles[0] is an OrpheCoreInsole created by CoreToolkit (no setup() needed).
+    // onEvent() adds listeners alongside CoreToolkit's own, so there is no need to wrap existing callbacks.
 
     // Prevent multiple fetchDeviceInfo calls
     let deviceInfoFetched = false;
 
-    ble.onConnect = function() {
+    ble.onEvent('onConnect', function() {
       console.log('[Recorder] Connected');
       isConnected = true;
       updateConnectionStatus(true);
       // Don't call fetchDeviceInfo here - it conflicts with CoreToolkit's begin()
       // Device info will be set from user selections instead
-      // Call original if exists
-      if (originalOnConnect) originalOnConnect.call(this);
-    };
+    });
 
-    ble.onDisconnect = function() {
+    ble.onEvent('onDisconnect', function() {
       console.log('[Recorder] Disconnected');
       isConnected = false;
       updateConnectionStatus(false);
-      // Call original if exists
-      if (originalOnDisconnect) originalOnDisconnect.call(this);
-    };
+    });
 
     // Track if we've received data
     let firstDataReceived = false;
 
     // Converted acceleration (actual G values)
-    ble.gotConvertedAcc = function(acc) {
+    ble.on('converted_acc', function(acc) {
       if (!firstDataReceived) {
-        console.log('[Recorder] First gotConvertedAcc received:', acc);
+        console.log('[Recorder] First converted_acc received:', acc);
         firstDataReceived = true;
       }
       currentData.acc = acc;
@@ -323,16 +305,16 @@
       if (isRecording) {
         addToRecordingBuffer('acc', acc);
       }
-    };
+    });
 
-    // Also hook into gotAcc as fallback (raw acceleration)
+    // Also subscribe to 'acc' as fallback (raw acceleration)
     let firstRawAccReceived = false;
-    ble.gotAcc = function(acc) {
+    ble.on('acc', function(acc) {
       if (!firstRawAccReceived) {
-        console.log('[Recorder] First gotAcc (raw) received:', acc);
+        console.log('[Recorder] First acc (raw) received:', acc);
         firstRawAccReceived = true;
       }
-      // Always use gotAcc as primary source now
+      // Always use 'acc' as primary source now
       currentData.acc = acc;
       currentData.accMag = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
       dataCount++;
@@ -345,13 +327,13 @@
       if (isRecording) {
         addToRecordingBuffer('acc', acc);
       }
-    };
+    });
 
     // Converted gyro
     let firstGyroReceived = false;
-    ble.gotConvertedGyro = function(gyro) {
+    ble.on('converted_gyro', function(gyro) {
       if (!firstGyroReceived) {
-        console.log('[Recorder] First gotConvertedGyro received:', gyro);
+        console.log('[Recorder] First converted_gyro received:', gyro);
         firstGyroReceived = true;
       }
       currentData.gyro = gyro;
@@ -366,13 +348,13 @@
       if (isRecording) {
         addToRecordingBuffer('gyro', gyro);
       }
-    };
+    });
 
     // Raw gyro fallback
     let firstRawGyroReceived = false;
-    ble.gotGyro = function(gyro) {
+    ble.on('gyro', function(gyro) {
       if (!firstRawGyroReceived) {
-        console.log('[Recorder] First gotGyro (raw) received:', gyro);
+        console.log('[Recorder] First gyro (raw) received:', gyro);
         firstRawGyroReceived = true;
       }
       currentData.gyro = gyro;
@@ -386,61 +368,61 @@
       if (isRecording) {
         addToRecordingBuffer('gyro', gyro);
       }
-    };
+    });
 
     // Euler angles
-    ble.gotEuler = function(euler) {
+    ble.on('euler', function(euler) {
       currentData.euler = euler;
       if (isRecording) {
         addToRecordingBuffer('euler', euler);
       }
-    };
+    });
 
     // Quaternion
-    ble.gotQuat = function(quat) {
+    ble.on('quat', function(quat) {
       currentData.quat = quat;
       if (isRecording) {
         addToRecordingBuffer('quat', quat);
       }
-    };
+    });
 
     // Gait analysis
-    ble.gotGait = function(gait) {
+    ble.on('gait', function(gait) {
       currentData.gait = gait;
       if (isRecording) {
         addToRecordingBuffer('gait', gait);
       }
-    };
+    });
 
     // Landing impact
-    ble.gotLandingImpact = function(impact) {
+    ble.on('landing_impact', function(impact) {
       currentData.landingImpact = impact.value || impact;
       if (isRecording) {
         addToRecordingBuffer('landingImpact', { value: currentData.landingImpact });
       }
-    };
+    });
 
     // Stride
-    ble.gotStride = function(stride) {
+    ble.on('stride', function(stride) {
       currentData.stride = stride;
       if (isRecording) {
         addToRecordingBuffer('stride', stride);
       }
-    };
+    });
 
     // Pronation
-    ble.gotPronation = function(pronation) {
+    ble.on('pronation', function(pronation) {
       currentData.pronation = pronation;
       if (isRecording) {
         addToRecordingBuffer('pronation', pronation);
       }
-    };
+    });
 
     // BLE frequency
-    ble.gotBLEFrequency = function(freq) {
+    ble.on('ble_frequency', function(freq) {
       const el = document.getElementById('data-rate');
       if (el) el.textContent = `${Math.round(freq)} Hz`;
-    };
+    });
   }
 
   // ============================================================================
@@ -448,7 +430,7 @@
   // ============================================================================
   async function fetchDeviceInfo(ble) {
     try {
-      const info = await ble.getDeviceInformation();
+      const info = await ble.commands.readDeviceInformation();
       console.log('[Recorder] Device info:', info);
 
       deviceInfo.battery = ['Low', 'Medium', 'Full'][info.battery] || 'Unknown';
@@ -457,13 +439,14 @@
       deviceInfo.gyroRange = [250, 500, 1000, 2000][info.range?.gyro] || 2000;
 
       // Try to detect CORE version from device name or characteristics
-      if (ble.device && ble.device.name) {
-        if (ble.device.name.includes('3')) {
+      const bluetoothDevice = ble.transport.device;
+      if (bluetoothDevice && bluetoothDevice.name) {
+        if (bluetoothDevice.name.includes('3')) {
           deviceInfo.coreVersion = 'CORE 3.0';
-        } else if (ble.device.name.includes('2')) {
+        } else if (bluetoothDevice.name.includes('2')) {
           deviceInfo.coreVersion = 'CORE 2.0';
         } else {
-          deviceInfo.coreVersion = ble.device.name;
+          deviceInfo.coreVersion = bluetoothDevice.name;
         }
       }
 
@@ -733,7 +716,7 @@
   }
 
   function updateDataRate() {
-    // This is now handled by gotBLEFrequency
+    // This is now handled by on('ble_frequency')
   }
 
   function updateConnectionStatus(connected) {
