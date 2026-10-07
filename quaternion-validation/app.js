@@ -1,4 +1,4 @@
-/* global OrpheInsole, OrpheInsoleSimulator, OrpheQuaternionValidationMetrics */
+/* global OrpheCoreInsoleJS, OrpheQuaternionValidationMetrics */
 
 (function () {
   'use strict';
@@ -10,10 +10,15 @@
     radToDeg,
   } = OrpheQuaternionValidationMetrics;
 
+  const { OrpheCoreInsole, insoleProfile, createInsoleSimulator } = OrpheCoreInsoleJS;
+
   const params = new URLSearchParams(window.location.search);
   const simulatorMode = params.get('sim') === '1';
-  const DeviceClass = simulatorMode ? OrpheInsoleSimulator : OrpheInsole;
-  const devices = [new DeviceClass(0), new DeviceClass(1)];
+  // ?sim=1 なら擬似 INSOLE（静止プリセット）、それ以外は実機。どちらも OrpheCoreInsole として扱える
+  const createDevice = id => simulatorMode
+    ? createInsoleSimulator(id, { preset: 'stand' }, { events: createDeviceEvents(id) })
+    : new OrpheCoreInsole({ profile: insoleProfile(), id, events: createDeviceEvents(id) });
+  const devices = [createDevice(0), createDevice(1)];
   const connected = [false, false];
   const deviceInfo = [null, null];
   const pending = [{}, {}];
@@ -40,7 +45,7 @@
   }
 
   function sideFor(deviceId) {
-    const info = deviceInfo[deviceId] || devices[deviceId].device_information;
+    const info = deviceInfo[deviceId] || devices[deviceId].profile.device_information;
     if (!info || typeof info.mount_position === 'undefined') return '-';
     return (Number(info.mount_position) & 1) === 1 ? 'R' : 'L';
   }
@@ -110,7 +115,7 @@
     const frame = {
       device: deviceId,
       side: sideFor(deviceId),
-      mode: Number(devices[deviceId].streaming_mode) || 4,
+      mode: Number(devices[deviceId].profile.streaming_mode) || 4,
       timestamp: current.timestamp ?? null,
       serial: current.serial ?? null,
       packetNumber: current.packetNumber ?? null,
@@ -134,58 +139,61 @@
     }
   }
 
-  function installCallbacks(device, deviceId) {
-    device.setup();
-    device.debug = false;
+  // ライフサイクルイベント（コンストラクタの events に渡す。devices 生成前に呼ばれるので関数宣言で巻き上げる）
+  function createDeviceEvents(deviceId) {
+    return {
+      onConnect() {
+        connected[deviceId] = true;
+        updateConnectionCard(deviceId);
+      },
+      onDisconnect() {
+        connected[deviceId] = false;
+        updateConnectionCard(deviceId);
+        updateControls();
+        log(`DEVICE ${deviceId} が切断されました`, 'warn');
+      },
+      onReconnectSuccess() {
+        connected[deviceId] = true;
+        updateConnectionCard(deviceId);
+        updateControls();
+        log(`DEVICE ${deviceId} が自動再接続しました`, 'pass');
+      },
+      onError(error) {
+        log(`DEVICE ${deviceId} error: ${error && error.message ? error.message : error}`, 'fail');
+      },
+    };
+  }
 
-    device.gotQuat = function (quat) {
+  function installCallbacks(device, deviceId) {
+    device.on('quat', quat => {
       notePending(deviceId, quat);
       pending[deviceId].quat = copyQuat(quat);
-    };
-    device.gotEuler = function (euler) {
+    });
+    device.on('euler', euler => {
       notePending(deviceId, euler);
       pending[deviceId].euler = copyEuler(euler);
-      if (Number(device.streaming_mode) === 1) commitFrame(deviceId);
-    };
-    device.gotConvertedAcc = function (acc) {
+      // mode 1（header 50）は press が無く、euler が 1 サンプルの最後に届く
+      if (Number(device.profile.streaming_mode) === 1) commitFrame(deviceId);
+    });
+    device.on('converted_acc', acc => {
       notePending(deviceId, acc);
       pending[deviceId].acc = copyVector(acc);
-    };
-    device.gotConvertedGyro = function (gyro) {
+    });
+    device.on('converted_gyro', gyro => {
       notePending(deviceId, gyro);
       pending[deviceId].gyro = copyVector(gyro);
-      if (Number(device.streaming_mode) === 1 && typeof window.Quaternion === 'undefined') commitFrame(deviceId);
-    };
-    device.gotPress = function (press) {
+    });
+    device.on('press', press => {
       notePending(deviceId, press);
       pending[deviceId].press = Array.isArray(press.values) ? press.values.slice(0, 6) : null;
       commitFrame(deviceId);
-    };
-    device.gotBLEFrequency = function (frequency) {
+    });
+    device.on('ble_frequency', frequency => {
       live[deviceId].frequency = Number(frequency) || 0;
-    };
-    device.lostData = function () {
+    });
+    device.on('lost_data', () => {
       // 欠損はframeのserial_numberから集計する。Consoleへ大量出力しない。
-    };
-    device.onConnect = function () {
-      connected[deviceId] = true;
-      updateConnectionCard(deviceId);
-    };
-    device.onDisconnect = function () {
-      connected[deviceId] = false;
-      updateConnectionCard(deviceId);
-      updateControls();
-      log(`DEVICE ${deviceId} が切断されました`, 'warn');
-    };
-    device.onReconnectSuccess = function () {
-      connected[deviceId] = true;
-      updateConnectionCard(deviceId);
-      updateControls();
-      log(`DEVICE ${deviceId} が自動再接続しました`, 'pass');
-    };
-    device.onError = function (error) {
-      log(`DEVICE ${deviceId} error: ${error && error.message ? error.message : error}`, 'fail');
-    };
+    });
   }
 
   devices.forEach(installCallbacks);
@@ -196,22 +204,23 @@
     button.disabled = true;
     button.textContent = simulatorMode ? '起動中…' : '選択中…';
     try {
+      // シミュレータのプリセットは createInsoleSimulator() の第 2 引数で指定済み
       const options = simulatorMode
-        ? { streamingMode: 4, preset: 'stand' }
+        ? { streamingMode: 4 }
         : { streamingMode: 4, autoReconnect: true, forceDeviceSelection: true };
       await devices[deviceId].begin('SENSOR_VALUES', options);
 
       if (!simulatorMode) {
         const other = 1 - deviceId;
-        const currentBluetooth = devices[deviceId].bluetoothDevice;
-        const otherBluetooth = devices[other].bluetoothDevice;
+        const currentBluetooth = devices[deviceId].transport.device;
+        const otherBluetooth = devices[other].transport.device;
         if (connected[other] && currentBluetooth && otherBluetooth && currentBluetooth.id === otherBluetooth.id) {
           devices[deviceId].reset();
           throw new Error('同じINSOLEが2枠で選択されました。別のデバイスを選択してください。');
         }
       }
 
-      deviceInfo[deviceId] = await devices[deviceId].getDeviceInformation();
+      deviceInfo[deviceId] = await devices[deviceId].commands.readDeviceInformation();
       connected[deviceId] = true;
       pending[deviceId] = {};
       resetLiveState(deviceId, 4);
@@ -251,7 +260,7 @@
       button.textContent = '接続済み';
       button.disabled = true;
       const battery = deviceInfo[deviceId] && deviceInfo[deviceId].battery;
-      detail.textContent = `${sideFor(deviceId)} / mode ${devices[deviceId].streaming_mode || 4}${battery !== undefined ? ` / battery ${battery}` : ''}`;
+      detail.textContent = `${sideFor(deviceId)} / mode ${devices[deviceId].profile.streaming_mode || 4}${battery !== undefined ? ` / battery ${battery}` : ''}`;
     } else {
       button.textContent = simulatorMode ? 'シミュレータ起動' : 'BLE接続';
       button.disabled = Boolean(activeRun) || exclusiveBusy;
@@ -343,7 +352,7 @@
     const startAt = performance.now();
     const accumulators = {};
     ids.forEach(id => {
-      accumulators[id] = new DeviceAccumulator(id, startAt, Number(devices[id].streaming_mode) || options.mode || 4);
+      accumulators[id] = new DeviceAccumulator(id, startAt, Number(devices[id].profile.streaming_mode) || options.mode || 4);
     });
     activeRun = {
       type: options.type,
@@ -584,7 +593,7 @@
     updateControls();
     try {
       log('mode 3へ切り替えています…');
-      await Promise.all(ids.map(id => devices[id].setDataStreamingMode(3)));
+      await Promise.all(ids.map(id => devices[id].commands.setDataStreamingMode(3)));
       ids.forEach(id => {
         pending[id] = {};
         resetLiveState(id, 3);
@@ -607,7 +616,7 @@
       if (activeRun && activeRun.type === 'mode3') await finishActiveRun('error');
     } finally {
       try {
-        await Promise.all(ids.filter(id => connected[id]).map(id => devices[id].setDataStreamingMode(4)));
+        await Promise.all(ids.filter(id => connected[id]).map(id => devices[id].commands.setDataStreamingMode(4)));
         ids.forEach(id => {
           pending[id] = {};
           resetLiveState(id, 4);
@@ -673,7 +682,7 @@
       const currentYaw = latest && latest.euler ? radToDeg(latest.euler.yaw) : null;
       $(`liveStatus${deviceId}`).textContent = connected[deviceId] ? (isLive ? 'LIVE' : '待機') : '未接続';
       $(`liveSide${deviceId}`).textContent = sideFor(deviceId);
-      $(`liveMode${deviceId}`).textContent = connected[deviceId] ? String(devices[deviceId].streaming_mode || '-') : '-';
+      $(`liveMode${deviceId}`).textContent = connected[deviceId] ? String(devices[deviceId].profile.streaming_mode || '-') : '-';
       $(`liveRate${deviceId}`).textContent = connected[deviceId] ? `${format(snapshot.sampleRateHz, 1)} Hz` : '-';
       $(`liveNorm${deviceId}`).textContent = currentNorm === null ? '-' : `${format(currentNorm, 6)} / μ ${format(snapshot.norm.mean, 6)}`;
       $(`liveYaw${deviceId}`).textContent = currentYaw === null ? '-' : `${format(currentYaw, 1)}° / unwrap ${format(snapshot.yaw.endDeg, 1)}°`;

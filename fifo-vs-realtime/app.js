@@ -2,16 +2,18 @@
  * fifo-vs-realtime: 通常モード（リアルタイム/プッシュ型）と FIFO収録（ロスレス/プル型）を
  * 同条件で計測して比較するデモ。左右2台の同時計測に対応。
  *
- * - 通常モード計測: gotPress で届いたサンプルをそのまま記録（BLE取りこぼし＝欠損）
- * - FIFO計測: OrpheInsoleFifo で収録（再要求で欠損なし。回復不能分のみ dropped に計上）
+ * - 通常モード計測: on('press') で届いたサンプルをそのまま記録（BLE取りこぼし＝欠損）
+ * - FIFO計測: FifoRecorder で収録（再要求で欠損なし。回復不能分のみ dropped に計上）
  * - 到着チャート: サンプルの「実際に届いた時刻」をデバイス毎のレーンにプロット。
  *   プッシュは連続、プルはバーストになる
  * - シリアル連続性マップ: 計測範囲のシリアル番号を横に並べ、受信=緑 / 欠損=赤 で塗る
  */
 
-/* global OrpheInsoleFifo */
+/* global OrpheCoreInsoleJS */
 
-const SERIAL_MOD = OrpheInsoleFifo.UINT16_MAX || 65535;
+const { FifoRecorder, serialDistance } = OrpheCoreInsoleJS;
+
+const SERIAL_MOD = 65536; // シリアル番号は uint16（0..65535）で 1 周する
 const DEVICE_IDS = [0, 1];
 const DEVICE_LABEL = (id) => `INSOLE 0${id + 1}`;
 
@@ -21,7 +23,9 @@ for (const id of DEVICE_IDS) {
         document.getElementById(`toolkit${id}`),
         DEVICE_LABEL(id),
         id,
-        { streamingMode: 4, autoReconnect: true }
+        // このページは FIFO を自前の FifoRecorder で回す。toolkit の設定モーダルから
+        // セッションの FIFO を選ぶと notify を取り合うため、セッション側の FIFO は無効にする
+        { streamingMode: 4, autoReconnect: true, fifo: false }
     );
 }
 
@@ -151,7 +155,7 @@ function drawChart() {
 // ---- シリアル連続性マップ ---------------------------------------------------
 function serialSpanCount(first, last) {
     if (first === null || last === null) return 0;
-    return OrpheInsoleFifo.serialDistance(first, last) + 1;
+    return serialDistance(first, last) + 1;
 }
 
 function drawSerialMap(canvas, result) {
@@ -353,19 +357,18 @@ window.onload = function () {
     }
 
     for (const id of DEVICE_IDS) {
-        insoles[id].setup();
-
-        // 通常モード: 届いたサンプルをそのまま記録・描画（this.id でデバイス判別）
-        insoles[id].gotPress = function (press) {
+        // insoles[id] は toolkit が作った OrpheCoreInsole（自分で作り直さない）
+        // 通常モード: 届いたサンプルをそのまま記録・描画（クロージャの id でデバイス判別）
+        insoles[id].on('press', (press) => {
             const total = press.values.reduce((a, b) => a + b, 0);
-            pushPoint(this.id, total, 'normal');
+            pushPoint(id, total, 'normal');
             if (run && run.mode === 'normal' && runState === 'normal') {
-                recordSample(this.id, press.serial_number);
+                recordSample(id, press.serial_number);
             }
-        };
+        });
 
         // FIFO: 収録データをライブ反映（回収なのでバースト到着になる）
-        const fifo = new OrpheInsoleFifo(insoles[id], { startupDelayMs: 800 });
+        const fifo = new FifoRecorder(insoles[id], { startupDelayMs: 800 });
         fifo.onSamples = function (deviceId, samples) {
             for (const s of samples) {
                 const total = s.press.values.reduce((a, b) => a + b, 0);
@@ -374,24 +377,24 @@ window.onload = function () {
             }
         };
         fifo.onProgress = function (info) {
-            if (this.deviceId === (run && run.activeIds[0])) {
+            if (id === (run && run.activeIds[0])) {
                 el.lagBadge.textContent = String(info.lag);
             }
         };
         fifo.onDataLoss = function (info) {
-            console.warn(`${DEVICE_LABEL(this.deviceId)}: FIFO data loss (${info.reason}): +${info.dropped}, cumulative ${info.cumulative}`);
-            if (run && run.mode === 'fifo' && run.dev[this.deviceId]) {
-                run.dev[this.deviceId].dropped = info.cumulative;
+            console.warn(`${DEVICE_LABEL(id)}: FIFO data loss (${info.reason}): +${info.dropped}, cumulative ${info.cumulative}`);
+            if (run && run.mode === 'fifo' && run.dev[id]) {
+                run.dev[id].dropped = info.cumulative;
             }
         };
         fifo.onStopped = function (info) {
             // stop() 後の回収フェーズ（drain）で救えたシリアル数を結果カードに反映
-            if (run && run.dev[this.deviceId]) {
-                run.dev[this.deviceId].drainRecovered = info.drainRecovered || 0;
+            if (run && run.dev[id]) {
+                run.dev[id].drainRecovered = info.drainRecovered || 0;
             }
         };
         fifo.onError = function (error) {
-            console.warn(`${DEVICE_LABEL(this.deviceId)}: FIFO error`, error);
+            console.warn(`${DEVICE_LABEL(id)}: FIFO error`, error);
         };
         fifos[id] = fifo;
     }
