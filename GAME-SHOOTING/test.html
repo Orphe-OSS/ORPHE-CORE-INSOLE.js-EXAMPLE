@@ -9,7 +9,7 @@
 
 <body>
     <h1>Number of STEPS</h1>
-<button onclick="ble.begin();">connect</button>
+<button onclick="ble.begin('STEP_ANALYSIS');">connect</button>
     <br>
     <ul>
         <li id="steps_number"></li>
@@ -17,17 +17,18 @@
 
 
     
-    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
     <script>
-        
-        var ble = new Orphe(0);
-        window.onload = function () {
-            // ORPHE CORE Init
-            ble.setup();
-            ble.gotStepsNumber = function (steps_number) {
-                document.querySelector('#steps_number').innerHTML = steps_number.value;
-            }
-        }
+        const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
+
+        var ble = new OrpheCoreInsole({
+            profile: coreProfile({ namePrefix: 'CR-' }),
+            id: 0,
+            events: { onError(error) { console.error(error); } }
+        });
+        ble.on('steps_number', function (steps_number) {
+            document.querySelector('#steps_number').innerHTML = steps_number.value;
+        });
     
     </script>
 </body>

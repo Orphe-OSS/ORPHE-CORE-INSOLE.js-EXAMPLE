@@ -91,13 +91,13 @@ ORPHE Direction → Game Lane
 
 **Code Reference** (main.js):
 ```javascript
-ble.gotGait = function(_gait) {
+bles[i].on('gait', (_gait) => {
     const direction = _gait.direction;
     if (direction !== orpheData.lastDirection[id]) {
         orpheData.lastDirection[id] = direction;
         handleOrpheInput(direction);
     }
-};
+});
 ```
 
 ### 3. Game Mechanics
@@ -171,20 +171,20 @@ ble.gotGait = function(_gait) {
 
 ## 🔄 Integration with Existing Codebase
 
-### Compatibility with ORPHE-CORE.js
+### Compatibility with ORPHE-CORE-INSOLE.js
 
 **Dependencies Used**:
 ```html
 <!-- From CDN -->
-<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE.js@main/js/ORPHE-CORE.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE.js/js/CoreToolkit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 ```
 
 **Integration Points**:
-1. `Orphe(id)` class instantiation
+1. `bles[i]` (`OrpheCoreInsole` instances provided by the toolkit; not created by the page)
 2. `buildCoreToolkit()` for UI
-3. `gotGait` callback for step detection
-4. `onConnect` callback for device status
+3. `bles[i].on('gait', …)` listener for step detection
+4. `bles[i].onEvent('onConnect', …)` for device status
 
 ### Differences from GAME-PINGPONG
 
@@ -248,7 +248,7 @@ ble.gotGait = function(_gait) {
 
 1. Navigate to project root:
    ```bash
-   cd /path/to/ORPHE-CORE.js
+   cd /path/to/ORPHE-CORE-INSOLE.js-EXAMPLE
    ```
 
 2. Start local server:
@@ -429,12 +429,12 @@ ble.gotGait = function(_gait) {
 1. Files are self-contained in `examples/GAME-DDR/`
 2. No modifications needed to other example projects
 3. Uses same CDN dependencies as GAME-PINGPONG
-4. Compatible with existing ORPHE-CORE.js API
+4. Uses the ORPHE-CORE-INSOLE.js `OrpheCoreInsole` API (`on()` / `onEvent()`)
 
 **Testing Integration**:
 ```bash
-# From ORPHE-CORE.js root
-cd examples/GAME-DDR
+# From ORPHE-CORE-INSOLE.js-EXAMPLE root
+cd GAME-DDR
 python -m http.server 8000
 # Open http://localhost:8000
 ```
