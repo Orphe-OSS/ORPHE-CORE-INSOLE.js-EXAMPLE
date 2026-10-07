@@ -61,7 +61,7 @@ renderSensorGrid(0);
 renderSensorGrid(1);
 
 //--------------------------------------------------
-// デバイススロット（CORE / INSOLE の選択。setup() は device-slot が呼ぶ）
+// デバイススロット（CORE / INSOLE の選択。slot.device は OrpheCoreInsole）
 //--------------------------------------------------
 const slots = [0, 1].map(id => buildDeviceSlot(document.getElementById(`slot${id}`), id, {
     storageKey: 'sensor-dashboard',
@@ -96,95 +96,95 @@ function setupCallbacks(deviceIndex) {
     const kind = slots[deviceIndex].kind;
     const sideOf = () => deviceToSideMapping[deviceIndex];
 
-    device.onConnect = function () {
+    device.onEvent('onConnect', () => {
         updateConnectionStatus(deviceIndex, true);
-    };
+    });
 
-    device.onDisconnect = function () {
+    device.onEvent('onDisconnect', () => {
         updateConnectionStatus(deviceIndex, false);
         // マッピングをクリア
         const side = deviceToSideMapping[deviceIndex];
         delete deviceToSideMapping[deviceIndex];
         if (side !== undefined) sideQuats[side] = null;
         refreshSideKinds();
-    };
+    });
 
     // 加速度 [G]
-    device.gotConvertedAcc = function (acc) {
+    device.on('converted_acc', (acc) => {
         const side = sideOf();
         if (side === undefined) return;
         updateVec('acc', side, [acc.x, acc.y, acc.z]);
         updateMeta('acc', side, acc);
-    };
+    });
 
     // 角速度 [dps]
-    device.gotConvertedGyro = function (gyro) {
+    device.on('converted_gyro', (gyro) => {
         const side = sideOf();
         if (side === undefined) return;
         updateVec('gyro', side, [gyro.x, gyro.y, gyro.z]);
         updateMeta('gyro', side, gyro);
-    };
+    });
 
     // クォータニオン（3D 表示にも使う。CORE / INSOLE 共通）
-    device.gotQuat = function (quat) {
+    device.on('quat', (quat) => {
         const side = sideOf();
         if (side === undefined) return;
         sideQuats[side] = quat;
         updateVec('quat', side, [quat.w, quat.x, quat.y, quat.z]);
         updateMeta('quat', side, quat);
-    };
+    });
 
-    device.gotEuler = function (euler) {
+    device.on('euler', (euler) => {
         const side = sideOf();
         if (side === undefined) return;
         updateVec('euler', side, [euler.pitch, euler.roll, euler.yaw]);
-    };
+    });
 
     if (kind === 'insole') {
         // 圧力センサー（6ch）
-        device.gotPress = function (press) {
+        device.on('press', (press) => {
             const side = sideOf();
             if (side === undefined) return;
             press.values.forEach((value, i) => setText(`press-${i}-${side}`, value));
             updateMeta('press', side, press);
-        };
+        });
         return;
     }
 
     // ─── CORE のみ（STEP_ANALYSIS） ───
-    device.gotGait = function (gait) {
+    device.on('gait', (gait) => {
         const side = sideOf();
         if (side === undefined) return;
         setText(`gait-0-${side}`, gait.type);
         setText(`gait-1-${side}`, gait.direction);
         setText(`gait-2-${side}`, gait.calorie.toFixed(3));
         setText(`gait-3-${side}`, gait.distance.toFixed(3));
-    };
-    device.gotStride = function (stride) {
+    });
+    device.on('stride', (stride) => {
         const side = sideOf();
         if (side === undefined) return;
         updateVec('stride', side, [stride.x, stride.y, stride.z], 1);
-    };
-    device.gotFootAngle = function (footAngle) {
+    });
+    device.on('foot_angle', (footAngle) => {
         const side = sideOf();
         if (side === undefined) return;
         setText(`stride-0-${side}`, footAngle.value.toFixed(3));
-    };
-    device.gotPronation = function (pronation) {
+    });
+    device.on('pronation', (pronation) => {
         const side = sideOf();
         if (side === undefined) return;
         updateVec('pronation', side, [pronation.x, pronation.y, pronation.z], 1);
-    };
-    device.gotLandingImpact = function (landingImpact) {
+    });
+    device.on('landing_impact', (landingImpact) => {
         const side = sideOf();
         if (side === undefined) return;
         setText(`pronation-0-${side}`, landingImpact.value.toFixed(3));
-    };
-    device.gotDelta = function (delta) {
+    });
+    device.on('delta', (delta) => {
         const side = sideOf();
         if (side === undefined) return;
         updateVec('delta', side, [delta.x, delta.y, delta.z]);
-    };
+    });
 }
 
 setupCallbacks(0);
@@ -204,12 +204,12 @@ function connectDevice(deviceIndex) {
     // CORE は notification type を選べる。INSOLE は SENSOR_VALUES 固定
     const begin = kind === 'core'
         ? device.begin(document.getElementById(`char${deviceIndex}`).value)
-        : device.begin();
+        : device.begin('SENSOR_VALUES');
     begin
         .then(() => {
-            const deviceName = device.bluetoothDevice ? device.bluetoothDevice.name : 'Unknown';
+            const deviceName = device.transport.device ? device.transport.device.name : 'Unknown';
             console.log(`Device ${deviceIndex + 1} connected: ${deviceName}`);
-            // begin() 実行後、device_information を参照して左右を決める
+            // begin() 実行後、profile.device_information を参照して左右を決める
             setupDeviceMapping(deviceIndex);
         })
         .catch(error => {
@@ -220,7 +220,8 @@ function connectDevice(deviceIndex) {
 
 // CORE のみ: 姿勢（クォータニオン計算）をリセット
 function resetAttitude(deviceIndex) {
-    devices[deviceIndex].resetMotionSensorAttitude().catch(error => {
+    if (slots[deviceIndex].kind !== 'core') return; // resetAttitude は CORE のコマンド
+    devices[deviceIndex].commands.resetAttitude().catch(error => {
         console.error(`Device ${deviceIndex + 1} reset attitude error:`, error);
     });
 }
@@ -236,7 +237,7 @@ function mountPositionOf(info) {
 
 function setupDeviceMapping(deviceIndex) {
     try {
-        const deviceInfo = devices[deviceIndex].device_information;
+        const deviceInfo = devices[deviceIndex].profile.device_information;
         const kind = slots[deviceIndex].kind;
         console.log(`Device ${deviceIndex} info:`, deviceInfo);
 
@@ -315,8 +316,8 @@ function refreshSideKinds() {
 function updateDeviceInformation(deviceIndex, side) {
     try {
         const device = devices[deviceIndex];
-        const deviceInfo = device.device_information;
-        const name = device.bluetoothDevice ? device.bluetoothDevice.name : '—';
+        const deviceInfo = device.profile.device_information;
+        const name = device.transport.device ? device.transport.device.name : '—';
         setText(`device-name-${side}`, `${name || '—'} (${slots[deviceIndex].kind.toUpperCase()})`);
         if (!deviceInfo) return;
 

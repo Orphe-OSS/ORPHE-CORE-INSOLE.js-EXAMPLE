@@ -3,10 +3,15 @@
 A measurement tool that connects **two ORPHE INSOLE units (left/right) and one ORPHE CORE
 on a single page**, and records them into one CSV with synchronized timestamps.
 
-- INSOLE ×2: `InsoleToolkit.js` (`insoles[0]` / `insoles[1]`).
+- INSOLE ×2: InsoleToolkit (`buildInsoleToolkit`, `insoles[0]` / `insoles[1]`).
+  Each is an `OrpheCoreInsole` (insole profile); live pressure comes from `insoles[i].on('press', …)`.
   Live view uses Realtime streaming (gyro, acc, 6ch pressure at 200Hz);
   **during recording it automatically switches to FIFO (lossless recording)**
-- CORE ×1: `src/CoreCompanionToolkit.js` (`orpheCore`). Always Realtime
+- CORE ×1: CoreCompanionToolkit (`buildCoreCompanionToolkit`, `orpheCore`). Always Realtime.
+  `orpheCore` is an `OrpheCoreInsole` (core profile); IMU values come from
+  `orpheCore.on('converted_acc' | 'converted_gyro', …)`
+- Recording uses the toolkit session API (`getInsoleToolkitSession(i)`,
+  `session.startMeasurement({ profile: 'fifo-recording' })` / `session.stopMeasurement()`)
 
 ## Usage
 
@@ -71,36 +76,30 @@ See the comment at the top of `app.js` for time-sync implementation details.
   the recording window and how many rows were produced (to distinguish reception-side
   loss from recording-side loss)
 
-## Why not CoreToolkit.js (bundled with ORPHE-CORE.js)?
+## Why CoreCompanionToolkit instead of CoreToolkit?
 
-`CoreToolkit.js` from the ORPHE-CORE.js repository collides with `InsoleToolkit.js`
-on globals (`bles` / `cores`) and DOM IDs (`switch_ble0`, etc.), so the two cannot be
-loaded on the same page. `src/CoreCompanionToolkit.js` is a single-CORE toolkit that
-uses `core_`-namespaced DOM IDs and an independent global `orpheCore`.
+`buildCoreToolkit` uses the same globals (`cores`) and DOM ID scheme as the
+multi-device toolkits. `buildCoreCompanionToolkit` is a single-CORE toolkit that
+uses `core_`-namespaced DOM IDs and an independent global `orpheCore`, so it can sit
+next to two InsoleToolkit slots on one page.
 
-### Workaround for CORE not appearing in the device chooser (built in)
+### CORE units that do not advertise the service UUID
 
-The stock `requestDevice()` in ORPHE-CORE.js filters devices with
-`filters: [{services: [ORPHE_INFORMATION]}]`, but real CORE units (CR- series) do not
-include the service UUID in their advertising packets, so no CORE appears in the
-chooser. `CoreCompanionToolkit.js` replaces `requestDevice()` with an OR filter of
-`namePrefix: 'CR-'` and `services`. For CORE units whose names do not start with
-`CR-`, use `buildCoreCompanionToolkit(el, title, { chooserNamePrefix: '...' })`.
-
-> This issue also applies to `requestDevice()` in ORPHE-CORE.js itself (upstream);
-> ideally the SDK should allow the filters to be configured.
+Real CORE units (CR- series) do not include the service UUID in their advertising
+packets. The companion toolkit creates `orpheCore` with
+`coreProfile({ namePrefix: 'CR-' })`, so the chooser matches by name prefix as well as
+by service. For CORE units whose names do not start with `CR-`, use
+`buildCoreCompanionToolkit(el, title, { chooserNamePrefix: '...' })`.
 
 ## Script load order (important)
 
 ```html
-<!-- 1. ORPHE CORE SDK (load first) -->
-<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE.js@v1.4.1/js/ORPHE-CORE.js"></script>
-<!-- 2. ORPHE INSOLE SDK + Toolkits -->
-<script src="../../src/ORPHE-INSOLE.js"></script>
-<script src="../../src/InsoleToolkit.js"></script>
-<script src="../../src/InsoleFifo.js"></script>   <!-- required for FIFO recording -->
-<script src="../../src/CoreCompanionToolkit.js"></script>
+<!-- 1. ORPHE-CORE-INSOLE.js (shared CORE / INSOLE SDK, load first) -->
+<script src="../vendor/orphe-core-insole.js"></script>
+<!-- 2. Toolkits (InsoleToolkit / CoreCompanionToolkit / fifo-recording session) -->
+<script src="../vendor/orphe-core-insole-toolkit.js"></script>
 ```
 
-When ORPHE-CORE.js is loaded first, `Orphe` refers to CORE and the INSOLE is used via
-`OrpheInsole` (the SDKs are designed to coexist).
+Both INSOLE and CORE are `OrpheCoreInsole` instances (the device type is selected by
+the profile), so subscribe with `on(field, …)`, `onEvent(name, …)` and `onRaw(…)`
+instead of assigning `got*` / `on*` callbacks.
