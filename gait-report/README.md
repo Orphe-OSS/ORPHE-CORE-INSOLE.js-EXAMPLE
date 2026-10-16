@@ -1,6 +1,6 @@
 # Gait Report
 
-ORPHE INSOLE の **Step Analysis**（`OrpheInsoleGait` / Toolkit `realtime-full-step`）から
+ORPHE INSOLE の **Step Analysis**（`InsoleGait` / Toolkit `realtime-full-step`）から
 1歩ごとの歩容パラメータを受け取り、**「記録開始」→ 1歩ごとにレポートがライブ更新 →
 左右それぞれ20歩そろった時点で平均±SDのレポートとして確定**する計測セッション型のexampleです。
 
@@ -45,11 +45,11 @@ ORPHE INSOLE の **Step Analysis**（`OrpheInsoleGait` / Toolkit `realtime-full-
 |---|---|
 | `side` | `left` / `right`（mount_position から判定した足） |
 | `device_id` | Toolkit のデバイス番号（0 / 1）。デモ再生の行は空 |
-| `fw_version` | そのデバイスの FW バージョン（`getFirmwareVersion()`: DIS 0x180A → advertisement の順）。FW 版で pitch/roll の入れ替わりや Step Analysis 非対応などの既知差があるため必ず残す。取得できない FW/環境とデモ再生の行は空 |
-| `sdk_version` | row を生成した ORPHE-INSOLE.js の版（`OrpheInsole.SDK_VERSION`、package.json の version と同じ）。gyro 換算や `-1` sentinel の扱いなどデコード規則の差異を後から追うため |
+| `fw_version` | そのデバイスの FW バージョン（`OrpheCoreInsoleJS.insoleFirmwareVersion(insole)`: advertisement → FW 情報の順）。FW 版で pitch/roll の入れ替わりや Step Analysis 非対応などの既知差があるため必ず残す。取得できない FW/環境とデモ再生の行は空 |
+| `sdk_version` | row を生成した ORPHE-CORE-INSOLE.js の版（読み込んだ `orphe-core-insole.js` の CDN URL の `@v<version>` から得る。ローカルの `vendor/` から読み込んだ場合は空）。gyro 換算や `-1` sentinel の扱いなどデコード規則の差異を後から追うため |
 | `recorded_at` | ブラウザが row を受信した時刻。**ISO 8601 の UTC（末尾 `Z`、例 `2026-09-16T10:45:37.118Z`）**。ローカル時刻は使わない |
 | `source` | `live`（実機）/ `demo`（合成データ） |
-| `step_number` 〜 `calorie` | [`src/InsoleGait.js`](../../src/InsoleGait.js) の CSV と同じ21列・同じ順（`OrpheInsoleGait.CSV_HEADER`） |
+| `step_number` 〜 `calorie` | [`src/gait/aggregator.ts`](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/blob/main/src/gait/aggregator.ts) の CSV と同じ21列・同じ順（`GAIT_CSV_HEADER`） |
 
 - 左右の行は受信時刻の昇順にマージされます（左右2台の時系列を1本で追えます）。
 - 数値は SDK の CSV と同じ書式（整数はそのまま、小数は4桁）。FW の未確定値（`-1`）や欠損（空欄）は
@@ -89,13 +89,12 @@ buildInsoleToolkit(toolkit, "INSOLE 01", 0, {
     }
   }
 });
-insoles[0].setup();   // 必須（buildInsoleToolkit は setup() を呼びません）
 ```
 
 | 参照先 | 役割 |
 |---|---|
-| [`src/InsoleGait.js`](../../src/InsoleGait.js) | Step Analysis characteristic の購読と1歩ごとの row 集約 |
-| [`src/InsoleToolkit.js`](../../src/InsoleToolkit.js) | 接続UI、`realtime-full-step` プロファイル、通知livenessの検証 |
+| [`src/gait/analyzer.ts`](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/blob/main/src/gait/analyzer.ts)（`InsoleGait`） | Step Analysis characteristic の購読と1歩ごとの row 集約 |
+| [`src/toolkit/insole-toolkit.ts`](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/blob/main/src/toolkit/insole-toolkit.ts) / [`src/session/insole-toolkit-session.ts`](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/blob/main/src/session/insole-toolkit-session.ts) | 接続UI、`realtime-full-step` プロファイル、通知livenessの検証 |
 | [`./report.js`](./report.js) | 集計ロジック（平均±SD・CV・左右差・分布・確定判定）と CSV 生成（`buildRowsCsv`）。純関数のみで Node からテスト可能 |
 | [`./i18n.js`](./i18n.js) | ja / en の表示文言（step-analysis と同じ仕組み） |
 

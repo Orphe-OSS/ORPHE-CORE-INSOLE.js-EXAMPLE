@@ -15,7 +15,7 @@
  * L/R banks: the LEFT insole plays bank L (poly synth pad + one drum set),
  * the RIGHT insole plays bank R (mono synth lead + a different-timbre set).
  * Same gesture number = same sound category, different timbre per side.
- * Side comes from device_information.mount_position (fallback: id 0=L, 1=R).
+ * Side comes from profile.device_information.mount_position (fallback: id 0=L, 1=R).
  *
  * Detection notes:
  *   - Streaming mode 3 (200 Hz, gyro+acc+press). Orientation is derived from
@@ -1824,51 +1824,52 @@ window.addEventListener('load', function () {
   });
 
   for (let i = 0; i < 2; i++) {
-    insoles[i].setup();
+    // insoles[i] is the toolkit-owned OrpheCoreInsole (do not recreate it)
+    const insole = insoles[i];
+    const id = i;
 
-    insoles[i].onConnect = function () {
+    insole.onEvent('onConnect', () => {
       // IMPORTANT: no GATT calls here — onConnect fires while begin() is
       // still running its own GATT sequence, and concurrent operations fail
       // with "GATT operation already in progress" (breaking the connection).
-      // begin() populates device_information itself, so we just poll it.
-      const self = this;
-      state.connected[this.id] = true;
+      // begin() populates profile.device_information itself, so we just poll it.
+      state.connected[id] = true;
       Audio.init().then(armAudioButton); // no GATT, safe
       updateLaneDevices();
       let tries = 0;
       const poll = setInterval(() => {
-        const info = self.device_information;
+        const info = insole.profile.device_information;
         if (info && typeof info.mount_position !== 'undefined') {
-          state.sides[self.id] = (info.mount_position & 1) ? 'R' : 'L';
+          state.sides[id] = (info.mount_position & 1) ? 'R' : 'L';
           clearInterval(poll);
           updateLaneDevices();
         } else if (++tries > 20) {
           clearInterval(poll);
         }
       }, 500);
-    };
-    insoles[i].onDisconnect = function () {
-      state.connected[this.id] = false;
+    });
+    insole.onEvent('onDisconnect', () => {
+      state.connected[id] = false;
       updateLaneDevices();
-    };
+    });
 
-    insoles[i].gotConvertedAcc = function (acc) {
-      state.latest[this.id] = state.latest[this.id] || {};
-      state.latest[this.id].acc = acc;
-      engines[this.id].onAcc(acc);
-    };
-    insoles[i].gotConvertedGyro = function (gyro) {
-      state.latest[this.id] = state.latest[this.id] || {};
-      state.latest[this.id].gyro = gyro;
-      engines[this.id].onGyro(gyro);
-    };
-    insoles[i].gotPress = function (press) {
-      state.latest[this.id] = state.latest[this.id] || {};
-      state.latest[this.id].press = press;
-      engines[this.id].onPress(press);
-    };
-    insoles[i].gotBLEFrequency = function (freq) { state.hz[this.id] = freq; };
-    insoles[i].lostData = function () { state.lost++; };
+    insole.on('converted_acc', (acc) => {
+      state.latest[id] = state.latest[id] || {};
+      state.latest[id].acc = acc;
+      engines[id].onAcc(acc);
+    });
+    insole.on('converted_gyro', (gyro) => {
+      state.latest[id] = state.latest[id] || {};
+      state.latest[id].gyro = gyro;
+      engines[id].onGyro(gyro);
+    });
+    insole.on('press', (press) => {
+      state.latest[id] = state.latest[id] || {};
+      state.latest[id].press = press;
+      engines[id].onPress(press);
+    });
+    insole.on('ble_frequency', (freq) => { state.hz[id] = freq; });
+    insole.on('lost_data', () => { state.lost++; });
   }
 
   // controls

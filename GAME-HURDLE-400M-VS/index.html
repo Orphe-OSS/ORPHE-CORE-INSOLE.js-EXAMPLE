@@ -280,8 +280,8 @@
     }
   </style>
   <!-- ORPHE CORE ライブラリと依存関係 -->
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
   <script type="module">
   import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
@@ -1204,8 +1204,7 @@
     // Setup each device
     for (let i = 0; i < bles.length; i++) {
       // Two-player races must not reuse a remembered single device for both players.
-      bles[i].forgetLastBluetoothDevice();
-      bles[i].setup();
+      bles[i].transport.forgetRememberedDevice();
     }
 
     // Build CoreToolkit for each device.
@@ -1245,66 +1244,67 @@
     for (let ble of bles) {
       setupDataCallbacks(ble);
 
-      ble.onConnect = function(uuid) {
-        console.log('🟢 ORPHE CORE Device ' + this.id + ' connected: ' + uuid);
-      };
+      ble.onEvent('onConnect', function(uuid) {
+        console.log('🟢 ORPHE CORE Device ' + ble.id + ' connected: ' + uuid);
+      });
 
-      ble.onStartNotify = function(uuid) {
-        markDeviceStreaming(this.id, uuid);
-      };
+      ble.onEvent('onStartNotify', function(uuid) {
+        markDeviceStreaming(ble.id, uuid);
+      });
 
-      ble.onDisconnect = function() {
-        streamingDeviceIds.delete(this.id);
-        console.log('🔴 ORPHE CORE Device ' + this.id + ' disconnected (Total: ' + streamingDeviceIds.size + '/2)');
-      };
+      ble.onEvent('onDisconnect', function() {
+        streamingDeviceIds.delete(ble.id);
+        console.log('🔴 ORPHE CORE Device ' + ble.id + ' disconnected (Total: ' + streamingDeviceIds.size + '/2)');
+      });
     }
 
     function setupDataCallbacks(ble_device) {
-      ble_device.gotConvertedAcc = function(_acc) {
+      const id = ble_device.id;
+      ble_device.on('converted_acc', function(_acc) {
         if (!_acc) return;
-        window.devices[this.id].acc = _acc;
+        window.devices[id].acc = _acc;
 
-        const acc = window.devices[this.id].acc;
+        const acc = window.devices[id].acc;
         const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
 
         const now = performance.now();
-        const player = this.id === 0 ? window.player1 : window.player2;
-        const threshold = this.id === 0 ? window.player1Thresholds.accel : window.player2Thresholds.accel;
+        const player = id === 0 ? window.player1 : window.player2;
+        const threshold = id === 0 ? window.player1Thresholds.accel : window.player2Thresholds.accel;
 
         if (!player) return;
 
         const shouldAccel = mag > threshold;
 
-        if (shouldAccel && (now - lastAccelTime[this.id]) > accelCooldownMs) {
+        if (shouldAccel && (now - lastAccelTime[id]) > accelCooldownMs) {
           player.setAccelPressed(true);
-          lastAccelTime[this.id] = now;
+          lastAccelTime[id] = now;
         } else if (!shouldAccel) {
           player.setAccelPressed(false);
         }
-      };
+      });
 
-      ble_device.gotEuler = function(_euler) {
+      ble_device.on('euler', function(_euler) {
         if (!_euler) return;
-        window.devices[this.id].eulers = _euler;
+        window.devices[id].eulers = _euler;
 
-        if (basePitch[this.id] === null) {
-          basePitch[this.id] = _euler.pitch;
+        if (basePitch[id] === null) {
+          basePitch[id] = _euler.pitch;
           return;
         }
 
         const currentPitch = _euler.pitch;
         const now = performance.now();
-        const player = this.id === 0 ? window.player1 : window.player2;
-        const threshold = this.id === 0 ? window.player1Thresholds.pitch : window.player2Thresholds.pitch;
+        const player = id === 0 ? window.player1 : window.player2;
+        const threshold = id === 0 ? window.player1Thresholds.pitch : window.player2Thresholds.pitch;
 
         if (!player) return;
 
         // Jump when pitch goes negative (toe up)
-        if (currentPitch < -threshold && (now - lastJumpTime[this.id]) > jumpCooldownMs) {
+        if (currentPitch < -threshold && (now - lastJumpTime[id]) > jumpCooldownMs) {
           player.jump();
-          lastJumpTime[this.id] = now;
+          lastJumpTime[id] = now;
         }
-      };
+      });
     }
 
     // Sensor display update function (same as original HURDLE)

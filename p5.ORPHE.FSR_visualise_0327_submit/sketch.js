@@ -28,20 +28,20 @@ var fsr = [
 window.onload = function () {
   // bles: defined in coreToolkit.js
   for (let ble of bles) {
-    ble.setup();
-    ble.onConnect = function (uuid) {
+    ble.onEvent('onConnect', function (uuid) {
       console.log("onConnect:", uuid);
       document.querySelector(`#status${ble.id}`).innerText = "ONLINE";
       document.querySelector(`#status${ble.id}`).classList =
         "bg-primary text-white";
-    };
-    ble.onDisconnect = function () {
+    });
+    ble.onEvent('onDisconnect', function () {
       document.querySelector(`#status${ble.id}`).innerText = "OFFLINE";
       document.querySelector(`#status${ble.id}`).classList =
         "bg-secondary text-white";
-    };
+    });
 
-    ble.gotQuat = function (quat) {
+    // このサンプルは quat フィールドの w/x/y/z を FSR 値（left/toe/right/heel）として読む
+    ble.on('quat', function (quat) {
       document.querySelector(`#quatw${ble.id}`).innerText = `${
         1000.0 * quat.w.toFixed(3)
       }`;
@@ -68,7 +68,7 @@ window.onload = function () {
       fsr[ble.id].toe = 1000.0 * quat.x.toFixed(3);
       fsr[ble.id].right = 1000.0 * quat.y.toFixed(3);
       fsr[ble.id].heel = 1000.0 * quat.z.toFixed(3);
-    };
+    });
 
     buildCoreToolkit(
       document.querySelector("#toolkit_placeholder"),

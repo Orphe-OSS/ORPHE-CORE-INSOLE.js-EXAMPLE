@@ -118,20 +118,20 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
     
-    <!-- ORPHE Device Setup (must be after ORPHE-CORE.js loads) -->
+    <!-- ORPHE Device Setup (must be after orphe-core-insole.js / orphe-core-insole-toolkit.js load) -->
     <script>
         // Initialize ORPHE devices
         // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言すると Toolkit が接続する実体と別物になるため宣言しない
-        bles[0].setup();
         buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'STEP_ANALYSIS');
-        bles[1].setup();
         buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'STEP_ANALYSIS');
         guardCoreToolkitBluetooth({ coreIds: [0, 1], messageElement: '#ble-support-message' });
         var connectedDevices = 0;
+        // 接続済みデバイスの id（onConnect は characteristic ごとに複数回呼ばれるため id で数える）
+        var connectedIds = new Set();
         
         console.log('🎮 ORPHE devices initialized:', bles);
     </script>

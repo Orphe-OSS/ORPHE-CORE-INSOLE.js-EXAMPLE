@@ -230,11 +230,11 @@
   // original visual-only layout. Keep array order as raw channel order so CSV
   // columns remain left_p0..p5/right_p0..p5. imageX/imageY are aligned to the
   // white cross markers baked into the insole image asset.
-  // 画像座標の正は SDK 共通定義（OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE）。
-  // orphe-core-insole.js が公開するグローバル OrpheInsoleUtils から解決する。
-  const InsoleUtils = root.OrpheInsoleUtils;
+  // 画像座標の正は SDK 共通定義（OrpheCoreInsoleJS.OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE）。
+  // orphe-core-insole.js が公開する名前空間 OrpheCoreInsoleJS から解決する。
+  const InsoleUtils = root.OrpheCoreInsoleJS && root.OrpheCoreInsoleJS.OrpheInsoleUtils;
   if (!InsoleUtils) {
-    throw new Error('balance-sway: orphe-core-insole.js を先に読み込んでください（OrpheInsoleUtils が見つかりません）');
+    throw new Error('balance-sway: orphe-core-insole.js を先に読み込んでください（OrpheCoreInsoleJS.OrpheInsoleUtils が見つかりません）');
   }
   const SensorLayout = InsoleUtils.SENSOR_LAYOUT_IMAGE.map(
     (sensor) => createSensorPoint(sensor.x, sensor.y, sensor.label)
@@ -672,12 +672,10 @@
   }
 
   function setupDevices() {
-    const toolkitInsoles = Array.isArray(root.insoles) ? root.insoles : (typeof insoles !== "undefined" && Array.isArray(insoles) ? insoles : null);
-    const toolkitBles = toolkitInsoles || (Array.isArray(root.bles) ? root.bles : (typeof bles !== "undefined" && Array.isArray(bles) ? bles : null));
-    const insoleBuilder = typeof root.buildInsoleToolkit === "function" ? root.buildInsoleToolkit : (typeof buildInsoleToolkit !== "undefined" ? buildInsoleToolkit : null);
-    const coreBuilder = typeof root.buildCoreToolkit === "function" ? root.buildCoreToolkit : (typeof buildCoreToolkit !== "undefined" ? buildCoreToolkit : null);
-    const toolkitBuilder = insoleBuilder || coreBuilder;
-    if (!toolkitBles || typeof toolkitBuilder !== "function") {
+    // orphe-core-insole-toolkit.js がグローバルに置く insoles（OrpheCoreInsole）と buildInsoleToolkit を使う
+    const toolkitInsoles = Array.isArray(root.insoles) ? root.insoles : null;
+    const toolkitBuilder = typeof root.buildInsoleToolkit === "function" ? root.buildInsoleToolkit : null;
+    if (!toolkitInsoles || !toolkitBuilder) {
       renderToolkitMessage(t("toolkitUnavailable"));
       setDeviceStatus(0, t("sdkMissing"));
       setDeviceStatus(1, t("sdkMissing"));
@@ -685,7 +683,8 @@
     }
 
     appState.devices = [0, 1].map((deviceIndex) => {
-      const instance = toolkitBles[deviceIndex];
+      // toolkit が作った OrpheCoreInsole（自分で作り直さない）
+      const instance = toolkitInsoles[deviceIndex];
       const deviceState = {
         index: deviceIndex,
         insole: instance,
@@ -693,51 +692,39 @@
         side: deviceIndex === 0 ? SIDE_LEFT : SIDE_RIGHT
       };
 
-      instance.setup();
-      instance.onConnect = () => {
+      instance.onEvent("onConnect", () => {
         deviceState.connected = true;
         appState.runningDemo = false;
         updateSourceBadge();
         updateDeviceConnectionUi(deviceState);
-      };
-      instance.onDisconnect = () => {
-        deviceState.connected = false;
-        appState.feet[deviceState.side].connected = false;
-        updateDeviceConnectionUi(deviceState);
-      };
-      instance.onClear = () => {
-        deviceState.connected = false;
-        appState.feet[deviceState.side].connected = false;
-        updateDeviceConnectionUi(deviceState);
-      };
-      instance.onStartNotify = () => {
+      });
+      instance.onEvent("onDisconnect", () => {
+        markDeviceCleared(deviceState);
+      });
+      instance.onEvent("onStartNotify", () => {
         applyStreamingMode(deviceState);
-      };
-      instance.onError = (error) => {
+      });
+      instance.onEvent("onError", (error) => {
         setDeviceStatus(deviceIndex, error && error.message ? error.message : t("connectionError"));
         root.setTimeout(() => refreshToolkitButton(deviceIndex), 0);
-      };
-      instance.gotPress = (press) => {
+      });
+      instance.on("press", (press) => {
         const side = resolveDeviceSide(deviceState);
         appState.feet[side].connected = true;
         updateFootPressure(side, press.values, press.timestamp || performance.now());
-      };
-      instance.gotConvertedAcc = (acc) => {
+      });
+      instance.on("converted_acc", (acc) => {
         appState.feet[resolveDeviceSide(deviceState)].acc = acc;
-      };
-      instance.gotConvertedGyro = (gyro) => {
+      });
+      instance.on("converted_gyro", (gyro) => {
         appState.feet[resolveDeviceSide(deviceState)].gyro = gyro;
-      };
-      instance.gotQuat = (quat) => {
+      });
+      instance.on("quat", (quat) => {
         appState.feet[resolveDeviceSide(deviceState)].quat = quat;
-      };
+      });
 
       const toolkitOptions = { streamingMode: appState.selectedMode, autoReconnect: true };
-      if (toolkitBuilder === insoleBuilder) {
-        toolkitBuilder(appState.dom.toolkitPlaceholder, `INSOLE 0${deviceIndex + 1}`, deviceIndex, toolkitOptions);
-      } else {
-        toolkitBuilder(appState.dom.toolkitPlaceholder, `INSOLE 0${deviceIndex + 1}`, deviceIndex, "SENSOR_VALUES", toolkitOptions);
-      }
+      toolkitBuilder(appState.dom.toolkitPlaceholder, `INSOLE 0${deviceIndex + 1}`, deviceIndex, toolkitOptions);
       enhanceToolkitControl(deviceIndex);
       return deviceState;
     });
@@ -752,7 +739,7 @@
 
   function enhanceToolkitControl(deviceIndex) {
     const documentRef = root.document;
-    const control = documentRef.getElementById(`insole_toolkit${deviceIndex}`) || documentRef.getElementById(`core_toolkit${deviceIndex}`);
+    const control = documentRef.getElementById(`insole_toolkit${deviceIndex}`);
     const input = documentRef.getElementById(`switch_ble${deviceIndex}`);
     const label = control ? control.querySelector(".form-check-label") : null;
     if (!control || !input || !label) {
@@ -763,9 +750,19 @@
     label.setAttribute("for", input.id);
     label.innerHTML = '<strong class="toolkit-device-name"></strong><small class="toolkit-action-label"></small>';
     input.addEventListener("change", () => {
+      // トグル OFF で toolkit が reset() する（reset() では onDisconnect が来ないので、ここで切断扱いにする）
+      if (!input.checked && appState.devices[deviceIndex]) {
+        markDeviceCleared(appState.devices[deviceIndex]);
+      }
       refreshToolkitButton(deviceIndex);
     });
     refreshToolkitButton(deviceIndex);
+  }
+
+  function markDeviceCleared(deviceState) {
+    deviceState.connected = false;
+    appState.feet[deviceState.side].connected = false;
+    updateDeviceConnectionUi(deviceState);
   }
 
   function refreshToolkitButtons() {
@@ -777,7 +774,7 @@
     if (!documentRef) {
       return;
     }
-    const control = documentRef.getElementById(`insole_toolkit${deviceIndex}`) || documentRef.getElementById(`core_toolkit${deviceIndex}`);
+    const control = documentRef.getElementById(`insole_toolkit${deviceIndex}`);
     const input = documentRef.getElementById(`switch_ble${deviceIndex}`);
     if (!control || !input) {
       return;
@@ -802,6 +799,7 @@
     if (deviceState.connected) {
       try {
         deviceState.insole.stop();
+        markDeviceCleared(deviceState);
       } catch (error) {
         setDeviceStatus(index, error.message || t("disconnectFailed"));
       }
@@ -820,11 +818,11 @@
   }
 
   async function applyStreamingMode(deviceState) {
-    if (!deviceState || !deviceState.connected || !deviceState.insole || typeof deviceState.insole.setDataStreamingMode !== "function") {
+    if (!deviceState || !deviceState.connected || !deviceState.insole || !deviceState.insole.commands) {
       return;
     }
     try {
-      await deviceState.insole.setDataStreamingMode(appState.selectedMode);
+      await deviceState.insole.commands.setDataStreamingMode(appState.selectedMode);
       setDeviceStatus(deviceState.index, t("modeStatus", deviceState.side, appState.selectedMode));
     } catch (error) {
       setDeviceStatus(deviceState.index, t("modeChangeFailed"));
@@ -832,7 +830,7 @@
   }
 
   function resolveDeviceSide(deviceState) {
-    const deviceInfo = deviceState.insole && deviceState.insole.device_information;
+    const deviceInfo = deviceState.insole && deviceState.insole.profile.device_information;
     if (deviceInfo && Number.isFinite(deviceInfo.mount_position)) {
       deviceState.side = (deviceInfo.mount_position & 1) === 0 ? SIDE_LEFT : SIDE_RIGHT;
     }

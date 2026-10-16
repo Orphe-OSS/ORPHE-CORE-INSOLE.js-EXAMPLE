@@ -373,6 +373,7 @@
   const difficultyFilter = document.querySelector('#difficultyFilter');
   const searchFilter = document.querySelector('#searchFilter');
   const languageToggle = document.querySelector('#languageToggle');
+  const sdkLink = document.querySelector('#sdkLink');
   const pageTitle = document.querySelector('#pageTitle');
   const pageLead = document.querySelector('#pageLead');
   const categoryLabel = document.querySelector('#categoryLabel');
@@ -502,6 +503,7 @@
     document.documentElement.dataset.lang = lang;
     document.title = text.documentTitle;
     languageToggle.textContent = text.toggle;
+    if (sdkLink) sdkLink.href = `https://orphe-oss.github.io/ORPHE-CORE-INSOLE.js/${lang === 'en' ? 'en/' : ''}`;
     pageTitle.textContent = text.title;
     pageLead.textContent = text.lead;
     categoryLabel.textContent = text.category;

@@ -299,7 +299,6 @@
     onStopped(info) { dropped = info.dropped; drainRecovered = info.drainRecovered; }
   }
 });
-insoles[0].setup();
 const session = getInsoleToolkitSession(0);
 
 // Start: the SDK switches the read mode, clears the device buffer and polls by serial.
@@ -340,8 +339,8 @@ const csv = LabRecorderCore.buildTrialCsv({ metadata, devices: [report], markers
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
   <script src="./recorder-core.js?v=20260916-lab-recorder"></script>
   <script src="./charts.js?v=20260916-lab-recorder"></script>
   <script src="./i18n.js?v=20260916-lab-recorder"></script>

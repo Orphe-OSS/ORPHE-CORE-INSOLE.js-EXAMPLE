@@ -185,7 +185,7 @@ const musicPath = `music/your-song.mp3`;
 
 ### ORPHE CORE Not Connecting
 
-- Check that ORPHE-CORE.js is loaded properly
+- Check that ORPHE-CORE-INSOLE.js (`orphe-core-insole.js` / `orphe-core-insole-toolkit.js`) is loaded properly
 - Ensure Bluetooth is enabled on your device
 - Try refreshing the page and reconnecting
 
@@ -253,11 +253,11 @@ Keyboard Press / ORPHE Step →
 ### ORPHE Integration
 
 ```javascript
-// Setup ORPHE callbacks
-ble.gotGait = function(_gait) {
+// Setup ORPHE listeners (bles[i] is an OrpheCoreInsole provided by the toolkit)
+bles[i].on('gait', (_gait) => {
     const direction = _gait.direction;
     handleOrpheInput(direction);
-};
+});
 ```
 
 ## 🎨 Customization
@@ -284,8 +284,8 @@ this.judgeWindow = {
 
 ## 📦 Dependencies
 
-- **ORPHE-CORE.js**: Main library for ORPHE sensor integration
-- **CoreToolkit.js**: UI toolkit for device connection
+- **ORPHE-CORE-INSOLE.js** (`orphe-core-insole.js`): Main library for ORPHE sensor integration (`OrpheCoreInsole`)
+- **orphe-core-insole-toolkit.js**: UI toolkit for device connection (`buildCoreToolkit`, `bles`)
 - **Bootstrap 5**: UI styling framework
 - **Modern Browser**: Chrome, Firefox, Safari, or Edge (with Canvas support)
 
@@ -312,7 +312,7 @@ this.judgeWindow = {
 
 ## 📄 License
 
-This project is part of the ORPHE-CORE.js examples collection.
+This project is part of the ORPHE-CORE-INSOLE.js examples collection.
 
 ## 🤝 Contributing
 
@@ -332,7 +332,7 @@ For issues related to:
 
 ## 🎓 Learning Resources
 
-- [ORPHE-CORE.js Documentation](../../README.md)
+- [ORPHE-CORE-INSOLE.js Examples](../README.md)
 - [Web Audio API Guide](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
 - [Canvas API Reference](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
 - [DDR Game Design Principles](https://en.wikipedia.org/wiki/Dance_Dance_Revolution)

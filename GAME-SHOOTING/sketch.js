@@ -12,16 +12,16 @@ function setup() {
   canvas.elt.addEventListener('keydown', handleRestartKey);
   document.addEventListener('keydown', handleRestartKey, true);
   player = new Player();
-  ble.gotEuler = function (_euler) {
+  ble.on('euler', function (_euler) {
     euler = _euler;
     player.move(euler.roll * 5);
-  };
-  ble.gotAcc = function (_acc) {
+  });
+  ble.on('acc', function (_acc) {
     let sum = sqrt(_acc.x * _acc.x + _acc.y * _acc.y + _acc.z * _acc.z);
     if (sum > 0.1) {
       missiles.push(new Missile(player.x, player.y));
     }
-  };
+  });
 }
 
 function draw() {

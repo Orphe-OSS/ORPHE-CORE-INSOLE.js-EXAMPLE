@@ -295,7 +295,33 @@ function windowResized() {
 }
 
 
-var bles = [new Orphe(0), new Orphe(1)];
+const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
+
+// ORPHE CORE を生成する（chooser の条件は名前が 'CR-' で始まるデバイス）
+function createCore(id) {
+  return new OrpheCoreInsole({
+    profile: coreProfile({ namePrefix: 'CR-' }),
+    id,
+    events: {
+      onDisconnect() {
+        document.querySelector(`#icon_bluetooth${id}`).classList = 'text-muted';
+        document.querySelector(`#icon_battery${id}`).innerHTML = '<i class="bi bi-battery"></i>';
+        document.querySelector(`#icon_battery${id}`).classList = 'text-muted';
+        document.querySelector(`#icon_reset${id}`).classList = 'text-muted';
+        document.querySelector(`#icon_brightness${id}`).classList = 'text-muted';
+        document.querySelector(`#switch_ble${id}`).checked = false;
+        bles[id].reset();
+        alert('接続が切れました');
+        bles[id].begin().catch(console.error);
+      },
+      onError(error) {
+        console.error(error);
+      },
+    },
+  });
+}
+
+var bles = [createCore(0), createCore(1)];
 
 async function toggleCoreModule(dom) {
   let checked = dom.checked;
@@ -306,7 +332,7 @@ async function toggleCoreModule(dom) {
     let ret = await ble.begin('STEP_ANALYSIS');
     console.log(number);
     setTimeout(async function () {
-      var obj = await ble.getDeviceInformation();
+      var obj = await ble.commands.readDeviceInformation();
       console.log(obj);
       let str_battery_status;
       if (obj.battery == 0) str_battery_status = 'empty';
@@ -343,8 +369,8 @@ async function toggleCoreModule(dom) {
 
 function resetCoreModule(dom) {
   let id = dom.getAttribute("value");
-  bles[id].resetMotionSensorAttitude();
-  bles[id].resetAnalysisLogs();
+  bles[id].commands.resetAttitude().catch(console.error);
+  bles[id].commands.resetAnalysisLogs().catch(console.error);
 }
 
 function toggleBrightness(dom) {
@@ -356,10 +382,10 @@ function toggleBrightness(dom) {
   document.querySelector(`#led_number${id}`).innerText = number + 1;
 
   if (number == -1) {
-    bles[id].setLED(0, 0);
+    bles[id].commands.setLED(0, 0).catch(console.error);
     document.querySelector(`#icon_brightness${id}`).classList = 'text-muted';
   } else {
-    bles[id].setLED(1, number);
+    bles[id].commands.setLED(1, number).catch(console.error);
     document.querySelector(`#icon_brightness${id}`).classList = 'text-primary';
   }
   dom.setAttribute('number', number);
@@ -369,71 +395,59 @@ let acc_count = 0;
 window.onload = function () {
 
   for (let ble of bles) {
-    chart_stride[ble.id] = new Chart(document.querySelector(`#chart_stride${ble.id}`), config_stride[ble.id]);
-    chart_quat[ble.id] = new Chart(document.querySelector(`#chart_quat${ble.id}`), config_quat[ble.id]);
+    const id = ble.id;
+    chart_stride[id] = new Chart(document.querySelector(`#chart_stride${id}`), config_stride[id]);
+    chart_quat[id] = new Chart(document.querySelector(`#chart_quat${id}`), config_quat[id]);
 
-    ble.setup();
-    ble.gotFootAngle = function (_footangle) {
-      pronation[this.id].angle = _footangle.value;
-    }
-    ble.gotPronation = function (_pronation) {
-      pronation[this.id].x = _pronation.x;
-      pronation[this.id].y = _pronation.y;
-      pronation[this.id].z = _pronation.z;
-    }
-    ble.gotGait = function (_gait) {
-    }
-    ble.gotStride = function (_stride) {
-      stride[this.id].x = 100 * _stride.x;
-      stride[this.id].y = 100 * _stride.y;
-      stride[this.id].z = 100 * _stride.z;
+    ble.on('foot_angle', (_footangle) => {
+      pronation[id].angle = _footangle.value;
+    });
+    ble.on('pronation', (_pronation) => {
+      pronation[id].x = _pronation.x;
+      pronation[id].y = _pronation.y;
+      pronation[id].z = _pronation.z;
+    });
+    ble.on('gait', (_gait) => {
+    });
+    ble.on('stride', (_stride) => {
+      stride[id].x = 100 * _stride.x;
+      stride[id].y = 100 * _stride.y;
+      stride[id].z = 100 * _stride.z;
 
-      while (chart_stride[this.id].data.labels.length > 100) {
-        chart_stride[this.id].data.labels.shift();
+      while (chart_stride[id].data.labels.length > 100) {
+        chart_stride[id].data.labels.shift();
       }
-      chart_stride[this.id].data.labels.push(_stride.steps_number);
-      while (chart_stride[this.id].data.datasets[0].data.length > 100) {
-        chart_stride[this.id].data.datasets[0].data.shift();
-        chart_stride[this.id].data.datasets[1].data.shift();
-        chart_stride[this.id].data.datasets[2].data.shift();
+      chart_stride[id].data.labels.push(_stride.steps_number);
+      while (chart_stride[id].data.datasets[0].data.length > 100) {
+        chart_stride[id].data.datasets[0].data.shift();
+        chart_stride[id].data.datasets[1].data.shift();
+        chart_stride[id].data.datasets[2].data.shift();
       }
-      chart_stride[this.id].data.datasets[0].data.push(_stride.x);
-      chart_stride[this.id].data.datasets[1].data.push(_stride.y);
-      chart_stride[this.id].data.datasets[2].data.push(_stride.z);
-      chart_stride[this.id].update();
-    }
-    ble.gotQuat = function (_quat) {
-      while (chart_quat[this.id].data.labels.length > 100) {
-        chart_quat[this.id].data.labels.shift();
+      chart_stride[id].data.datasets[0].data.push(_stride.x);
+      chart_stride[id].data.datasets[1].data.push(_stride.y);
+      chart_stride[id].data.datasets[2].data.push(_stride.z);
+      chart_stride[id].update();
+    });
+    ble.on('quat', (_quat) => {
+      while (chart_quat[id].data.labels.length > 100) {
+        chart_quat[id].data.labels.shift();
       }
-      chart_quat[this.id].data.labels.push(acc_count);
+      chart_quat[id].data.labels.push(acc_count);
 
-      while (chart_quat[this.id].data.datasets[0].data.length > 100) {
-        chart_quat[this.id].data.datasets[0].data.shift();
-        chart_quat[this.id].data.datasets[1].data.shift();
-        chart_quat[this.id].data.datasets[2].data.shift();
-        chart_quat[this.id].data.datasets[3].data.shift();
+      while (chart_quat[id].data.datasets[0].data.length > 100) {
+        chart_quat[id].data.datasets[0].data.shift();
+        chart_quat[id].data.datasets[1].data.shift();
+        chart_quat[id].data.datasets[2].data.shift();
+        chart_quat[id].data.datasets[3].data.shift();
       }
-      chart_quat[this.id].data.datasets[0].data.push(_quat.w);
-      chart_quat[this.id].data.datasets[1].data.push(_quat.x);
-      chart_quat[this.id].data.datasets[2].data.push(_quat.y);
-      chart_quat[this.id].data.datasets[3].data.push(_quat.z);
+      chart_quat[id].data.datasets[0].data.push(_quat.w);
+      chart_quat[id].data.datasets[1].data.push(_quat.x);
+      chart_quat[id].data.datasets[2].data.push(_quat.y);
+      chart_quat[id].data.datasets[3].data.push(_quat.z);
 
-      chart_quat[this.id].update();
+      chart_quat[id].update();
       acc_count++;
-    };
-
-    ble.onDisconnect = function () {
-      document.querySelector(`#icon_bluetooth${ble.id}`).classList = 'text-muted';
-      document.querySelector(`#icon_battery${ble.id}`).innerHTML = '<i class="bi bi-battery"></i>';
-      document.querySelector(`#icon_battery${ble.id}`).classList = 'text-muted';
-      document.querySelector(`#icon_reset${ble.id}`).classList = 'text-muted';
-      document.querySelector(`#icon_brightness${ble.id}`).classList = 'text-muted';
-      document.querySelector(`#switch_ble${ble.id}`).checked = false;
-      ble.reset();
-      alert('接続が切れました');
-      ble.begin();
-    }
+    });
   }
 }
 

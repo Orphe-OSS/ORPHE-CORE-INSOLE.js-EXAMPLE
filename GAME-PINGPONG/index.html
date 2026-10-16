@@ -82,8 +82,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.1/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js"
   integrity="sha384-IDwe1+LCz02ROU9k972gdyvl+AESN10+x7tBKgc9I5HFtuNz0wWnPclzo6p9vxnk"
   crossorigin="anonymous"></script>
@@ -91,45 +91,47 @@
 
   <script>
     // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言すると Toolkit が接続する実体と別物になるため宣言しない
-    bles[0].setup();
     buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
-    bles[1].setup();
     buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
     guardCoreToolkitBluetooth({
       coreIds: [0, 1],
       messageElement: '#ble-support-message'
     });
     var connectedDevices = 0;
+    // 接続済みデバイスの id（onConnect は characteristic ごとに複数回呼ばれるため id で数える）
+    const connectedIds = new Set();
+    // センサー購読を登録済みのデバイス（on() は代入と違い多重登録になるため 1 回だけ登録する）
+    const subscribedDevices = new Set();
     var gamestage = 0;
 
     /*
-    ble1.onConnect = function () {
+    ble1.onEvent('onConnect', function () {
         console.log('ble1 connected');
         if (connectedDevices == 3) {
           mystart(ble1);
           mystart(ble2);
         }
         connectedDevices++;
-      };
-    ble2.onConnect = function () {
+      });
+    ble2.onEvent('onConnect', function () {
         console.log('ble1 connected');
         if (connectedDevices == 3) {
           mystart(ble1);
           mystart(ble2);
         }
         connectedDevices++;
-      };
+      });
 
       */
       for (let ble of bles) {
-        ble.onConnect = function () {
+        ble.onEvent('onConnect', function () {
 
-            connectedDevices++;
-            // STEP_ANALYSIS_AND_SENSOR_VALUES では onConnect が
-            // 1 デバイスにつき 2 回発火する (各 characteristic ごと)。
-            // 2 デバイス × 2 characteristic = 4 回で完全接続完了。
-            // 旧コードは === 3 で「片方が中途半端な状態」で start していたため修正。
-            if (connectedDevices === 4) {
+            // onConnect は 1 デバイスにつき characteristic ごとに複数回発火するため、
+            // デバイスの id で数えて 2 台揃ったときに 1 回だけ start する。
+            if (connectedIds.has(ble.id)) return;
+            connectedIds.add(ble.id);
+            connectedDevices = connectedIds.size;
+            if (connectedDevices === 2) {
             //接続されたときの処理
 
             mystart(bles[0]);
@@ -140,7 +142,7 @@
 
             }
 
-      }
+      });
     }
 
 
@@ -201,26 +203,27 @@
 
 
     function mystart(ble_device) {
-      ble_device.gotQuat = function (_quat) {
-        devices[this.id].quats = _quat;
-      };
-      ble_device.gotEuler = function (_euler) {
-        devices[this.id].eulers = _euler;
-      };
-      ble_device.gotGait = function (_gait) {
-        devices[this.id].gaits = _gait;
-        updateMetrics(this.id, _gait);
-      };
-      ble_device.gotStride = function (_stride) {
-        devices[this.id].strides = _stride;
-        updateStrideLength(this.id, _stride);
-      };
-      ble_device.gotFootAngle = function (_foot_angle) {
-        devices[this.id].foot_angles = _foot_angle.value;
-      };
-      ble_device.gotPronation = function (_pronation) {
-        devices[this.id].pronations = _pronation;
-      };
+      if (subscribedDevices.has(ble_device)) return;
+      subscribedDevices.add(ble_device);
+      const id = ble_device.id;
+      ble_device.on('quat', function (_quat) {
+        devices[id].quats = _quat;
+      });
+      ble_device.on('euler', function (_euler) {
+        devices[id].eulers = _euler;
+      });
+      ble_device.on('gait', function (_gait) {
+        devices[id].gaits = _gait;
+      });
+      ble_device.on('stride', function (_stride) {
+        devices[id].strides = _stride;
+      });
+      ble_device.on('foot_angle', function (_foot_angle) {
+        devices[id].foot_angles = _foot_angle.value;
+      });
+      ble_device.on('pronation', function (_pronation) {
+        devices[id].pronations = _pronation;
+      });
       // gotDuration は SDK に存在しないコールバックのため削除
     }
     

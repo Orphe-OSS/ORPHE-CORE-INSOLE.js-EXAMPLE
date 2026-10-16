@@ -502,24 +502,35 @@ class BoxingGame {
     async connectDevice(side) {
         try {
             console.log(`${side} 接続処理開始`);
-            // left/right を id 0/1 で明示的に区別する。引数なしの new Orphe()
-            // だと id がデフォルトの 0 になり、両足同じ id で内部状態が衝突する。
-            const core = new Orphe(side === 'left' ? 0 : 1);
-            
             const statusIndicator = document.getElementById(`${side}Indicator`);
             const connectBtn = document.getElementById(`connect${side.charAt(0).toUpperCase() + side.slice(1)}`);
             
             statusIndicator.textContent = '接続中...';
             statusIndicator.className = 'status-indicator';
             
-            console.log(`${side} setup()実行`);
-            // begin() の内部処理で getDeviceInformation() / syncCoreTime() /
-            // startNotify('SENSOR_VALUES') を順に呼ぶため、対応する 3 つの
-            // キャラクタリスティック (DEVICE_INFORMATION / DATE_TIME /
-            // SENSOR_VALUES) を全部 setUUID する必要がある。DATE_TIME を
-            // 落とすと syncCoreTime → connectGATT('DATE_TIME') →
-            // this.hashUUID['DATE_TIME'] が undefined で TypeError になる。
-            core.setup(['DEVICE_INFORMATION', 'DATE_TIME', 'SENSOR_VALUES']);
+            // left/right を id 0/1 で明示的に区別する。両足同じ id にすると
+            // 内部状態が衝突する。
+            // setup() は不要。begin() が DEVICE_INFORMATION / DATE_TIME /
+            // SENSOR_VALUES の接続・時刻同期・notify 開始までまとめて行う。
+            // 接続イベントは constructor の events で受け取る。
+            const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
+            const core = new OrpheCoreInsole({
+                profile: coreProfile({ namePrefix: 'CR-' }),
+                id: side === 'left' ? 0 : 1,
+                events: {
+                    onScan(deviceName) {
+                        console.log(`${side} デバイス発見:`, deviceName);
+                    },
+                    onConnect(uuid) {
+                        console.log(`${side} 接続成功:`, uuid);
+                    },
+                    onError(error) {
+                        console.error(`${side} ORPHE CORE エラー:`, error);
+                        statusIndicator.textContent = '接続失敗';
+                        statusIndicator.className = 'status-indicator disconnected';
+                    },
+                },
+            });
 
             // SDK が前回ペアリングしたデバイスを localStorage から復活させ、
             // 自動 gatt.connect() を試みる。BOXING は left / right で別の
@@ -528,31 +539,15 @@ class BoxingGame {
             // (これをしないと left / right とも同じ最後のデバイス CR-* に
             //  接続を試みて NetworkError: Bluetooth Device is no longer in
             //  range を吐き続ける。)
-            if (typeof core.forgetLastBluetoothDevice === 'function') {
-              core.forgetLastBluetoothDevice();
-            }
+            core.transport.forgetRememberedDevice();
             
-            // 正しいコールバック設定
-            const gameInstance = this;
-            core.gotConvertedAcc = function(acc) {
-                gameInstance.onAccelData(side, acc);
-            };
-            core.gotConvertedGyro = function(gyro) {
-                gameInstance.onGyroData(side, gyro);
-            };
-            
-            // 接続イベントハンドリング追加
-            core.onScan = function(deviceName) {
-                console.log(`${side} デバイス発見:`, deviceName);
-            };
-            core.onConnect = function(uuid) {
-                console.log(`${side} 接続成功:`, uuid);
-            };
-            core.onError = function(error) {
-                console.error(`${side} ORPHE CORE エラー:`, error);
-                statusIndicator.textContent = '接続失敗';
-                statusIndicator.className = 'status-indicator disconnected';
-            };
+            // センサー値の購読（接続ごとに新しいインスタンスなので 1 回だけ登録される）
+            core.on('converted_acc', (acc) => {
+                this.onAccelData(side, acc);
+            });
+            core.on('converted_gyro', (gyro) => {
+                this.onGyroData(side, gyro);
+            });
             
             console.log(`${side} begin()実行 - Bluetoothダイアログが表示されるはず`);
             // 接続開始 - この時点でBluetoothダイアログが表示される

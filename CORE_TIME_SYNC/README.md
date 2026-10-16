@@ -8,7 +8,7 @@ CORE device time.
 - Connect one ORPHE CORE module.
 - Start `SENSOR_VALUES` notification to confirm the device is connected.
 - Read the device `DATE_TIME` characteristic.
-- Run `syncCoreTime()` and display round-trip timing information.
+- Run `syncTime({ samples })` and display round-trip timing information.
 
 ## Required devices
 
@@ -27,15 +27,15 @@ Use a Web Bluetooth compatible browser such as Chrome.
 ## Data / API
 
 - Notify type: `SENSOR_VALUES`
-- Main APIs: `getDateTime()`, `syncCoreTime()`
+- Main APIs: `new OrpheCoreInsole({ profile: coreProfile() })`, `on('converted_acc')`, `readDateTime()`, `syncTime({ samples })`
 
 ## Validation status
 
 Owner real-device validation passed with one ORPHE CORE:
 
 - `SENSOR_VALUES` notification showed converted acceleration values.
-- `getDateTime()` returned DateTime bytes.
-- `syncCoreTime()` returned round-trip timing and adjusted time values.
+- `readDateTime()` returned DateTime bytes (`raw`).
+- `syncTime()` returned round-trip timing and adjusted time values.
 
 This should stay positioned as a developer / recording utility rather than a
 beginner-facing gallery example.

@@ -46,24 +46,21 @@ function setup() {
     rightCycleLength = random(100, 200); // 右側の色変化周期
 
 
-    bles[0].setup();
     buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'SENSOR_VALUES');
-    bles[1].setup();
     buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'SENSOR_VALUES');
     guardCoreToolkitBluetooth({ coreIds: [0, 1], messageElement: '#ble-support-message' });
     
    // ORPHE CORE Init
 
    bles.forEach(ble => {
-    //ble.setup();
-    ble.onConnect = function () {
+    ble.onEvent('onConnect', function () {
         connectedDevices++;
         // SENSOR_VALUES のみのため onConnect は 1 デバイスにつき 1 回発火。
         // 2 デバイスで 2 回 (前: === 4 だと到達不能)。
         if (connectedDevices === 2) {
             gamepar = 5;
         }
-    }
+    });
 });
   
    rms();
@@ -73,7 +70,7 @@ function setup() {
 function rms(){
     bles.forEach((ble, index) => {
 
-        ble.gotAcc = function (_acc) {
+        ble.on('acc', function (_acc) {
             
             acc_vals[index].x.push(_acc.x);
             acc_vals[index].y.push(_acc.y);
@@ -85,9 +82,9 @@ function rms(){
             acc_rms[index].x = calculate_rms(acc_vals[index].x);
             acc_rms[index].y = calculate_rms(acc_vals[index].y);
             acc_rms[index].z = calculate_rms(acc_vals[index].z);
-          };
+          });
       
-          ble.gotEuler = function (_euler) {
+          ble.on('euler', function (_euler) {
             euler_vals[index].pitch.push(_euler.pitch);
             euler_vals[index].roll.push(_euler.roll);
             euler_vals[index].yaw.push(_euler.yaw);
@@ -96,11 +93,11 @@ function rms(){
             euler_rms[index].pitch = calculate_rms(euler_vals[index].pitch);
             euler_rms[index].roll = calculate_rms(euler_vals[index].roll);
             euler_rms[index].yaw = calculate_rms(euler_vals[index].yaw);
-          };
+          });
       
-          ble.onStartNotify = function () {
+          ble.onEvent('onStartNotify', function () {
             loop();
-          };
+          });
         });
 }
 

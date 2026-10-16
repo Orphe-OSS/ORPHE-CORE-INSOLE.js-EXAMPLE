@@ -16,8 +16,8 @@ ORPHE COREを足に装着して走る動きで進み、ハードルを越えて�
 
 ## 使うデータ
 
-- `gotConvertedAcc`
-- `gotEuler`
+- `on('converted_acc')`
+- `on('euler')`
 - Gait Analysis data
 
 ## 必要なORPHE CORE数

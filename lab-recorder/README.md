@@ -70,7 +70,7 @@ tests/lab-recorder-core.test.js   # Node 単体テスト（npm test に含まれ
 ```
 
 FIFO のプロトコル（読み取りモード切替・serial 指定の再要求・drain）は
-`src/InsoleFifo.js` / `src/InsoleToolkit.js` にあり、このページは呼ぶだけです。
+ORPHE-CORE-INSOLE.js の `FifoRecorder`（`src/fifo/`）と toolkit のセッション（`src/session/insole-toolkit-session.ts`）にあり、このページは呼ぶだけです。
 
 ## 使い方
 

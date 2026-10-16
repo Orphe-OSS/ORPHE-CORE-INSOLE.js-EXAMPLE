@@ -11,7 +11,7 @@ Visualize pronation and landing-related gait data.
 ## 使うデータ
 
 - プロネーション (pronation)
-- 接地衝撃 (landingImpact)
+- 接地衝撃 (landing_impact)
 - 歩行 (gait)
 
 ## 必要なORPHE CORE数

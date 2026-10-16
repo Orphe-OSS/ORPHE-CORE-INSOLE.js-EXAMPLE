@@ -5,19 +5,24 @@
 </head>
 <body>
     <button onclick="mystart();">connect</button>
-    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
     <script>
+        const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
         var core;
         window.onload = function () {
-            core = new Orphe(0);
-            core.setup();                
+            core = new OrpheCoreInsole({
+                profile: coreProfile({ namePrefix: 'CR-' }),
+                id: 0,
+                events: { onError(error) { console.error(error); } }
+            });
+            // 購読は 1 回だけ登録する（接続のたびに on() を呼ぶと多重登録になる）
+            core.on('acc', function (acc) {
+                console.log(acc);
+            });
         }
         function mystart() {
-          core.begin('SENSOR_VALUES');
-          core.gotAcc = function (acc) {
-              console.log(acc);
-          }
-      }
+            core.begin('SENSOR_VALUES');
+        }
     </script>
 </body>
 </html>

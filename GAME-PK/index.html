@@ -245,8 +245,8 @@
   
   <!-- ORPHE CORE ライブラリと依存関係 -->
   
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
 <script src="../assets/js/site-analytics.js"></script>
 </head>
@@ -491,10 +491,8 @@
     }
     
     // Initialize ORPHE CORE through the same instance used by CoreToolkit.
-    debugLog('INIT', 'Using CoreToolkit Orphe instance...');
+    debugLog('INIT', 'Using CoreToolkit OrpheCoreInsole instance...');
     var ble = bles[0];
-    debugLog('INIT', 'Calling ble.setup()...');
-    ble.setup();
     
     // Initialize device data storage (same structure as HURDLE)
     window.devices = {
@@ -644,12 +642,12 @@
     }
     
     // Connection handler
-    ble.onConnect = function() {
+    ble.onEvent('onConnect', function() {
       debugLog('BLE', '🔵 onConnect callback triggered');
       debugLog('BLE', 'Device info:', {
-        id: this.id,
-        name: this.name || 'unknown',
-        connected: this.isConnected
+        id: ble.id,
+        name: (ble.transport.device && ble.transport.device.name) || 'unknown',
+        connected: ble.isConnected()
       });
       
       isConnected = true;
@@ -660,27 +658,27 @@
       
       if (!dataCallbacksReady) {
         debugLog('BLE', 'Setting up data callbacks...');
-        setupDataCallbacks(this);
+        setupDataCallbacks(ble);
         dataCallbacksReady = true;
         debugLog('BLE', 'Setup complete, waiting for sensor data...');
       }
-    };
+    });
     
     // Disconnection handler
-    ble.onDisconnect = function() {
+    ble.onEvent('onDisconnect', function() {
       debugLog('BLE', '🔴 onDisconnect callback triggered');
       isConnected = false;
       document.getElementById('connection-status').textContent = '切断 / Disconnected';
       document.getElementById('connection-status').style.color = '#ff9800';
       document.getElementById('sensor-ready').style.display = 'none';
       console.warn('⚠️ ORPHE CORE disconnected');
-    };
+    });
     
     // Error handler
-    ble.onError = function(error) {
+    ble.onEvent('onError', function(error) {
       debugLog('BLE', '❌ onError callback triggered:', error);
       console.error('BLE Error:', error);
-    };
+    });
     
     // Setup data callbacks
     let accDataCount = 0;
@@ -690,15 +688,16 @@
     let dataCallbacksReady = false;
     
     function setupDataCallbacks(ble_device) {
-      debugLog('CALLBACK', 'Setting up gotConvertedAcc callback');
+      const id = ble_device.id;
+      debugLog('CALLBACK', "Setting up on('converted_acc') listener");
       // Accelerometer data
-      ble_device.gotConvertedAcc = function(_acc) {
+      ble_device.on('converted_acc', function(_acc) {
         accDataCount++;
         currentSensorData.acc = _acc;
-        if (!window.devices[this.id]) {
-          window.devices[this.id] = { acc: {x:0, y:0, z:0}, eulers: {pitch:0, roll:0, yaw:0} };
+        if (!window.devices[id]) {
+          window.devices[id] = { acc: {x:0, y:0, z:0}, eulers: {pitch:0, roll:0, yaw:0} };
         }
-        window.devices[this.id].acc = _acc;
+        window.devices[id].acc = _acc;
         
         // Log first few data points and then periodically
         const now = Date.now();
@@ -743,11 +742,11 @@
             processKick();
           }
         }
-      };
+      });
       
-      debugLog('CALLBACK', 'Setting up gotEuler callback');
+      debugLog('CALLBACK', "Setting up on('euler') listener");
       // Euler angles (from gyroscope/orientation)
-      ble_device.gotEuler = function(_euler) {
+      ble_device.on('euler', function(_euler) {
         gyroDataCount++;
         // Convert Euler to gyro-like representation for consistency
         currentSensorData.gyro = {
@@ -755,10 +754,10 @@
           y: _euler.pitch,
           z: _euler.yaw
         };
-        if (!window.devices[this.id]) {
-          window.devices[this.id] = { acc: {x:0, y:0, z:0}, eulers: {pitch:0, roll:0, yaw:0} };
+        if (!window.devices[id]) {
+          window.devices[id] = { acc: {x:0, y:0, z:0}, eulers: {pitch:0, roll:0, yaw:0} };
         }
-        window.devices[this.id].eulers = _euler;
+        window.devices[id].eulers = _euler;
         
         // Log first few data points and then periodically
         const now = Date.now();
@@ -770,7 +769,7 @@
           });
           lastGyroLogTime = now;
         }
-      };
+      });
       
       debugLog('CALLBACK', 'Callbacks registered successfully');
     }

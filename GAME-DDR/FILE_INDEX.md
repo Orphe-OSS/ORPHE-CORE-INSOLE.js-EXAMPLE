@@ -190,8 +190,8 @@ GAME-DDR/
 ```
 index.html
   ├─> style.css
-  ├─> ORPHE-CORE.js (CDN)
-  ├─> CoreToolkit.js (CDN)
+  ├─> orphe-core-insole.js (ORPHE-CORE-INSOLE.js)
+  ├─> orphe-core-insole-toolkit.js (ORPHE-CORE-INSOLE.js)
   ├─> Bootstrap (CDN)
   ├─> game/audio.js
   ├─> game/chart.js

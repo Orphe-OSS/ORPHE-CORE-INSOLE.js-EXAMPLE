@@ -1,7 +1,7 @@
 {
   "schema_version": "0.3.0",
-  "updated": "2026-10-06",
-  "purpose": "Catalog of ORPHE CORE / ORPHE INSOLE examples built on ORPHE-CORE-INSOLE.js (orphe-core-insole.js). Paths are relative to the repository root.",
+  "updated": "2026-10-07",
+  "purpose": "Catalog of ORPHE CORE / ORPHE INSOLE examples built on ORPHE-CORE-INSOLE.js (orphe-core-insole.js). All examples use the shared OrpheCoreInsole API (v0.2.0+). Paths are relative to the repository root.",
   "status_definitions": {
     "public": "Worth keeping in public navigation. Device verification can still be tracked separately.",
     "public-candidate": "Valuable, but needs copy, thumbnail, validation, or small cleanup before promotion.",
