@@ -304,11 +304,14 @@ function createCore(id) {
     id,
     events: {
       onDisconnect() {
+        // スイッチを OFF にして自分で切断したときは、通知も再接続もしない
+        const userInitiated = !document.querySelector(`#switch_ble${id}`).checked;
         document.querySelector(`#icon_bluetooth${id}`).classList = 'text-muted';
         document.querySelector(`#icon_battery${id}`).innerHTML = '<i class="bi bi-battery"></i>';
         document.querySelector(`#icon_battery${id}`).classList = 'text-muted';
         document.querySelector(`#icon_reset${id}`).classList = 'text-muted';
         document.querySelector(`#icon_brightness${id}`).classList = 'text-muted';
+        if (userInitiated) return;
         document.querySelector(`#switch_ble${id}`).checked = false;
         bles[id].reset();
         alert('接続が切れました');
