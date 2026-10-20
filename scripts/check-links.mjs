@@ -13,7 +13,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const EXPECTED_SDK_VERSION = 'v0.2.0';
+const EXPECTED_SDK_VERSION = 'v0.2.1';
 const errors = [];
 
 /** 同梱の第三者ライブラリ（互換 API の検出対象外） */

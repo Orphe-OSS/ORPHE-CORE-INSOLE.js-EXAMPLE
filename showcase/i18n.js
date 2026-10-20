@@ -67,7 +67,7 @@
             mode4Use: '全データ（デフォルト）',
             connectBrowserNote: '対応ブラウザ: Chrome / Edge / Opera（Web Bluetooth API が必要）。Firefox / Safari では接続できませんが、このページの閲覧とデモ再生は可能です。',
             snippetMinimalTitle: '最小コード',
-            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
+            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.1/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
 &lt;script&gt;
   const { OrpheCoreInsole, insoleProfile } = OrpheCoreInsoleJS;
   // id: 0 or 1 (最大2台)
@@ -282,7 +282,7 @@ insole.on('euler', (euler) =&gt; {
             mode4Use: 'All data (default)',
             connectBrowserNote: 'Supported browsers: Chrome / Edge / Opera with the Web Bluetooth API. Firefox and Safari cannot connect to devices, but the page and demo playback still work.',
             snippetMinimalTitle: 'Minimal Code',
-            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
+            snippetMinimalCode: `&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.1/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
 &lt;script&gt;
   const { OrpheCoreInsole, insoleProfile } = OrpheCoreInsoleJS;
   // id: 0 or 1, up to two devices

@@ -19,4 +19,4 @@ ORPHE CORE / ORPHE INSOLE の BLE 通信を hex のまま確認するための�
 ## 動作環境
 
 - Web Bluetooth に対応した Chrome（macOS / Windows / Linux / Android）
-- ライブラリ: [ORPHE-CORE-INSOLE.js](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js) v0.2.0（`orphe-core-insole.js` の `OrpheCoreInsole`）
+- ライブラリ: [ORPHE-CORE-INSOLE.js](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js) v0.2.1（`orphe-core-insole.js` の `OrpheCoreInsole`）
