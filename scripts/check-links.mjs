@@ -62,6 +62,9 @@ for (const file of walk(ROOT, '.html')) {
   const rel = relative(ROOT, file);
   const raw = readFileSync(file, 'utf8');
   const html = raw.replace(/<!--[\s\S]*?-->/g, '');
+  if (!/<meta\s+name=["']robots["']\s+content=["'][^"']*noindex/i.test(html)) {
+    errors.push(`${rel}: <meta name="robots" content="noindex"> が無い`);
+  }
   if (LEGACY.test(html)) errors.push(`${rel}: 旧ライブラリの <script> が残っている`);
   for (const m of html.matchAll(/\b(?:src|href)\s*=\s*"([^"]+)"/g)) {
     const url = m[1];
