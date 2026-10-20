@@ -389,25 +389,13 @@
       document.getElementById('gesture-jp').textContent = 'COREを接続してください';
     });
 
-    // Acceleration callback
-    ble.on('acc', function(acc) {
-      currentAcc = acc;
-      dataCount++;
-      processGesture();
-    });
-
-    // Gyroscope callback
-    ble.on('gyro', function(gyro) {
-      currentGyro = gyro;
-      processGesture();
-    });
-
     // Euler callback - needed for pitch-based detection
     ble.on('euler', function(euler) {
       detector.updateEuler(euler);
     });
 
-    // Also support converted values
+    // THRESHOLDS は G / °/s なので、換算済みの値だけを使う
+    // （正規化値の acc / gyro も購読すると 1 サンプルで単位の違う判定が 2 回走る）
     ble.on('converted_acc', function(acc) {
       currentAcc = acc;
       dataCount++;
