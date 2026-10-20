@@ -39,8 +39,7 @@ insoles[0].on('press', (press) => draw(press.values));
 - 実機が無いときは `OrpheCoreInsoleJS.createInsoleSimulator()` で擬似 INSOLE を使えます（例: `quaternion-validation/?sim=1`）。
 - 旧 API との対応表は [ORPHE-CORE-INSOLE.js の README](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js#旧-api-からの移行) にあります。
 
-> **注意:** `v0.2.0` のタグが ORPHE-CORE-INSOLE.js に発行されるまで、上の CDN URL は 404 になります。
-> それまではローカル検証（下記）で動かしてください。
+上記URLは公開済みの `v0.2.0` タグを参照します。未リリースのSDKを検証する場合は、下記のローカル切替手順を使ってください。
 
 ## 構成
 
