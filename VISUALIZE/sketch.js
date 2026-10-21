@@ -96,11 +96,11 @@ const feeds = []; // feeds[id] = {press?, acc, gyro, quat, euler}
 
 /**
  * デバイスの装着位置から左右を返す（0=LEFT, 1=RIGHT, null=不明）。
- *  - INSOLE: device_information.mount_position の bit0（0=LEFT, 1=RIGHT）
- *  - CORE  : device_information.lr（0/2=LEFT, 1/3=RIGHT。0xFF などは未設定）
+ *  - INSOLE: profile.device_information.mount_position の bit0（0=LEFT, 1=RIGHT）
+ *  - CORE  : profile.device_information.lr（0/2=LEFT, 1/3=RIGHT。0xFF などは未設定）
  */
 function sideOf(slot) {
-    const info = slot.device.device_information;
+    const info = slot.device.profile.device_information;
     if (!info) return null;
     if (slot.kind === 'insole') {
         if (typeof info.mount_position === 'undefined') return null;
@@ -124,7 +124,7 @@ function updatePanelOrder() {
 }
 
 /**
- * device_information は接続処理の中で onConnect の後に取得されることがあるため、
+ * profile.device_information は接続処理の中で onConnect の後に取得されることがあるため、
  * 左右が分かるまで短時間ポーリングしてからパネルを並べ替える。
  */
 function updatePanelOrderWhenReady(id, tries = 20) {
@@ -160,7 +160,6 @@ function createFeeds(id, kind) {
 
 window.onload = function () {
     for (let id = 0; id < 2; id++) {
-        // setup() は device-slot が呼ぶ
         const slot = buildDeviceSlot(document.getElementById(`toolkit${id}`), id, {
             title: id === 0 ? '01' : '02',
             storageKey: 'visualize',
@@ -175,31 +174,31 @@ window.onload = function () {
 
         const device = slot.device;
         if (slot.kind === 'insole') {
-            device.gotPress = function (press) {
-                feeds[this.id].press.push(press.values);
-            };
+            device.on('press', (press) => {
+                feeds[id].press.push(press.values);
+            });
         }
-        device.gotAcc = function (acc) {
-            feeds[this.id].acc.push([acc.x, acc.y, acc.z]);
-        };
-        device.gotGyro = function (gyro) {
-            feeds[this.id].gyro.push([gyro.x, gyro.y, gyro.z]);
-        };
-        device.gotQuat = function (quat) {
-            feeds[this.id].quat.push([quat.w, quat.x, quat.y, quat.z]);
-        };
-        device.gotEuler = function (euler) {
-            feeds[this.id].euler.push([euler.pitch, euler.roll, euler.yaw]);
-        };
-        device.lostData = function (serial_number, serial_number_prev) {
-            console.warn(`${slot.kind.toUpperCase()}${this.id}: lost packets ${serial_number_prev} -> ${serial_number}`);
-        };
-        device.onConnect = function () {
-            updatePanelOrderWhenReady(this.id);
-        };
-        device.onReconnectSuccess = function () {
-            updatePanelOrderWhenReady(this.id);
-        };
+        device.on('acc', (acc) => {
+            feeds[id].acc.push([acc.x, acc.y, acc.z]);
+        });
+        device.on('gyro', (gyro) => {
+            feeds[id].gyro.push([gyro.x, gyro.y, gyro.z]);
+        });
+        device.on('quat', (quat) => {
+            feeds[id].quat.push([quat.w, quat.x, quat.y, quat.z]);
+        });
+        device.on('euler', (euler) => {
+            feeds[id].euler.push([euler.pitch, euler.roll, euler.yaw]);
+        });
+        device.on('lost_data', ({ serial, prev }) => {
+            console.warn(`${slot.kind.toUpperCase()}${id}: lost packets ${prev} -> ${serial}`);
+        });
+        device.onEvent('onConnect', () => {
+            updatePanelOrderWhenReady(id);
+        });
+        device.onEvent('onReconnectSuccess', () => {
+            updatePanelOrderWhenReady(id);
+        });
     }
 
     // 描画ループ: pending データがあるチャートだけ update する

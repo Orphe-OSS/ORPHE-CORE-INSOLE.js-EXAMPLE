@@ -196,7 +196,7 @@ Try these challenges:
 1. Check `README.md` for detailed documentation
 2. Open browser console for error messages
 3. Review `CHANGELOG.md` for technical details
-4. Check ORPHE-CORE.js main documentation
+4. Check ORPHE-CORE-INSOLE.js main documentation
 
 ---
 

@@ -135,7 +135,7 @@ USER INPUT
     │
     └─ ORPHE: Step Detection
            │
-           └─> ble.gotGait(_gait)
+           └─> bles[i].on('gait', _gait => …)
                   │
                   └─> direction = _gait.direction
                          │
@@ -230,27 +230,25 @@ GAME INPUT HANDLER
 │  ORPHE SETUP                                        │
 └─────────────────────────────────────────────────────┘
         │
-        ├─> Create devices: bles = [Orphe(0), Orphe(1)]
+        ├─> Devices: bles[0], bles[1] (OrpheCoreInsole, provided by orphe-core-insole-toolkit.js)
         │
         ├─> Setup device 1
         │      │
-        │      ├─> bles[0].setup()
         │      └─> buildCoreToolkit('#toolkit_placeholder1', '01', 0, 'STEP_ANALYSIS')
         │
         ├─> Setup device 2
         │      │
-        │      ├─> bles[1].setup()
         │      └─> buildCoreToolkit('#toolkit_placeholder2', '02', 1, 'STEP_ANALYSIS')
         │
         └─> Register callbacks
                │
-               ├─> onConnect
+               ├─> onEvent('onConnect')
                │      │
-               │      └─> connectedDevices++
+               │      └─> connectedDevices = number of connected device ids
                │             │
                │             └─> If >= 1: Enable ORPHE input
                │
-               └─> gotGait
+               └─> on('gait')
                       │
                       └─> Receive _gait object
                              │
@@ -396,8 +394,8 @@ GAME INPUT HANDLER
        │                                │
        ▼                                ▼
 ┌──────────────┐               ┌──────────────┐
-│  ORPHE-CORE  │               │  Bootstrap   │
-│  CoreToolkit │               │  CSS/JS      │
+│ orphe-core-  │               │  Bootstrap   │
+│ insole(+tk)  │               │  CSS/JS      │
 └──────┬───────┘               └──────────────┘
        │
        ├─> bles[0], bles[1]

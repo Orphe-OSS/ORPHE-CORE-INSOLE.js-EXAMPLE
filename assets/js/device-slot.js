@@ -23,9 +23,12 @@
  *     insoleToolkitOptions: { streamingMode: 4, autoReconnect: true },
  *   });
  *   slot.kind    // 'core' | 'insole'
- *   slot.device  // Orphe（CORE）または OrpheInsole（INSOLE）のインスタンス。setup() 済み
+ *   slot.device  // OrpheCoreInsole（CORE は coreProfile、INSOLE は insoleProfile）
+ *   slot.device.on('converted_acc', (acc) => { ... });
+ *   slot.device.onEvent('onConnect', () => { ... });
  *
- * toolkit: false のときは device を new するだけで接続 UI は作らない（ページ側で begin() する）。
+ * toolkit: false のときは OrpheCoreInsole を作るだけで接続 UI は作らない（ページ側で begin() する）。
+ * options.events を渡すと、そのままコンストラクタの events になる。
  */
 (function (root) {
   'use strict';
@@ -55,11 +58,14 @@
       }
       return list[id];
     }
-    const Ctor = kind === 'core' ? root.Orphe : root.OrpheInsole;
-    if (typeof Ctor !== 'function') {
+    const sdk = root.OrpheCoreInsoleJS;
+    if (!sdk || typeof sdk.OrpheCoreInsole !== 'function') {
       throw new Error('device-slot: orphe-core-insole.js を先に読み込んでください');
     }
-    return new Ctor(id);
+    const profile = kind === 'core'
+      ? sdk.coreProfile({ namePrefix: 'CR-' }) // サービス UUID を広告しない CORE も名前で拾う
+      : sdk.insoleProfile();
+    return new sdk.OrpheCoreInsole({ profile, id, events: options.events || {} });
   }
 
   function buildDeviceSlot(parent, id, options = {}) {
@@ -86,7 +92,7 @@
     const device = createDevice(kind, id, options);
 
     select.addEventListener('change', () => {
-      if (device.isConnected && device.isConnected()) {
+      if (device.isConnected()) {
         const ok = root.confirm('接続中のデバイスを切断して種別を切り替えます。よろしいですか？');
         if (!ok) { select.value = kind; return; }
         try { device.reset(); } catch (error) { void error; }
@@ -105,12 +111,9 @@
         root.buildInsoleToolkit(toolkitHost, title, id, options.insoleToolkitOptions || {});
       }
     }
-    // Toolkit は setup() を呼ばないので、ここで必ず呼ぶ
-    device.setup();
-
     const slot = { id, kind, device, select, toolkitHost, element: wrap };
     // 接続中は種別を変えられないようにする
-    const lock = () => { select.disabled = !!(device.isConnected && device.isConnected()); };
+    const lock = () => { select.disabled = device.isConnected(); };
     root.setInterval(lock, 500);
     return slot;
   }

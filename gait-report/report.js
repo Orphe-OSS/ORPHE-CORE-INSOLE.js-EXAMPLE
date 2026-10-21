@@ -208,7 +208,7 @@
   }
 
   // CSV 出力: 記録した歩（Step Analysis row）を1歩1行で書き出す。
-  // 列は src/InsoleGait.js の CSV_HEADER と同じ順（参照実装互換）で、先頭に記録メタ列を置く。
+  // 列は ORPHE-CORE-INSOLE.js の GAIT_CSV_HEADER（src/gait/aggregator.ts）と同じ順（参照実装互換）で、先頭に記録メタ列を置く。
   const ROW_CSV_FIELDS = Object.freeze([
     "step_number", "gait_type", "stride_direction", "distance_m",
     "stance_phase_s", "swing_phase_s", "duration_s", "cadence_hz", "speed_mps",
@@ -217,7 +217,7 @@
     "pronation_deg", "pronation_type", "pronation_z_deg", "calorie"
   ]);
   // fw_version: FW 版で pitch/roll の入れ替わりや Step Analysis 非対応など既知の差異があるため、後日の解析で必ず参照できるよう行ごとに持つ。
-  // sdk_version: 行を生成した ORPHE-INSOLE.js の版（OrpheInsole.SDK_VERSION）。デコード規則（gyro 換算・sentinel 処理など）の差異を追うため。
+  // sdk_version: 行を生成した ORPHE-CORE-INSOLE.js の版（読み込んだ orphe-core-insole.js の CDN URL から得る）。デコード規則（gyro 換算・sentinel 処理など）の差異を追うため。
   // recorded_at: ISO 8601 の UTC（末尾 Z）。ローカル時刻や無指定のタイムゾーンは使わない。
   const META_CSV_FIELDS = Object.freeze(["side", "device_id", "fw_version", "sdk_version", "recorded_at", "source"]);
   const CSV_HEADER = META_CSV_FIELDS.concat(ROW_CSV_FIELDS).join(",");

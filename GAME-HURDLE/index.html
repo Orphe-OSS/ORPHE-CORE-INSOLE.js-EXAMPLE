@@ -399,8 +399,8 @@
     }
   </style>
   <!-- ORPHE CORE ライブラリと依存関係 -->
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
   <!--
     Ranking is now driven by two sources:
@@ -1457,15 +1457,17 @@
   <script>
     // Initialize ORPHE CORE devices
     // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言すると Toolkit が接続する実体と別物になるため宣言しない
-    bles[0].setup();
     buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
     //STEP_ANALYSIS_AND_SENSOR_VALUES
     //SENSOR_VALUES
-    bles[1].setup();
     buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
     guardCoreToolkitBluetooth({ coreIds: [0, 1], messageElement: '#ble-support-message' });
     
+    // 接続済みデバイスの id（onConnect は characteristic ごとに複数回呼ばれるため id で数える）
+    const connectedIds = new Set();
     var connectedDevices = 0;
+    // 2 台揃ったらセンサー入力を有効にする（以後は有効のまま）
+    let sensorsReady = false;
     
     // Global variables for sensor data
     window.devices = {
@@ -1489,23 +1491,27 @@
     
     // Connection handlers for both devices
     for (let ble of bles) {
-      ble.onConnect = function() {
-        connectedDevices++;
-        console.log('ORPHE CORE Device ' + this.id + ' connected');
+      ble.onEvent('onConnect', function() {
+        if (connectedIds.has(ble.id)) return;
+        connectedIds.add(ble.id);
+        connectedDevices = connectedIds.size;
+        console.log('ORPHE CORE Device ' + ble.id + ' connected');
         
-        if (connectedDevices === 2) {
-          // Both devices connected, start data streaming
-          for (let device of bles) {
-            device.begin('STEP_ANALYSIS_AND_SENSOR_VALUES');//ここ変更
-            setupDataCallbacks(device);
-          }
+        if (connectedDevices === 2 && !sensorsReady) {
+          // Both devices connected, start using sensor data
+          // （通知は buildCoreToolkit の notification 引数で begin 済みなので begin し直さない）
+          sensorsReady = true;
         }
-      };
+      });
+      // センサー購読は初期化時に 1 回だけ登録する
+      setupDataCallbacks(ble);
     }
     
     function setupDataCallbacks(ble_device) {
-      ble_device.gotConvertedAcc = function(_acc) {
-        window.devices[this.id].acc = _acc;
+      const id = ble_device.id;
+      ble_device.on('converted_acc', function(_acc) {
+        if (!sensorsReady) return;
+        window.devices[id].acc = _acc;
         
         // Check if either foot has acceleration for movement
         let maxAccel = 0;
@@ -1529,13 +1535,14 @@
           }
           // 閾値以上が連続しても 250ms 内には再オンしない（連打防止）
         }
-      };
+      });
       
-      ble_device.gotEuler = function(_euler) {
-        window.devices[this.id].eulers = _euler;
+      ble_device.on('euler', function(_euler) {
+        if (!sensorsReady) return;
+        window.devices[id].eulers = _euler;
         
-        if (basePitch[this.id] === null) {
-          basePitch[this.id] = _euler.pitch;
+        if (basePitch[id] === null) {
+          basePitch[id] = _euler.pitch;
           return;
         }
         
@@ -1549,7 +1556,7 @@
             lastJumpTime = now;
           }
         }
-      };
+      });
     }
     
     // Sensor value display update

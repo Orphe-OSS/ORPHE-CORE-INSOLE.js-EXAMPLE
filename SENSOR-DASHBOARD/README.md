@@ -9,9 +9,9 @@ ORPHE CORE / ORPHE INSOLE を最大2台同時に接続し、センサー値と�
 
 - スロットごとに `ORPHE CORE` / `ORPHE INSOLE` を選択（変更するとページを再読み込みします）
 - 共通: 加速度 [G]・角速度 [dps]・クォータニオン・オイラー角、タイムスタンプ/パケット番号、STATUS（バッテリー・取り付け位置・レンジ）
-- 共通: p5.js（WEBGL）+ toxiclibs による靴モデルの3D表示（`gotQuat` で回転）
-- CORE のみ: notification type の選択（`STEP_ANALYSIS` / `SENSOR_VALUES` / `STEP_ANALYSIS_AND_SENSOR_VALUES`）、Gait / Stride（Foot Angle）/ Pronation（Landing Impact）/ Delta の表示、`Reset Attitude`（`resetMotionSensorAttitude()`）
-- INSOLE のみ: 圧力 6ch の表示、`device_information.mount_position` による左右の自動割り当て
+- 共通: p5.js（WEBGL）+ toxiclibs による靴モデルの3D表示（`on('quat')` で回転）
+- CORE のみ: notification type の選択（`STEP_ANALYSIS` / `SENSOR_VALUES` / `STEP_ANALYSIS_AND_SENSOR_VALUES`）、Gait / Stride（Foot Angle）/ Pronation（Landing Impact）/ Delta の表示、`Reset Attitude`（`commands.resetAttitude()`）
+- INSOLE のみ: 圧力 6ch の表示、`profile.device_information.mount_position` による左右の自動割り当て
 
 ## 左右の割り当て
 
@@ -26,5 +26,5 @@ ORPHE CORE / ORPHE INSOLE を最大2台同時に接続し、センサー値と�
 
 ## 使用ライブラリ
 
-- [ORPHE-CORE-INSOLE.js](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js)（`Orphe` / `OrpheInsole`）
+- [ORPHE-CORE-INSOLE.js](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js)（`OrpheCoreInsole`。CORE は `coreProfile`、INSOLE は `insoleProfile`）
 - `../assets/js/device-slot.js`、p5.js、toxiclibs.js

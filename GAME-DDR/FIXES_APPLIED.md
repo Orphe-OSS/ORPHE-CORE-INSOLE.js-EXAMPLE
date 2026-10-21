@@ -9,13 +9,11 @@ BLEボタンが表示されず、START GAMEボタンも機能しない問題が�
 ### GAME-PINGPONG の実装（正しい方法）:
 ```html
 <!-- index.html内 -->
-<script src="ORPHE-CORE.js"></script>
-<script src="CoreToolkit.js"></script>
+<script src="orphe-core-insole.js"></script>
+<script src="orphe-core-insole-toolkit.js"></script>
 <script>
-    var bles = [new Orphe(0), new Orphe(1)];  // ← ORPHE-CORE.jsが読み込まれた後
-    bles[0].setup();
+    // bles（= cores）は toolkit が提供する OrpheCoreInsole。ページでは宣言しない
     buildCoreToolkit(...);
-    bles[1].setup();
     buildCoreToolkit(...);
 </script>
 ```
@@ -23,20 +21,18 @@ BLEボタンが表示されず、START GAMEボタンも機能しない問題が�
 ### GAME-DDR の実装（問題があった）:
 ```javascript
 // main.js ファイルの先頭
-let bles = [new Orphe(0), new Orphe(1)];  // ← ORPHE-CORE.jsが読み込まれる前に実行
+let bles = [/* 独自に生成した CORE ×2 */];  // ← ライブラリ読み込み前に独自の bles を宣言していた
 ```
 
 ## ✅ 実施した修正
 
 ### 1. **index.html に ORPHE 初期化スクリプトを追加**
 ```html
-<!-- ORPHE Device Setup (must be after ORPHE-CORE.js loads) -->
+<!-- ORPHE Device Setup (must be after orphe-core-insole.js / orphe-core-insole-toolkit.js load) -->
 <script>
     // Initialize ORPHE devices
-    var bles = [new Orphe(0), new Orphe(1)];
-    bles[0].setup();
+    // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言しない
     buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'STEP_ANALYSIS');
-    bles[1].setup();
     buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'STEP_ANALYSIS');
     var connectedDevices = 0;
     
@@ -47,12 +43,12 @@ let bles = [new Orphe(0), new Orphe(1)];  // ← ORPHE-CORE.jsが読み込まれ
 ### 2. **main.js から重複する宣言を削除**
 ```javascript
 // 変更前
-let bles = [new Orphe(0), new Orphe(1)];  // ← 削除
+let bles = [/* 独自に生成した CORE ×2 */];  // ← 削除
 let connectedDevices = 0;                  // ← 削除
 
 // 変更後
-// ORPHE CORE devices (initialized in inline script in index.html)
-// bles and connectedDevices are declared globally in HTML
+// ORPHE CORE devices (bles is provided by orphe-core-insole-toolkit.js)
+// connectedDevices is declared globally in HTML
 ```
 
 ### 3. **setupOrpheCORE() 関数を簡略化**
@@ -67,17 +63,20 @@ function setupOrpheCORE() {
     
     // 接続ハンドラーを設定
     for (let i = 0; i < bles.length; i++) {
-        bles[i].onConnect = function() {
-            connectedDevices++;
+        bles[i].onEvent('onConnect', function() {
+            // onConnect は characteristic ごとに複数回呼ばれるため id で数える
+            if (connectedIds.has(i)) return;
+            connectedIds.add(i);
+            connectedDevices = connectedIds.size;
             console.log(`✅ ORPHE Device ${i} connected!`);
-        };
+        });
         
-        bles[i].gotGait = function(gait) {
+        bles[i].on('gait', function(gait) {
             orpheData.gaits[i] = gait;
             if (gait.direction !== undefined) {
                 handleOrpheInput(gait.direction);
             }
-        };
+        });
     }
 }
 ```
@@ -99,10 +98,9 @@ cp ../GAME-PINGPONG/BebasNeue-Regular.ttf ./BebasNeue-Regular.ttf
 ## 🎯 修正後の動作フロー
 
 1. **HTMLファイルが読み込まれる**
-2. **ORPHE-CORE.js がCDNから読み込まれる** ✅
-3. **CoreToolkit.js が読み込まれる** ✅
-4. **インラインスクリプトで `bles` を初期化** ✅
-   - `new Orphe()` が実行される
+2. **orphe-core-insole.js が読み込まれる** ✅
+3. **orphe-core-insole-toolkit.js が読み込まれる** ✅（`bles` = OrpheCoreInsole ×2 を提供）
+4. **インラインスクリプトで CoreToolkit を構築** ✅
    - `buildCoreToolkit()` でBLEボタンが表示される
 5. **main.js が読み込まれる** ✅
    - `bles` は既に初期化済み
@@ -114,7 +112,7 @@ cp ../GAME-PINGPONG/BebasNeue-Regular.ttf ./BebasNeue-Regular.ttf
 
 1. **コンソールログ**:
 ```
-🎮 ORPHE devices initialized: [Orphe, Orphe]
+🎮 ORPHE devices initialized: [OrpheCoreInsole, OrpheCoreInsole]
 🎮 Game initialization started...
 ✅ Audio Manager initialized
 ✅ Chart Manager initialized
@@ -148,8 +146,8 @@ debugHelper.forceStart()
 
 ## 📝 まとめ
 
-**問題**: ORPHE-CORE.js が読み込まれる前に `new Orphe()` を実行していた
-**解決**: GAME-PINGPONG と同じパターンを採用し、HTML内のインラインスクリプトで初期化
+**問題**: ライブラリが読み込まれる前に main.js で独自の `bles` を作ろうとしていた
+**解決**: GAME-PINGPONG と同じパターンを採用し、toolkit が提供する `bles` を使って HTML 内のインラインスクリプトで CoreToolkit を構築
 
 これで **BLEボタンが正しく表示され、ゲームが起動する** はずです！
 

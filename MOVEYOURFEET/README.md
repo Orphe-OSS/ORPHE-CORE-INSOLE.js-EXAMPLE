@@ -10,7 +10,7 @@ Exercise-style game using foot movement.
 
 ## 使うデータ
 
-- 加速度 (gotConvertedAcc, 実Gスケール)
+- 加速度 (`on('acc')`)
 
 ## 必要なORPHE CORE数
 

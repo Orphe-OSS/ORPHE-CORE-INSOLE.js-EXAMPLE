@@ -12,7 +12,7 @@
 
 ## 使うデータ
 
-- 加速度 (gotConvertedAcc, 実Gスケール)
+- 加速度 (`on('converted_acc')`, 実Gスケール)
 - オイラー角 (euler)
 
 ## 必要なORPHE CORE数

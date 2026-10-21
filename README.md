@@ -12,19 +12,34 @@ ORPHE-CORE.js と ORPHE-INSOLE.js にあった examples を集め、ライブラ
 各 example は jsDelivr から次の 2 ファイルを読み込みます。
 
 ```html
-<!-- SDK 本体（Orphe / OrpheInsole / OrpheInsoleUtils などをグローバルに置く） -->
-<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+<!-- SDK 本体。公開 API はグローバル OrpheCoreInsoleJS に入る -->
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
 <!-- 接続 UI（buildCoreToolkit / buildInsoleToolkit / buildCoreCompanionToolkit）。使う example だけ -->
-<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 ```
 
-- SDK は旧ライブラリ互換の `Orphe`（CORE）と `OrpheInsole`（INSOLE）を提供します。example のコードは `new Orphe(0)` や `gotAcc = …` のまま動きます。
-- `Orphe` は常に CORE のクラスです。INSOLE は `OrpheInsole` を使ってください（旧 ORPHE-INSOLE.js の `Orphe` 別名はありません）。
-- Toolkit が作る `cores`（= `bles`）と `insoles` をそのまま使います。example 側で `var bles = [new Orphe(0), …]` と作り直すと、Toolkit が接続するインスタンスと別物になりコールバックが届きません。
-- 旧ライブラリで別ファイルだった `float16.min.js`・`quaternion.js`・`BleSharedBridge.js`・`InsoleUtils.js`・`InsoleFifo.js`・`InsoleGait.js`・`InsoleSimulator.js` は SDK に含まれます。
+example のコードはすべて新しい共通 API の `OrpheCoreInsole` で書いています。
+旧ライブラリ互換の `Orphe` / `OrpheInsole` / `got*` 代入は SDK に残っていますが、example では使いません。
 
-> **注意:** `v0.1.0` のタグが ORPHE-CORE-INSOLE.js に発行されるまで、上の CDN URL は 404 になります。
-> それまではローカル検証（下記）で動かしてください。
+```js
+// 接続 UI を使わない場合: 名前空間から取り出して自分で作る
+const { OrpheCoreInsole, coreProfile, insoleProfile } = OrpheCoreInsoleJS;
+const core = new OrpheCoreInsole({ profile: coreProfile({ namePrefix: 'CR-' }), id: 0 });
+core.on('converted_acc', (acc) => console.log(acc.x, acc.y, acc.z));
+core.onEvent('onConnect', () => console.log('connected'));
+button.onclick = () => core.begin('SENSOR_VALUES');
+
+// 接続 UI を使う場合: toolkit が作る cores[i] / insoles[i]（OrpheCoreInsole）に購読する
+buildInsoleToolkit(document.getElementById('toolkit0'), 'INSOLE 01', 0, { streamingMode: 4 });
+insoles[0].on('press', (press) => draw(press.values));
+```
+
+- `cores`（= `bles`）/ `insoles` / `orpheCore` は toolkit が作ります。example 側で作り直すと、toolkit が接続するインスタンスと別物になり、データが届きません。
+- LED や姿勢リセットなどのコマンドは `ble.commands`（例 `cores[0].commands.setLED(true, 2)`）、デバイス情報は `ble.profile.device_information` です。
+- 実機が無いときは `OrpheCoreInsoleJS.createInsoleSimulator()` で擬似 INSOLE を使えます（例: `quaternion-validation/?sim=1`）。
+- 旧 API との対応表は [ORPHE-CORE-INSOLE.js の README](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js#旧-api-からの移行) にあります。
+
+上記URLは公開済みの `v0.2.0` タグを参照します。未リリースのSDKを検証する場合は、下記のローカル切替手順を使ってください。
 
 ## 構成
 
@@ -36,7 +51,7 @@ VISUALIZE/ SENSOR-DASHBOARD/ TERMINAL/ UDON/
                                        CORE と INSOLE の両方に対応した example（スロットごとに種別を選ぶ）
 大文字のディレクトリ                    ORPHE-CORE.js 由来の example
 小文字のディレクトリ                    ORPHE-INSOLE.js 由来の example
-scripts/                               移行・検証用スクリプト
+scripts/                               検証・CDN 切替のスクリプト
 ```
 
 CORE / INSOLE の両対応 example は `assets/js/device-slot.js` でデバイス種別を選びます。
@@ -65,20 +80,22 @@ node scripts/toggle-cdn.mjs cdn     # 元に戻す（コミット前に必ず実
 ## 検証
 
 ```bash
-node scripts/check-links.mjs
+node scripts/check-links.mjs    # 参照切れ・旧ライブラリ / 互換 API の残り・CDN の版・vendor 参照の残り
+node scripts/check-syntax.mjs   # 全 .js と HTML の inline script の構文
 ```
 
-相対パスの参照切れ、catalog.json のリンク・サムネイル、旧ライブラリの `<script>` の残りを確認します。
+`check-links.mjs` は相対パスの参照切れ、catalog.json のリンク・サムネイル、旧ライブラリの `<script>`、互換 API（`new Orphe(` や `got* =` など）の残り、`@v0.2.0` 以外の CDN 版、`../vendor/` 参照の戻し忘れを検出します。
 
 ## example を追加するとき
 
-1. ルート直下にディレクトリを作り、上記の 2 ファイルを読み込みます。共有資産は `../assets/...` で参照します。
+1. ルート直下にディレクトリを作り、上記の 2 ファイルを読み込みます。コードは `OrpheCoreInsole` で書きます。共有資産は `../assets/...` で参照します。
 2. `catalog.json` の `entries` に追加します。パスはリポジトリルート基準で、`device` に `core` / `insole` / `both` を書きます。
 3. 日本語のタイトルと説明は `gallery.js` の `entryTextJa` に追加します。
-4. `node scripts/check-links.mjs` を実行します。
+4. `node scripts/check-links.mjs` と `node scripts/check-syntax.mjs` を実行します。
 
 ## 移元から変えたこと
 
+- ライブラリの呼び出しを、旧 `Orphe` / `OrpheInsole` の API から新しい共通 API（`OrpheCoreInsole`）に書き直しました。
 - `FOOT ANGLE` を `FOOT-ANGLE` に改名しました（URL の空白を避けるため）。
 - 次の 4 組は 1 つにまとめました。
   - CORE の VISUALIZE と INSOLE の VISUALIZE を `VISUALIZE` にまとめました。
@@ -87,6 +104,7 @@ node scripts/check-links.mjs
   - CORE の VIEW と INSOLE の sensor-dashboard を `SENSOR-DASHBOARD` にまとめました。
 - ORPHE-INSOLE.js の Node テスト（`test-*.mjs`）は、旧 `src/` に依存するため含めていません。元のリポジトリで実行してください。
 - ORPHE-CORE.js サイトの starter-templates・docs・ワークショップ資料は example ではないため、ギャラリーから外しました。
+- 2 台を使うゲーム（GAME-HURDLE 系・GAME-PINGPONG・MOVEYOURFEET など）は、2 台が接続されてから入力を受け付けます。移行元は接続イベントの回数を数えていたため、1 台目の途中で開始していました。
 
 ## 免責
 

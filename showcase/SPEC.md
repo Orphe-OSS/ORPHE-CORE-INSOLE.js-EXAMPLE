@@ -136,13 +136,13 @@ ORPHE CORE との比較表は掲載しない（決定済み）。
 - 6chリアルタイム折れ線チャート（Chart.js、rAFスロットリング）
 - L/R判定（mount_position）に応じて足型画像とセンサ座標を切替
 - 説明文: ADC生値であること、キャリブレーションの必要性
-- スニペット: `gotPress` の最小例
+- スニペット: `on('press')` の最小例
 
 ### 6. 姿勢: クォータニオン → 3D
 
 - **ORPHE-CORE.js examples/VIEW をほぼ移植**: p5.js(WEBGL) + toxiclibs Quaternion + STL靴モデル（`assets/models/orphe_shoeL3.stl` / `orphe_shoeR3.stl` をCOREリポジトリからコピー）
 - L/R判定に応じて表示モデルを切替
-- 姿勢リセットボタン（基準クォータニオンの共役を掛けるオフセット方式。INSOLE SDKにはCOREの `resetMotionSensorAttitude()` が無いためアプリ側で実装）
+- 姿勢リセットボタン（基準クォータニオンの共役を掛けるオフセット方式。INSOLEにはCOREの姿勢リセット（`commands.resetAttitude()`）が無いためアプリ側で実装）
 - 並べて Euler (pitch/roll/yaw) をゲージ+数値で表示
 - `pitch / roll を入れ替えて表示` スイッチ: FW・IMU実装による pitch/roll 割り当ての差異を吸収する**表示のみ**の切替（既定OFF）。センサ座標系をZ軸回り-90°回す相似変換 `q' = r q r*`（`viz-3d.js` の `SWAP_R`）を掛け、**3DモデルとEulerゲージの両方**に適用する（ゲージは変換後クォータニオンから再計算するのでCGと必ず一致）。CSVはSDKの生値のまま記録する。符号は実機確認済み（+90°だと軸の入れ替えは合うが両軸とも回転方向が反転する）
 - 注記: クォータニオンはモード1/4のみ
@@ -151,7 +151,7 @@ ORPHE CORE との比較表は掲載しない（決定済み）。
 
 - 記録開始/停止、行数・経過時間表示、CSVダウンロード（接続中の全デバイスを1ファイルに記録）
 - 列: `device, timestamp, serial_number, press0..5, acc_x/y/z [G], gyro_x/y/z [dps], quat_w/x/y/z, euler_pitch/roll/yaw [rad]`（モードにより欠ける列は空欄、device 列の無い旧形式CSVも読込可）
-- 行の確定タイミング: モード3/4は各サンプルの最後に呼ばれる `gotPress`、モード1は `gotEuler`（SDKのコールバック順に基づく）
+- 行の確定タイミング: モード3/4は各サンプルの最後に届く `on('press')`、モード1は `on('euler')`（SDKのコールバック順に基づく）
 - 記録したCSVをファイル入力から読み込み、デモモードとしてループ再生できる（収録データの確認とデモデータ差し替えの動線）
 
 ---
@@ -164,7 +164,7 @@ ORPHE CORE との比較表は掲載しない（決定済み）。
 | UI | Bootstrap 5.2.2 + bootstrap-icons（CDN） | InsoleToolkit の前提と一致 |
 | チャート | Chart.js 3.9.0（CDN） | VISUALIZEと同一バージョン |
 | 3D | p5.js + toxiclibs（CDN）+ STLモデル同梱 | CORE VIEW からの移植（決定済み） |
-| 接続UI | `src/InsoleToolkit.js` | モード切替UI込みで再利用 |
+| 接続UI | `buildInsoleToolkit()`（ORPHE-CORE-INSOLE.js `src/toolkit/insole-toolkit.ts`） | モード切替UI込みで再利用 |
 | ストリーミング | デフォルトはモード4。ツールキットのギアで1/3/4へ切替可能 | アプリは全モードに追従（決定済み） |
 | 描画 | データはバッファ、描画はrAFで約30fps | CLAUDE.md Pattern 5 準拠 |
 
@@ -186,7 +186,7 @@ examples/showcase/
 └── README.md         # 起動方法
 ```
 
-データフロー: ライブ（`got*` コールバック）とデモ（再生プレイヤー）はどちらも同じ `dispatchFrame()` に1サンプル分のフレームを渡し、可視化モジュールはデータ源を区別しない。
+データフロー: ライブ（`on()` の購読コールバック）とデモ（再生プレイヤー）はどちらも同じ `dispatchFrame()` に1サンプル分のフレームを渡し、可視化モジュールはデータ源を区別しない。
 
 ## 6. 非機能要件
 

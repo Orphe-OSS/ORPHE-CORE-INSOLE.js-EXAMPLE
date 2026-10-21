@@ -229,10 +229,10 @@
         <div class="col-md-8">
           <div class="snippet-block">
             <div class="snippet-title" data-i18n="snippetPressureTitle">圧力データの取得</div>
-            <pre class="snippet"><code data-i18n-html="snippetPressureCode">insole.gotPress = function (press) {
+            <pre class="snippet"><code data-i18n-html="snippetPressureCode">insole.on('press', (press) =&gt; {
   // press.values: [p0..p5] 6ch の ADC 生値 (uint16)
   const total = press.values.reduce((a, b) =&gt; a + b, 0);
-};</code></pre>
+});</code></pre>
             <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
           </div>
         </div>
@@ -259,8 +259,8 @@
     <section id="imu" class="py-4 border-top border-secondary">
       <h2 class="section-title"><i class="bi bi-speedometer2"></i> <span data-i18n="imuTitle">IMU: 加速度・ジャイロ</span></h2>
       <p class="section-desc" data-i18n-html="imuDesc">
-        3軸加速度（±16G）と3軸角速度（±2000dps）。<code>gotAcc</code>/<code>gotGyro</code> は -1..1 の正規化値、
-        <code>gotConvertedAcc</code>/<code>gotConvertedGyro</code> は実値（G / deg/s）を返します。下のチャートは実値です。
+        3軸加速度（±16G）と3軸角速度（±2000dps）。<code>on('acc')</code>/<code>on('gyro')</code> は -1..1 の正規化値、
+        <code>on('converted_acc')</code>/<code>on('converted_gyro')</code> は実値（G / deg/s）を返します。下のチャートは実値です。
       </p>
       <div class="row g-4 mt-1" id="imu_panels">
         <div class="col-md-6 device-panel" id="imu_panel0">
@@ -280,12 +280,12 @@
       </div>
       <div class="snippet-block mt-3">
         <div class="snippet-title" data-i18n="snippetImuTitle">IMUデータの取得</div>
-        <pre class="snippet"><code data-i18n-html="snippetImuCode">insole.gotConvertedAcc = function (acc) {
+        <pre class="snippet"><code data-i18n-html="snippetImuCode">insole.on('converted_acc', (acc) =&gt; {
   // {x, y, z} 単位: G
-};
-insole.gotConvertedGyro = function (gyro) {
+});
+insole.on('converted_gyro', (gyro) =&gt; {
   // {x, y, z} 単位: deg/s
-};</code></pre>
+});</code></pre>
         <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
       </div>
       <div class="related-examples mt-3">
@@ -341,12 +341,12 @@ insole.gotConvertedGyro = function (gyro) {
           </div>
           <div class="snippet-block mt-3">
             <div class="snippet-title" data-i18n="snippetAttitudeTitle">姿勢データの取得（モード1/4）</div>
-            <pre class="snippet"><code data-i18n-html="snippetAttitudeCode">insole.gotQuat = function (quat) {
+            <pre class="snippet"><code data-i18n-html="snippetAttitudeCode">insole.on('quat', (quat) =&gt; {
   // {w, x, y, z}
-};
-insole.gotEuler = function (euler) {
+});
+insole.on('euler', (euler) =&gt; {
   // {pitch, roll, yaw} 単位: rad
-};</code></pre>
+});</code></pre>
             <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
           </div>
         </div>
@@ -467,10 +467,11 @@ insole.gotEuler = function (euler) {
         <div class="col-lg-7">
           <div class="snippet-block">
             <div class="snippet-title" data-i18n="snippetMinimalTitle">最小コード</div>
-            <pre class="snippet"><code data-i18n-html="snippetMinimalCode">&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
+            <pre class="snippet"><code data-i18n-html="snippetMinimalCode">&lt;script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"&gt;&lt;/script&gt;
 &lt;script&gt;
-  var insole = new OrpheInsole(0);  // id: 0 or 1 (最大2台)
-  insole.setup();                   // begin の前に必須
+  const { OrpheCoreInsole, insoleProfile } = OrpheCoreInsoleJS;
+  // id: 0 or 1 (最大2台)
+  const insole = new OrpheCoreInsole({ profile: insoleProfile(), id: 0 });
 
   // ボタンクリック等のユーザー操作から呼ぶ
   async function connect() {
@@ -480,9 +481,9 @@ insole.gotEuler = function (euler) {
     });
   }
 
-  insole.gotPress = function (press) {
-    console.log(this.id, press.values);  // 6ch の ADC 生値
-  };
+  insole.on('press', (press) =&gt; {
+    console.log(insole.id, press.values);  // 6ch の ADC 生値
+  });
 &lt;/script&gt;</code></pre>
             <button class="btn btn-sm btn-outline-light copy-btn" type="button" data-i18n="copyButton">copy</button>
           </div>
@@ -491,9 +492,9 @@ insole.gotEuler = function (euler) {
           <div class="connect-note-card">
             <h3 class="h6 text-info" data-i18n="programStepsTitle">実装の流れ</h3>
             <ol class="small mb-0">
-              <li data-i18n-html="programStep1"><code>new OrpheInsole(id)</code> でインスタンスを作る。</li>
-              <li data-i18n-html="programStep2"><code>setup()</code> を呼び、ボタン操作などから <code>begin()</code> で接続する。</li>
-              <li data-i18n-html="programStep3"><code>gotPress</code>, <code>gotConvertedAcc</code>, <code>gotConvertedGyro</code>, <code>gotQuat</code> を必要に応じて実装する。</li>
+              <li data-i18n-html="programStep1"><code>new OrpheCoreInsole({ profile: insoleProfile(), id })</code> でインスタンスを作る。</li>
+              <li data-i18n-html="programStep2">ボタン操作などから <code>begin()</code> で接続する。</li>
+              <li data-i18n-html="programStep3"><code>on('press')</code>, <code>on('converted_acc')</code>, <code>on('converted_gyro')</code>, <code>on('quat')</code> で必要なデータを購読する。</li>
               <li data-i18n-html="programStep4">接続UIも必要なら <code>buildInsoleToolkit()</code> を使う。</li>
             </ol>
           </div>
@@ -632,8 +633,8 @@ insole.gotEuler = function (euler) {
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
 
   <!-- ORPHE Libraries (REQUIRED ORDER) -->
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 
   <script src="./i18n.js"></script>
   <script src="./demo-data.js"></script>

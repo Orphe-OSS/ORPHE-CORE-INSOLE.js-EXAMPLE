@@ -11,7 +11,7 @@
    * Lab Recorder — 純関数モジュール（DOM / BLE 非依存。Node で単体テストする）。
    *
    * FIFO 収録そのもの（読み取りモード切替・シリアル指定の再要求・drain）は
-   * src/InsoleFifo.js / src/InsoleToolkit.js が担当し、ここでは一切実装しない。
+   * ORPHE-CORE-INSOLE.js の FifoRecorder / InsoleToolkitSession が担当し、ここでは一切実装しない。
    * このファイルが担当するのは「収録済みサンプルと打刻をどう並べ、どう時刻付けし、
    * どう書き出すか」だけ:
    *
@@ -30,7 +30,7 @@
   const HALF_SERIAL = 32768;
   const DAY_MS = 86400000;
   const FRAMES_PER_PACKET = 4;
-  /** 実測 IMU ODR。src/InsoleFifo.js の IMU_ODR_HZ と一致することをテストで保証する。 */
+  /** 実測 IMU ODR。ORPHE-CORE-INSOLE.js の FIFO_IMU_ODR_HZ（src/fifo/protocol.ts）と一致することをテストで保証する。 */
   const NOMINAL_IMU_ODR_HZ = 208;
   const FRAME_INTERVAL_MS = 1000 / NOMINAL_IMU_ODR_HZ;
   const PACKET_INTERVAL_MS = FRAME_INTERVAL_MS * FRAMES_PER_PACKET;
@@ -550,7 +550,7 @@
    * @param {string|null} [input.firmwareVersion]
    * @param {Array} input.samples FIFO で回収したサンプル（Toolkit の result.raw.samples）
    * @param {Array<{hostRxMs:number, deviceTimeMaxMs:number, serials:number[]}>} input.batches
-   * @param {number} [input.dropped] 回復不能ロス累計（OrpheInsoleFifo onStopped の dropped）
+   * @param {number} [input.dropped] 回復不能ロス累計（FifoRecorder onStopped の dropped）
    * @param {number} [input.maxLag]
    * @param {number} [input.drainRecovered]
    * @param {number} [input.catchupRecovered]
@@ -891,7 +891,7 @@
         received: "number of distinct serial packets recovered",
         missing: "expected - received; serial packets absent from the CSV",
         missing_rate: "missing / expected",
-        dropped: "serial packets the FIFO loop declared unrecoverable during recording (OrpheInsoleFifo droppedCount); may differ from missing",
+        dropped: "serial packets the FIFO loop declared unrecoverable during recording (FifoRecorder droppedCount); may differ from missing",
         max_lag: "maximum number of not-yet-fetched serials observed while polling; the device ring buffer holds 1500",
         complete: "true only when missing == 0 and dropped == 0 and the sample buffer was not truncated"
       },

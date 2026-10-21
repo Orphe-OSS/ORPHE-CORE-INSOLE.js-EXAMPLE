@@ -1,4 +1,4 @@
-/* global ToolkitValidationMetrics, AttitudeViz, buildInsoleToolkit, getInsoleToolkitSession, insoles, insoleToolkitMeasurementToCSV */
+/* global ToolkitValidationMetrics, AttitudeViz, OrpheCoreInsoleJS, buildInsoleToolkit, getInsoleToolkitSession, insoles, insoleToolkitMeasurementToCSV */
 
 'use strict';
 
@@ -911,9 +911,7 @@ function noteStepType(target, packet) {
 function handleRealtimePacket(id, data, uuid) {
     if (uuid !== 'SENSOR_VALUES') return;
     if (![50, 55, 56].includes(data.getUint8(0))) return;
-    const parsed = insoles[id].constructor.parseSensorValues
-        ? insoles[id].constructor.parseSensorValues(data)
-        : null;
+    const parsed = OrpheCoreInsoleJS.parseInsoleSensorValues(data, insoles[id].profile.sensorParseOptions());
     if (!parsed) return;
 
     if (!currentRun) {
@@ -2016,9 +2014,9 @@ function renderConnectionState(id) {
     const stateElement = document.getElementById(`connection_state_${id}`);
     stateElement.textContent = state;
     stateElement.className = `metric-chip ${state === 'connected' ? 'pass' : state === 'reconnecting' ? 'warn' : 'neutral'}`;
-    const name = insole?.bluetoothDevice?.name || 'No device selected';
+    const name = insole?.transport?.device?.name || 'No device selected';
     setText(`connection_name_${id}`, name);
-    const mountPosition = insole?.device_information?.mount_position;
+    const mountPosition = insole?.profile?.device_information?.mount_position;
     if (typeof AttitudeViz !== 'undefined' && Number.isFinite(Number(mountPosition))) {
         AttitudeViz.setFoot(id, (Number(mountPosition) & 0b1) === 1 ? 'R' : 'L');
     }
@@ -2299,49 +2297,49 @@ function installDevice(id) {
         }
     );
     sessions[id] = getInsoleToolkitSession(id);
-    insoles[id].setup();
-    insoles[id].gotData = function (data, uuid) {
-        handleRealtimePacket(this.id, data, uuid);
-    };
-    insoles[id].onScan = function (deviceName) {
-        logEvent(this.id, `Bluetooth device selected: ${deviceName || 'name unavailable'}`, 'success');
-    };
-    insoles[id].onConnect = function (uuid) {
-        logEvent(this.id, `GATT connected: ${uuid}`, 'success');
-    };
-    insoles[id].onStartNotify = function (uuid) {
-        logEvent(this.id, `Notification started: ${uuid}`, 'success');
-    };
-    insoles[id].onStopNotify = function (uuid) {
-        logEvent(this.id, `Notification stopped: ${uuid}`, 'warn');
-    };
-    insoles[id].onError = function (error) {
+    const insole = insoles[id];
+    insole.onRaw((uuid, data) => {
+        handleRealtimePacket(id, data, uuid);
+    });
+    insole.onEvent('onScan', (deviceName) => {
+        logEvent(id, `Bluetooth device selected: ${deviceName || 'name unavailable'}`, 'success');
+    });
+    insole.onEvent('onConnect', (uuid) => {
+        logEvent(id, `GATT connected: ${uuid}`, 'success');
+    });
+    insole.onEvent('onStartNotify', (uuid) => {
+        logEvent(id, `Notification started: ${uuid}`, 'success');
+    });
+    insole.onEvent('onStopNotify', (uuid) => {
+        logEvent(id, `Notification stopped: ${uuid}`, 'warn');
+    });
+    insole.onEvent('onError', (error) => {
         const cancelled = error?.name === 'NotFoundError';
         logEvent(
-            this.id,
+            id,
             cancelled
                 ? 'Core: Bluetooth chooser cancelled; existing connections are unchanged'
                 : `Core error: ${error?.message || error}`,
             cancelled ? 'warn' : 'error'
         );
-    };
-    insoles[id].onDisconnect = function () {
-        const reconnect = reconnectStats[this.id];
+    });
+    insole.onEvent('onDisconnect', () => {
+        const reconnect = reconnectStats[id];
         reconnect.disconnects += 1;
         reconnect.disconnectedAt = performance.now();
         reconnect.pendingFirstData = false;
         reconnect.pendingRestore = false;
-        logEvent(this.id, 'Physical disconnect detected', 'warn');
-        renderReconnect(this.id);
-    };
-    insoles[id].onReconnectAttempt = function (info) {
-        const reconnect = reconnectStats[this.id];
+        logEvent(id, 'Physical disconnect detected', 'warn');
+        renderReconnect(id);
+    });
+    insole.onEvent('onReconnectAttempt', (info) => {
+        const reconnect = reconnectStats[id];
         reconnect.attempts += 1;
-        logEvent(this.id, `Reconnect attempt ${info.attempt}/${info.maxAttempts}`, 'warn');
-        renderReconnect(this.id);
-    };
-    insoles[id].onReconnectSuccess = function (info) {
-        const reconnect = reconnectStats[this.id];
+        logEvent(id, `Reconnect attempt ${info.attempt}/${info.maxAttempts}`, 'warn');
+        renderReconnect(id);
+    });
+    insole.onEvent('onReconnectSuccess', (info) => {
+        const reconnect = reconnectStats[id];
         reconnect.successes += 1;
         reconnect.successAt = performance.now();
         reconnect.elapsedMs = info.elapsedMs;
@@ -2349,18 +2347,18 @@ function installDevice(id) {
         reconnect.restoredAfterSuccessMs = null;
         reconnect.pendingFirstData = true;
         reconnect.pendingRestore = true;
-        logEvent(this.id, `Reconnect succeeded (${info.elapsedMs} ms)`, 'success');
-        renderReconnect(this.id);
-    };
-    insoles[id].onReconnectFailed = function (info) {
-        const reconnect = reconnectStats[this.id];
+        logEvent(id, `Reconnect succeeded (${info.elapsedMs} ms)`, 'success');
+        renderReconnect(id);
+    });
+    insole.onEvent('onReconnectFailed', (info) => {
+        const reconnect = reconnectStats[id];
         reconnect.failures += 1;
         reconnect.elapsedMs = info.elapsedMs;
         reconnect.pendingFirstData = false;
         reconnect.pendingRestore = false;
-        logEvent(this.id, `Reconnect failed (${info.elapsedMs} ms)`, 'error');
-        renderReconnect(this.id);
-    };
+        logEvent(id, `Reconnect failed (${info.elapsedMs} ms)`, 'error');
+        renderReconnect(id);
+    });
 }
 
 document.querySelectorAll('.preset-card').forEach((button) => {

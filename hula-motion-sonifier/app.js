@@ -1124,34 +1124,39 @@
 
   function setupDevices() {
     debugLog("setupDevices() start");
-    if (typeof window.OrpheInsole === "undefined") {
-      debugLog("setupDevices() failed: OrpheInsole is undefined");
+    if (typeof window.OrpheCoreInsoleJS === "undefined") {
+      debugLog("setupDevices() failed: OrpheCoreInsoleJS is undefined");
       setGlobalStatus("orphe-core-insole.jsを読み込めませんでした。scriptのパスを確認してください。", true);
       return;
     }
 
-    state.devices = [new OrpheInsole(0), new OrpheInsole(1)];
+    const { OrpheCoreInsole, insoleProfile } = window.OrpheCoreInsoleJS;
+    state.devices = [0, 1].map((index) => new OrpheCoreInsole({
+      profile: insoleProfile(),
+      id: index,
+      events: {
+        onScan: (deviceName) => debugLog("onScan", { index, deviceName }),
+        // 旧 onConnectGATT は onConnect に統合された（characteristic ごとに uuid 付きで呼ばれる）
+        onConnect: (uuid) => {
+          debugLog("onConnect", { index, uuid });
+          updateConnectionStatus(index, true);
+        },
+        onDisconnect: () => {
+          debugLog("onDisconnect", { index });
+          updateConnectionStatus(index, false);
+          delete state.deviceToSide[index];
+          setDeviceStatus(index, "未接続");
+        },
+        onError: (error) => debugError("device.onError", error, { index }),
+        onWrite: (uuid) => debugLog("onWrite", { index, uuid }),
+        onStartNotify: (uuid) => debugLog("onStartNotify", { index, uuid }),
+      },
+    }));
     state.devices.forEach((device, index) => {
-      device.setup();
-      debugLog("device setup complete", { index, uuidKeys: Object.keys(device.hashUUID || {}) });
-      device.onScan = (deviceName) => debugLog("onScan", { index, deviceName });
-      device.onConnectGATT = (uuid) => debugLog("onConnectGATT", { index, uuid });
-      device.onConnect = (uuid) => {
-        debugLog("onConnect", { index, uuid });
-        updateConnectionStatus(index, true);
-      };
-      device.onDisconnect = () => {
-        debugLog("onDisconnect", { index });
-        updateConnectionStatus(index, false);
-        delete state.deviceToSide[index];
-        setDeviceStatus(index, "未接続");
-      };
-      device.onError = (error) => debugError("device.onError", error, { index });
-      device.onWrite = (uuid) => debugLog("onWrite", { index, uuid });
-      device.onStartNotify = (uuid) => debugLog("onStartNotify", { index, uuid });
-      device.gotPress = (press) => handlePressure(index, press);
-      device.gotConvertedAcc = (acc) => handleMotion(index, "acc", acc);
-      device.gotConvertedGyro = (gyro) => handleMotion(index, "gyro", gyro);
+      debugLog("device setup complete", { index, uuidKeys: Object.keys(device.profile.characteristics()) });
+      device.on("press", (press) => handlePressure(index, press));
+      device.on("converted_acc", (acc) => handleMotion(index, "acc", acc));
+      device.on("converted_gyro", (gyro) => handleMotion(index, "gyro", gyro));
     });
   }
 
@@ -1161,8 +1166,8 @@
       index,
       hasDeviceInstance: !!device,
       connected: state.connected[index],
-      bluetoothDeviceName: device && device.bluetoothDevice && device.bluetoothDevice.name,
-      gattConnected: !!(device && device.bluetoothDevice && device.bluetoothDevice.gatt && device.bluetoothDevice.gatt.connected),
+      bluetoothDeviceName: device && device.transport.device && device.transport.device.name,
+      gattConnected: !!(device && device.transport.device && device.transport.device.gatt && device.transport.device.gatt.connected),
     });
     if (!device) {
       debugLog("connectDevice() aborted: no device instance", { index });
@@ -1186,13 +1191,13 @@
     setDeviceStatus(index, "接続中...");
     try {
       debugLog("connectDevice() before begin()", { index, streamingMode: 4 });
-      await device.begin({ streamingMode: 4 });
+      await device.begin("SENSOR_VALUES", { streamingMode: 4 });
       debugLog("connectDevice() begin() resolved", {
         index,
-        bluetoothDeviceName: device.bluetoothDevice && device.bluetoothDevice.name,
+        bluetoothDeviceName: device.transport.device && device.transport.device.name,
       });
       setupDeviceSide(index);
-      const name = device.bluetoothDevice ? device.bluetoothDevice.name : `デバイス${index + 1}`;
+      const name = device.transport.device ? device.transport.device.name : `デバイス${index + 1}`;
       setDeviceStatus(index, `接続済み: ${name}`);
       setGlobalStatus("SENSOR_VALUESを受信中です。まずはゆっくり動き、次に1つのステップをはっきり試してください。");
     } catch (error) {
@@ -1211,7 +1216,7 @@
   }
 
   function setupDeviceSide(index) {
-    const info = state.devices[index].device_information || {};
+    const info = state.devices[index].profile.device_information || {};
     const side = state.manualSide[index] || (((info.mount_position || 0) & 1) === 0 ? "left" : "right");
     state.deviceToSide[index] = side;
     const selector = $(`side-${index}`);
@@ -1223,7 +1228,7 @@
     state.manualSide[index] = side;
     if (state.connected[index]) {
       state.deviceToSide[index] = side;
-      renderDeviceInfo(index, state.devices[index].device_information || {}, side);
+      renderDeviceInfo(index, state.devices[index].profile.device_information || {}, side);
     }
   }
 

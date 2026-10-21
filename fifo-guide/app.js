@@ -5,9 +5,10 @@
    * FIFO Guide — 初めてFIFOを使う人向けの実機example。1台でも2台（左右同時）でも収録できる。
    *
    * FIFOプロトコル（serial指定・再要求・drain）はこのファイルでは一切実装しない。
-   *   - src/InsoleFifo.js    … FIFO収集ループ本体（デバイスごとに1インスタンス）
-   *   - src/InsoleToolkit.js … 接続UI / 'fifo-recording' プロファイル /
-   *                            startMeasurement()・stopMeasurement()（drain待ち込み）/
+   *   - FifoRecorder（ORPHE-CORE-INSOLE.js src/fifo/）… FIFO収集ループ本体（デバイスごとに1インスタンス。
+   *                            toolkit のセッションが管理する）
+   *   - buildInsoleToolkit / InsoleToolkitSession（src/toolkit/, src/session/）… 接続UI /
+   *                            'fifo-recording' プロファイル / startMeasurement()・stopMeasurement()（drain待ち込み）/
    *                            insoleToolkitMeasurementToCSV()
    * 判定ロジック（serial連続性・欠損range・timeline集約・30秒バッファ判定・
    * 複数デバイスの判定合成）は ./continuity.js に純関数として切り出し、Node で単体テストしている。
@@ -301,9 +302,6 @@
       }
     });
     device(id).session = root.getInsoleToolkitSession(id);
-    // buildInsoleToolkit() は setup() を呼ばない（simulator 指定時のみ内部で呼ぶ）。
-    // 未呼び出しだと hashUUID が空のままで、接続時に serviceUUID 参照で失敗する。
-    root.insoles[id].setup();
   }
 
   // ── 計測時間とバッファガイド ─────────────────────────────────────────
@@ -557,7 +555,7 @@
 
   /**
    * 接続状態の遷移は Toolkit の onStateChange 経由で拾う。
-   * insole.on* を上書きしないので、Toolkit のヘッダ表示や自動再接続と競合しない。
+   * insole のライフサイクルイベントを購読しなくても、Toolkit のヘッダ表示や自動再接続と同じ状態を参照できる。
    */
   function handleSessionState(id, snapshot) {
     const entry = device(id);
@@ -595,7 +593,7 @@
 
   function mountPositionOf(id) {
     const insole = Array.isArray(root.insoles) ? root.insoles[id] : null;
-    return insole && insole.device_information ? insole.device_information.mount_position : null;
+    return insole && insole.profile.device_information ? insole.profile.device_information.mount_position : null;
   }
 
   function handleSessionError(id, error) {

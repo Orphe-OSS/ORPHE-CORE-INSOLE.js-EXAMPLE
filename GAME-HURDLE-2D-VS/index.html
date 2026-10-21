@@ -178,8 +178,8 @@
   </div>
 
   <!-- ORPHE CORE -->
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 
   <script>
     // Game constants
@@ -762,15 +762,16 @@
 
     // ORPHE CORE setup
     // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言すると Toolkit が接続する実体と別物になるため宣言しない
-    for (let i = 0; i < bles.length; i++) {
-      bles[i].setup();
-    }
 
     buildCoreToolkit(document.querySelector('#toolkit_p1'), 'Player 1', 0, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
     buildCoreToolkit(document.querySelector('#toolkit_p2'), 'Player 2', 1, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
     guardCoreToolkitBluetooth({ coreIds: [0, 1], messageElement: '#ble-support-message' });
 
+    // 接続済みデバイスの id（onConnect は characteristic ごとに複数回呼ばれるため id で数える）
+    const connectedIds = new Set();
     var connectedDevices = 0;
+    // 2 台揃ったらセンサー入力を有効にする（以後は有効のまま）
+    let sensorsReady = false;
     window.devices = {
       0: { acc: { x: 0, y: 0, z: 0 }, eulers: { pitch: 0, roll: 0, yaw: 0 } },
       1: { acc: { x: 0, y: 0, z: 0 }, eulers: { pitch: 0, roll: 0, yaw: 0 } }
@@ -783,68 +784,75 @@
     const jumpCooldownMs = 200;
 
     for (let ble of bles) {
-      ble.onConnect = function() {
-        connectedDevices++;
-        console.log('ORPHE Device ' + this.id + ' connected');
+      ble.onEvent('onConnect', function() {
+        if (connectedIds.has(ble.id)) return;
+        connectedIds.add(ble.id);
+        connectedDevices = connectedIds.size;
+        console.log('ORPHE Device ' + ble.id + ' connected');
 
-        if (connectedDevices === 2) {
-          for (let device of bles) {
-            device.begin('STEP_ANALYSIS_AND_SENSOR_VALUES');
-            setupDataCallbacks(device);
-          }
+        if (connectedDevices === 2 && !sensorsReady) {
+          // （通知は buildCoreToolkit の notification 引数で begin 済みなので begin し直さない）
+          sensorsReady = true;
         }
-      };
+      });
 
-      ble.onDisconnect = function() {
-        connectedDevices--;
-        console.log('ORPHE Device ' + this.id + ' disconnected');
-      };
+      ble.onEvent('onDisconnect', function() {
+        connectedIds.delete(ble.id);
+        connectedDevices = connectedIds.size;
+        console.log('ORPHE Device ' + ble.id + ' disconnected');
+      });
+
+      // センサー購読は初期化時に 1 回だけ登録する
+      setupDataCallbacks(ble);
     }
 
     function setupDataCallbacks(ble_device) {
-      ble_device.gotConvertedAcc = function(_acc) {
+      const id = ble_device.id;
+      ble_device.on('converted_acc', function(_acc) {
+        if (!sensorsReady) return;
         if (!_acc) return;
-        window.devices[this.id].acc = _acc;
+        window.devices[id].acc = _acc;
 
-        const acc = window.devices[this.id].acc;
+        const acc = window.devices[id].acc;
         const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
         const now = performance.now();
-        const player = this.id === 0 ? player1 : player2;
-        const threshold = this.id === 0 ? window.player1Thresholds.accel : window.player2Thresholds.accel;
+        const player = id === 0 ? player1 : player2;
+        const threshold = id === 0 ? window.player1Thresholds.accel : window.player2Thresholds.accel;
 
         if (!player) return;
 
         const shouldAccel = mag > threshold;
 
-        if (shouldAccel && (now - lastAccelTime[this.id]) > accelCooldownMs) {
+        if (shouldAccel && (now - lastAccelTime[id]) > accelCooldownMs) {
           player.setAccelPressed(true);
-          lastAccelTime[this.id] = now;
+          lastAccelTime[id] = now;
         } else if (!shouldAccel) {
           player.setAccelPressed(false);
         }
-      };
+      });
 
-      ble_device.gotEuler = function(_euler) {
+      ble_device.on('euler', function(_euler) {
+        if (!sensorsReady) return;
         if (!_euler) return;
-        window.devices[this.id].eulers = _euler;
+        window.devices[id].eulers = _euler;
 
-        if (basePitch[this.id] === null) {
-          basePitch[this.id] = _euler.pitch;
+        if (basePitch[id] === null) {
+          basePitch[id] = _euler.pitch;
           return;
         }
 
         const currentPitch = _euler.pitch;
         const now = performance.now();
-        const player = this.id === 0 ? player1 : player2;
-        const threshold = this.id === 0 ? window.player1Thresholds.pitch : window.player2Thresholds.pitch;
+        const player = id === 0 ? player1 : player2;
+        const threshold = id === 0 ? window.player1Thresholds.pitch : window.player2Thresholds.pitch;
 
         if (!player) return;
 
-        if (currentPitch < -threshold && (now - lastJumpTime[this.id]) > jumpCooldownMs) {
+        if (currentPitch < -threshold && (now - lastJumpTime[id]) > jumpCooldownMs) {
           player.jump();
-          lastJumpTime[this.id] = now;
+          lastJumpTime[id] = now;
         }
-      };
+      });
     }
 
     // Start game loop

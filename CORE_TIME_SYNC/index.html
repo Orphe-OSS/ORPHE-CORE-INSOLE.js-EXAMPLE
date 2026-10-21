@@ -21,38 +21,42 @@
     <hr>
     <button onclick="doAdjustCoreTime();">時刻補正実行</button> COREから時刻を取得して，データを読み出して完了するまでの時間の半分だけCOREの時刻を進めます<br>
     <p>結果:<br> <span id="result"></span></p>
-    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.1.0/dist/browser/orphe-core-insole.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
     <script>
-        var core = new Orphe(0);
-        window.onload = function () {
-            // ORPHE CORE Init
-            core.setup();
-
-
-        }
+        const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
+        // ORPHE CORE Init（chooser の条件は名前が 'CR-' で始まるデバイス）
+        var core = new OrpheCoreInsole({
+            profile: coreProfile({ namePrefix: 'CR-' }),
+            id: 0,
+            events: {
+                onError(error) { console.error(error); },
+            },
+        });
+        // converted_acc は実 G 値 (±range G) を返す。
+        // 表示用なので正規化値より読みやすいこちらを使用。
+        // 購読はページ読み込み時に 1 回だけ登録する（ボタンを押すたびに重複登録しないため）。
+        core.on('converted_acc', (acc) => {
+            document.querySelector('#acc').innerText = `x:${acc.x}, y:${acc.y}, z:${acc.z}`;
+        });
         async function getCoreTime() {
-            let ret = await core.getDateTime();
+            // readDateTime() は { date, raw, round_trip_time } を返す（raw が DATE_TIME の生バイト）
+            let ret = await core.readDateTime();
             let e = document.getElementById("timestamp");
             e.innerText = "YY MM DD HH MM SS ss: ";
             let str_timestamp = '';
-            for (let i = 0; i < ret.data.byteLength; i++) {
-                e.innerHTML += String(ret.data.getUint8(i)).toString(16).padStart(2, '0') + " ";
-                str_timestamp += String(ret.data.getUint8(i)).toString(16).padStart(2, '0');
+            for (let i = 0; i < ret.raw.byteLength; i++) {
+                e.innerHTML += String(ret.raw.getUint8(i)).toString(16).padStart(2, '0') + " ";
+                str_timestamp += String(ret.raw.getUint8(i)).toString(16).padStart(2, '0');
             }
             str_timestamp += "00";
             e.innerHTML += "<br>";
         }
         function activateNotify() {
-            core.begin("SENSOR_VALUES");
-            // gotConvertedAcc は実 G 値 (±range G) を返す。
-            // 表示用なので正規化値より読みやすいこちらを使用。
-            core.gotConvertedAcc = function (acc) {
-                document.querySelector('#acc').innerText = `x:${acc.x}, y:${acc.y}, z:${acc.z}`;
-            }
+            core.begin("SENSOR_VALUES").catch(console.error);
         }
         async function doAdjustCoreTime() {
 
-            let s = await core.syncCoreTime();
+            let s = await core.syncTime({ samples: 3 });
 
             let e = document.getElementById("result");
             e.innerHTML = `Result: <br>

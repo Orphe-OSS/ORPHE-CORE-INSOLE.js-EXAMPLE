@@ -1,18 +1,24 @@
-// ORPHE CORE 連携部分は変更なし
-var ble = new Orphe(0);
+// ORPHE CORE 連携部分（index.html の connect ボタンが ble.begin('SENSOR_VALUES') を呼ぶ）
+const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
+var ble = new OrpheCoreInsole({
+  profile: coreProfile({ namePrefix: 'CR-' }),
+  id: 0,
+  events: {
+    onError(error) { console.error(error); },
+  },
+});
 var euler = {
   pitch: 0,
   roll: 0,
   yaw: 0
 };
-ble.setup();
 // 左右の動きはORPHE COREの傾きに連動
-ble.gotEuler = function (_euler) {
+ble.on('euler', (_euler) => {
   if (game_state === state.CONNECTING) {
     game_state = state.READY;
   }
   euler = _euler;
-};
+});
 
 // --- ゲームの状態管理 ---
 const state = {
@@ -261,9 +267,9 @@ function drawStar(x, y, radius, starColor) {
 }
 
 // ORPHE COREの加速度センサーでステップを判定
-ble.gotAcc = function (_acc) {
+ble.on('acc', (_acc) => {
   // このイベントは、星とノーツが重なったときに自動的にトリガーされるため、ここでは何もしません
-};
+});
 
 // デバッグ用にスペースキーでもステップ判定を可能に
 function keyPressed() {

@@ -12,7 +12,7 @@
    *   - データ辞書・欠損レポート・試行の連続実行・左右アライメント表示
    *
    * FIFO のセッション処理（読み取りモード切替・serial 指定の再要求・drain）は
-   *   src/InsoleFifo.js / src/InsoleToolkit.js（startMeasurement / stopMeasurement）
+   *   ORPHE-CORE-INSOLE.js の FifoRecorder / InsoleToolkitSession（startMeasurement / stopMeasurement）
    * に任せ、このファイルは呼ぶだけ。時刻付け・突き合わせ・書き出しは ./recorder-core.js（純関数）。
    *
    * やらないこと: 歩容指標・スコア・判定、クラウド送信、未検証の導出値（フットクリアランス等）。
@@ -248,14 +248,20 @@
       };
       for (const id of ids) {
         const insole = Array.isArray(root.insoles) ? root.insoles[id] : null;
-        if (!insole || typeof insole.addSensorDataListener !== "function") continue;
+        if (!insole || typeof insole.onRaw !== "function") continue;
         const pairs = [];
         pairsById.set(id, pairs);
-        unsubscribes.push(insole.addSensorDataListener((event) => {
-          const deviceMs = Core.deviceTimeOfDayFromPacket(event && event.data);
-          if (deviceMs === null || !Number.isFinite(event.receivedAt)) return;
-          if (!firstAt.has(id)) firstAt.set(id, event.receivedAt);
-          pairs.push({ hostMs: event.receivedAt, deviceMs });
+        const { parseInsoleSensorValues } = root.OrpheCoreInsoleJS;
+        // リアルタイムの SENSOR_VALUES パケット（header 50 / 55 / 56）だけを拾う
+        unsubscribes.push(insole.onRaw((uuid, data) => {
+          if (uuid !== "SENSOR_VALUES") return;
+          const packet = parseInsoleSensorValues(data, insole.profile.sensorParseOptions());
+          if (!packet || ![50, 55, 56].includes(packet.header)) return;
+          const receivedAt = Date.now();
+          const deviceMs = Core.deviceTimeOfDayFromPacket(data);
+          if (deviceMs === null) return;
+          if (!firstAt.has(id)) firstAt.set(id, receivedAt);
+          pairs.push({ hostMs: receivedAt, deviceMs });
         }));
       }
       const startedAt = Date.now();
@@ -273,15 +279,13 @@
   }
 
   // ── SDK version ──────────────────────────────────────────────────────
-  // 1) OrpheInsole.SDK_VERSION（SDK が公開する定数）
-  // 2) 読み込んだ orphe-core-insole.js の CDN URL に含まれる版
-  // 3) 読み込んだ SDK ソースの JSDoc `@version`（Pages / CDN でも取れる最後の手段）
+  // 1) 読み込んだ orphe-core-insole.js の CDN URL に含まれる版
+  // 2) 読み込んだ SDK ソースの JSDoc `@version`（Pages / CDN でも取れる最後の手段）
   async function resolveSdkVersion() {
     state.sdkVersionDate = typeof root.orphe_js_version_date === "string"
       ? root.orphe_js_version_date.replace(/Last modified:\s*/i, "").trim()
       : null;
-    const fromSdk = root.OrpheInsole && typeof root.OrpheInsole.SDK_VERSION === "string" ? root.OrpheInsole.SDK_VERSION : null;
-    state.sdkVersion = fromSdk || (await fetchSdkVersionFromPackage()) || (await fetchSdkVersionFromSource());
+    state.sdkVersion = (await fetchSdkVersionFromPackage()) || (await fetchSdkVersionFromSource());
     if (state.sdkVersion) log("info", "logSdkVersion", { version: state.sdkVersion });
     else log("warn", "logSdkVersionUnknown");
     renderEnvLine();
@@ -328,8 +332,6 @@
       }
     });
     device(id).session = root.getInsoleToolkitSession(id);
-    // buildInsoleToolkit() は setup() を呼ばない
-    root.insoles[id].setup();
   }
 
   function deviceLabel(id) {
@@ -369,16 +371,13 @@
 
   function mountPositionOf(id) {
     const insole = Array.isArray(root.insoles) ? root.insoles[id] : null;
-    return insole && insole.device_information ? insole.device_information.mount_position : null;
+    return insole && insole.profile.device_information ? insole.profile.device_information.mount_position : null;
   }
 
   async function resolveFirmware(id) {
     const insole = Array.isArray(root.insoles) ? root.insoles[id] : null;
-    let version = null;
-    try {
-      if (insole && typeof insole.getFirmwareVersion === "function") version = await insole.getFirmwareVersion();
-    } catch (error) { void error; }
-    if (!version && insole && insole.lastStatus && insole.lastStatus.version) version = insole.lastStatus.version;
+    // advertisement の版 → FW 情報のビルド ID の順に解決する（取得できなければ null）
+    const version = insole ? root.OrpheCoreInsoleJS.insoleFirmwareVersion(insole) : null;
     device(id).firmwareVersion = version || null;
     if (version) log("info", "logFirmware", { device: deviceLabel(id), version });
     else log("warn", "logFirmwareUnknown", { device: deviceLabel(id) });
