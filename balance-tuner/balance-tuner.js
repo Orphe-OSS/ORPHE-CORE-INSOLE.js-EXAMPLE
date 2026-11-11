@@ -136,9 +136,14 @@
     };
   }
 
-  function footLocalToImage(point) {
+  // SENSOR_LAYOUT_IMAGE は左足画像のマーカー座標なので、右足画像では x を反転する。
+  function sensorImageX(side, imageX) {
+    return side === SIDE_RIGHT ? 1 - imageX : imageX;
+  }
+
+  function footLocalToImage(side, point) {
     return {
-      x: clamp(point.x / FOOT_LOCAL_X_RANGE + 0.5, 0, 1),
+      x: sensorImageX(side, clamp(point.x / FOOT_LOCAL_X_RANGE + 0.5, 0, 1)),
       y: clamp(0.5 - point.y / FOOT_LOCAL_Y_RANGE, 0, 1)
     };
   }
@@ -500,7 +505,7 @@
       const dot = root.document.createElement("div");
       dot.className = "sensor-dot";
       dot.dataset.index = String(index);
-      dot.style.left = `${sensor.imageX * 100}%`;
+      dot.style.left = `${sensorImageX(side, sensor.imageX) * 100}%`;
       dot.style.top = `${sensor.imageY * 100}%`;
       dot.innerHTML = `<span>${sensor.label}</span><small>0</small>`;
       container.appendChild(dot);
@@ -1023,7 +1028,7 @@
 
     const marker = container.querySelector(".foot-estimated-center");
     if (marker && foot.local) {
-      const imagePoint = footLocalToImage(foot.local);
+      const imagePoint = footLocalToImage(foot.side, foot.local);
       marker.style.left = `${imagePoint.x * 100}%`;
       marker.style.top = `${imagePoint.y * 100}%`;
       marker.classList.add("is-visible");
