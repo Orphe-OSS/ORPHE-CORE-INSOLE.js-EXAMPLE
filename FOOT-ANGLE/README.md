@@ -10,7 +10,7 @@ Visualize foot angle from ORPHE gait analysis.
 
 ## 使うデータ
 
-- 足角度 (footAngle)
+- 足角度 (foot_angle)
 - ストライド (stride)
 - 歩行 (gait)
 

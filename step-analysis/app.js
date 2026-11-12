@@ -248,8 +248,8 @@
 
   function resolveDeviceSide(deviceId) {
     const insole = Array.isArray(root.insoles) ? root.insoles[deviceId] : null;
-    const mountPosition = insole && insole.device_information
-      ? insole.device_information.mount_position
+    const mountPosition = insole && insole.profile.device_information
+      ? insole.profile.device_information.mount_position
       : null;
     const side = Metrics.sideFromMountPosition(mountPosition, deviceId);
     state.deviceSides[deviceId] = side;
@@ -545,45 +545,43 @@
 
     state.sessions[deviceId] = root.getInsoleToolkitSession(deviceId);
     const insole = root.insoles[deviceId];
-    insole.setup();
-
-    insole.gotBLEFrequency = function gotBLEFrequency(freq) {
-      state.frequency[this.id] = Metrics.finite(freq) || 0;
+    insole.on("ble_frequency", (freq) => {
+      state.frequency[deviceId] = Metrics.finite(freq) || 0;
       updateSideMeta();
-    };
-    insole.gotConvertedAcc = function gotConvertedAcc(acc) {
-      state.pendingRaw[this.id].acc = acc;
-    };
-    insole.gotConvertedGyro = function gotConvertedGyro(gyro) {
-      state.pendingRaw[this.id].gyro = gyro;
-    };
-    insole.gotPress = function gotPress(press) {
-      state.pendingRaw[this.id].pressure = press && press.values;
-      commitLiveRaw(this.id);
-    };
-    insole.onConnect = function onConnect() {
-      activateLiveConnection(this.id, { forceSource: true });
-    };
-    insole.onDisconnect = function onDisconnect() {
-      state.reconnecting[this.id] = true;
+    });
+    insole.on("converted_acc", (acc) => {
+      state.pendingRaw[deviceId].acc = acc;
+    });
+    insole.on("converted_gyro", (gyro) => {
+      state.pendingRaw[deviceId].gyro = gyro;
+    });
+    insole.on("press", (press) => {
+      state.pendingRaw[deviceId].pressure = press && press.values;
+      commitLiveRaw(deviceId);
+    });
+    insole.onEvent("onConnect", () => {
+      activateLiveConnection(deviceId, { forceSource: true });
+    });
+    insole.onEvent("onDisconnect", () => {
+      state.reconnecting[deviceId] = true;
       if (!state.demo.running) {
         setSourceCopy(
           "waiting",
           "reconnectTitle",
           "reconnectWait",
-          { titleParams: { device: this.id + 1 } }
+          { titleParams: { device: deviceId + 1 } }
         );
       }
-    };
-    insole.onReconnectAttempt = function onReconnectAttempt(info) {
-      state.reconnecting[this.id] = true;
+    });
+    insole.onEvent("onReconnectAttempt", (info) => {
+      state.reconnecting[deviceId] = true;
       if (!state.demo.running) {
         setSourceCopy(
           "waiting",
           "reconnectTitle",
           "reconnectAttempt",
           {
-            titleParams: { device: this.id + 1 },
+            titleParams: { device: deviceId + 1 },
             detailParams: {
               attempt: info.attempt,
               maxAttempts: info.maxAttempts
@@ -591,29 +589,29 @@
           }
         );
       }
-    };
-    insole.onReconnectSuccess = function onReconnectSuccess() {
-      activateLiveConnection(this.id, { forceSource: true });
-    };
-    insole.onReconnectFailed = function onReconnectFailed(info) {
-      state.connected[this.id] = false;
-      state.reconnecting[this.id] = false;
+    });
+    insole.onEvent("onReconnectSuccess", () => {
+      activateLiveConnection(deviceId, { forceSource: true });
+    });
+    insole.onEvent("onReconnectFailed", (info) => {
+      state.connected[deviceId] = false;
+      state.reconnecting[deviceId] = false;
       const message = info && info.error && info.error.message
         ? info.error.message
         : null;
       setSourceCopy("error", "reconnectFailedTitle", "reconnectFailedFallback", {
-        titleParams: { device: this.id + 1 },
+        titleParams: { device: deviceId + 1 },
         ...(message ? { detailRaw: message } : {})
       });
-    };
-    insole.onError = function onError(error) {
+    });
+    insole.onEvent("onError", (error) => {
       if (error && error.name === "NotFoundError") return;
       const message = error && error.message ? error.message : String(error);
       setSourceCopy("error", "toolkitErrorTitle", "", {
-        titleParams: { device: this.id + 1 },
+        titleParams: { device: deviceId + 1 },
         detailRaw: message
       });
-    };
+    });
   }
 
   function demoRow(side, stepNumber, elapsedSeconds) {

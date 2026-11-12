@@ -10,7 +10,8 @@ Sound interaction driven by body motion.
 
 ## 使うデータ
 
-- 加速度 (gotConvertedAcc, 実Gスケール)
+- 加速度 (`on('acc')`)
+- オイラー角 (`on('euler')`)
 
 ## 必要なORPHE CORE数
 

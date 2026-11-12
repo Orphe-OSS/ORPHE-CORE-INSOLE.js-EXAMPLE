@@ -13,7 +13,7 @@
  *
  * ms       — performance.now() relative to take start (receive time)
  * timestamp— sensor timestamp from the packet
- * side     — L/R from device_information.mount_position (bit0), '?' if unknown
+ * side     — L/R from profile.device_information.mount_position (bit0), '?' if unknown
  */
 
 /* ================================================================ *
@@ -64,7 +64,7 @@ const $ = (id) => document.getElementById(id);
  *  Recording
  * ================================================================ */
 
-/** Called from gotPress (last callback per sample) with cached acc/gyro/quat. */
+/** Called from on('press') (last callback per sample) with cached acc/gyro/quat. */
 function onSample(devId, press, acc, gyro, quat) {
   const l = state.live[devId];
   l.press.push(press.values.slice());
@@ -306,53 +306,54 @@ window.addEventListener('load', function () {
   renderTakes();
 
   for (let i = 0; i < 2; i++) {
-    insoles[i].setup();
+    // insoles[i] is the toolkit-owned OrpheCoreInsole (do not recreate it)
+    const insole = insoles[i];
+    const id = i;
 
-    insoles[i].onDisconnect = function () {
-      state.connected[this.id] = false;
-    };
-    insoles[i].onConnect = function () {
-      state.connected[this.id] = true;
+    insole.onEvent('onDisconnect', () => {
+      state.connected[id] = false;
+    });
+    insole.onEvent('onConnect', () => {
+      state.connected[id] = true;
       // IMPORTANT: no GATT calls here — onConnect fires while begin() is
-      // still running its own GATT sequence (getDeviceInformation ->
-      // setDataStreamingMode -> syncCoreTime -> startNotify) and concurrent
+      // still running its own GATT sequence (DEVICE_INFORMATION read ->
+      // streaming mode write -> time sync / startNotify) and concurrent
       // operations fail with "GATT operation already in progress".
-      // begin() populates device_information itself, so we just poll it.
-      const self = this;
+      // begin() populates profile.device_information itself, so we just poll it.
       let tries = 0;
       const poll = setInterval(() => {
-        const info = self.device_information;
+        const info = insole.profile.device_information;
         if (info && typeof info.mount_position !== 'undefined') {
           // mount_position bit0: 0=LEFT, 1=RIGHT
-          state.sides[self.id] = (info.mount_position & 1) ? 'R' : 'L';
+          state.sides[id] = (info.mount_position & 1) ? 'R' : 'L';
           clearInterval(poll);
         } else if (++tries > 20) {
           clearInterval(poll); // keep '?'
         }
       }, 500);
-    };
+    });
 
     // SDK callback order per sample (mode 4 / header 56): quat -> acc/gyro
     // (+converted) -> press last, so caching values here and writing the row
-    // in gotPress keeps all columns aligned to the same sample.
-    insoles[i].gotQuat = function (quat) {
-      state.latest[this.id] = state.latest[this.id] || {};
-      state.latest[this.id].quat = quat;
-    };
-    insoles[i].gotConvertedAcc = function (acc) {
-      state.latest[this.id] = state.latest[this.id] || {};
-      state.latest[this.id].acc = acc;
-    };
-    insoles[i].gotConvertedGyro = function (gyro) {
-      state.latest[this.id] = state.latest[this.id] || {};
-      state.latest[this.id].gyro = gyro;
-    };
-    insoles[i].gotPress = function (press) {
-      const l = state.latest[this.id] = state.latest[this.id] || {};
+    // in on('press') keeps all columns aligned to the same sample.
+    insole.on('quat', (quat) => {
+      state.latest[id] = state.latest[id] || {};
+      state.latest[id].quat = quat;
+    });
+    insole.on('converted_acc', (acc) => {
+      state.latest[id] = state.latest[id] || {};
+      state.latest[id].acc = acc;
+    });
+    insole.on('converted_gyro', (gyro) => {
+      state.latest[id] = state.latest[id] || {};
+      state.latest[id].gyro = gyro;
+    });
+    insole.on('press', (press) => {
+      const l = state.latest[id] = state.latest[id] || {};
       l.press = press;
-      onSample(this.id, press, l.acc, l.gyro, l.quat);
-    };
-    insoles[i].gotBLEFrequency = function (freq) { state.hz[this.id] = freq; };
+      onSample(id, press, l.acc, l.gyro, l.quat);
+    });
+    insole.on('ble_frequency', (freq) => { state.hz[id] = freq; });
   }
 
   $('rec_btn').addEventListener('click', () => (state.recording ? stopRec() : startRec()));

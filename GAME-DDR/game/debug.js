@@ -22,7 +22,7 @@ window.debugHelper = {
         
         // 2. ORPHE CORE状態
         console.log('\n👟 ORPHE CORE Status:');
-        console.log('  ORPHE class loaded:', typeof Orphe !== 'undefined' ? '✅' : '❌');
+        console.log('  ORPHE-CORE-INSOLE.js loaded:', typeof OrpheCoreInsoleJS !== 'undefined' ? '✅' : '❌');
         console.log('  CoreToolkit loaded:', typeof buildCoreToolkit !== 'undefined' ? '✅' : '❌');
         console.log('  Devices created:', window.game?.orpheData ? '✅' : '❌');
         
@@ -55,8 +55,8 @@ window.debugHelper = {
         console.log('\n⚠️ Potential Issues:');
         const issues = [];
         
-        if (typeof Orphe === 'undefined') {
-            issues.push('ORPHE-CORE.js not loaded');
+        if (typeof OrpheCoreInsoleJS === 'undefined') {
+            issues.push('ORPHE-CORE-INSOLE.js not loaded');
         }
         if (!document.getElementById('gameCanvas')) {
             issues.push('Canvas element missing');

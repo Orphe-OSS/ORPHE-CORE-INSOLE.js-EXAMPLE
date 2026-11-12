@@ -501,7 +501,7 @@ function applySide(deviceId, side) {
  * mount_position が入るまで短時間ポーリングしてから反映する。
  */
 function applyMountPositionWhenReady(insole, tries = 20) {
-    const info = insole.device_information;
+    const info = insole.profile.device_information;
     if (info && typeof info.mount_position !== 'undefined') {
         applySide(insole.id, (info.mount_position & 0b1) === 1 ? 'R' : 'L');
         return;
@@ -575,42 +575,40 @@ window.onload = function () {
         const toolkitSession = getInsoleToolkitSession(id);
         fifos[id] = toolkitSession ? toolkitSession.fifo : null;
         gaits[id] = toolkitSession ? toolkitSession.gait : null;
-        insole.setup();
-
-        insole.gotQuat = function (quat) {
-            notePending(this.id, quat);
-            pendings[this.id].quat = { w: quat.w, x: quat.x, y: quat.y, z: quat.z };
-        };
-        insole.gotEuler = function (euler) {
-            pendings[this.id].euler = { pitch: euler.pitch, roll: euler.roll, yaw: euler.yaw };
+        insole.on('quat', (quat) => {
+            notePending(id, quat);
+            pendings[id].quat = { w: quat.w, x: quat.x, y: quat.y, z: quat.z };
+        });
+        insole.on('euler', (euler) => {
+            pendings[id].euler = { pitch: euler.pitch, roll: euler.roll, yaw: euler.yaw };
             // モード1は press が無く euler が各サンプルの最後に呼ばれる
-            if (this.streaming_mode === 1) commitLiveFrame(this.id);
-        };
-        insole.gotConvertedAcc = function (acc) {
-            notePending(this.id, acc);
-            pendings[this.id].acc = { x: acc.x, y: acc.y, z: acc.z };
-        };
-        insole.gotConvertedGyro = function (gyro) {
-            notePending(this.id, gyro);
-            pendings[this.id].gyro = { x: gyro.x, y: gyro.y, z: gyro.z };
-            // quaternion.js が読み込めず gotEuler が呼ばれない環境でのモード1フォールバック
-            if (this.streaming_mode === 1 && typeof Quaternion === 'undefined') commitLiveFrame(this.id);
-        };
-        insole.gotPress = function (press) {
-            notePending(this.id, press);
-            pendings[this.id].press = press.values.slice(0, 6);
+            if (insole.profile.streaming_mode === 1) commitLiveFrame(id);
+        });
+        insole.on('converted_acc', (acc) => {
+            notePending(id, acc);
+            pendings[id].acc = { x: acc.x, y: acc.y, z: acc.z };
+        });
+        insole.on('converted_gyro', (gyro) => {
+            notePending(id, gyro);
+            pendings[id].gyro = { x: gyro.x, y: gyro.y, z: gyro.z };
+            // quaternion.js が読み込めず euler が届かない環境でのモード1フォールバック
+            if (insole.profile.streaming_mode === 1 && typeof Quaternion === 'undefined') commitLiveFrame(id);
+        });
+        insole.on('press', (press) => {
+            notePending(id, press);
+            pendings[id].press = press.values.slice(0, 6);
             // モード3/4は press が各サンプルの最後に呼ばれる（SDKのコールバック順）
-            commitLiveFrame(this.id);
-        };
-        insole.lostData = function (serial, prev) {
-            console.warn(`INSOLE${this.id}: lost packets ${prev} -> ${serial}`);
-        };
-        insole.onConnect = function () {
-            applyMountPositionWhenReady(this);
-        };
-        insole.onReconnectSuccess = function () {
-            applyMountPositionWhenReady(this);
-        };
+            commitLiveFrame(id);
+        });
+        insole.on('lost_data', ({ serial, prev }) => {
+            console.warn(`INSOLE${id}: lost packets ${prev} -> ${serial}`);
+        });
+        insole.onEvent('onConnect', () => {
+            applyMountPositionWhenReady(insole);
+        });
+        insole.onEvent('onReconnectSuccess', () => {
+            applyMountPositionWhenReady(insole);
+        });
     }
 
     // 初期のL/Rバッジ・並び（デモは device0=左足 / device1=右足）
@@ -1143,8 +1141,8 @@ window.onload = function () {
             for (let id = 0; id < 2; id++) {
                 const devLive = (performance.now() - lastLiveAtDev[id]) < LIVE_TIMEOUT_MS;
                 if (!devLive) continue;
-                if (insoles[id].streaming_mode === 1) anyMode1 = true;
-                if (insoles[id].streaming_mode === 3) anyMode3 = true;
+                if (insoles[id].profile.streaming_mode === 1) anyMode1 = true;
+                if (insoles[id].profile.streaming_mode === 3) anyMode3 = true;
             }
             noticePress.classList.toggle('d-none', !anyMode1);
             noticeQuat.classList.toggle('d-none', !anyMode3);

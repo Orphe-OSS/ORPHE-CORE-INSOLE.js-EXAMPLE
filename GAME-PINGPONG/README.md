@@ -11,7 +11,7 @@ Simple competitive game concept using ORPHE input.
 ## 使うデータ
 
 - オイラー角 (euler)
-- 加速度 (gotConvertedAcc, 実Gスケール)
+- 加速度 (`on('converted_acc')`, 実Gスケール)
 
 ## 必要なORPHE CORE数
 

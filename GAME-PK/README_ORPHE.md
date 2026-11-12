@@ -128,8 +128,8 @@ dy = avgPitch × 上下感度 × 150  （ピクセル）
 - Web Audio API (効果音)
 
 ### センサー連携
-- ORPHE-CORE.js (Bluetooth LE通信)
-- CoreToolkit.js (接続UI)
+- ORPHE-CORE-INSOLE.js の `OrpheCoreInsole` (Bluetooth LE通信)
+- orphe-core-insole-toolkit.js の `buildCoreToolkit` (接続UI)
 - サンプリングレート: 約60Hz (16ms間隔)
 - バッファサイズ: 20フレーム
 
@@ -203,12 +203,11 @@ Test 3: Corner Kick (Top-Right) - 75% power, dx=356.3px, dy=213.7px
 ## 🔗 リンク
 
 - [ORPHE公式サイト](https://orphe.io/)
-- [ORPHE-CORE.js GitHub](https://github.com/Orphe-OSS/ORPHE-CORE.js)
-- [ORPHE-CORE.js ドキュメント](https://orphe-oss.github.io/ORPHE-CORE.js/)
+- [ORPHE-CORE-INSOLE.js GitHub](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js)
 
 ## 📄 ライセンス
 
-このゲームはオープンソースの[ORPHE-CORE.js](https://github.com/Orphe-OSS/ORPHE-CORE.js)を使用しています。
+このゲームはオープンソースの[ORPHE-CORE-INSOLE.js](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js)を使用しています。
 
 ---
 

@@ -16,15 +16,15 @@ This example prototypes a stabilometry-like balance view for ORPHE INSOLE. It es
 - Listed measurement ranges are +/-16G, +/-2000 dps, and 0-148 N pressure.
 - Listed sampling rates are 100 Hz / 200 Hz, with rate depending on application.
 - Connectivity is BLE, and this repository exposes that stream through Web Bluetooth callbacks.
-- In the current `src/ORPHE-INSOLE.js`, `begin()` defaults to streaming mode 4: gyro, acceleration, pressure, and quaternion at 100 Hz. Mode 3 provides gyro, acceleration, and pressure at 200 Hz.
+- In the current SDK (`OrpheCoreInsole` with `insoleProfile()`), `begin('SENSOR_VALUES')` defaults to streaming mode 4: gyro, acceleration, pressure, and quaternion at 100 Hz. Mode 3 provides gyro, acceleration, and pressure at 200 Hz.
 
-Source: https://shop.orphe.io/en/products/orphe-insole-%CE%B2-evaluation-kit and this repository's `README.md` / `src/ORPHE-INSOLE.js`.
+Source: https://shop.orphe.io/en/products/orphe-insole-%CE%B2-evaluation-kit and the ORPHE-CORE-INSOLE.js SDK `README.md` / `src/profiles/insole.ts`.
 
 ## Implementation Notes
 
 - CoP is calculated as a weighted average over the approximate `SensorLayout` positions in `balance-sway.js`.
 - The global CoP is a load-weighted combination of the current left and right foot CoP values.
-- Connection uses the repository `src/CoreToolkit.js` switch UI, the same pattern as the existing FSR / hula-style examples. Unsupported CORE-only LED/settings controls are hidden in this example.
+- Connection uses the `buildInsoleToolkit()` switch UI from `orphe-core-insole-toolkit.js`. The page subscribes to the toolkit-owned `insoles[0]` / `insoles[1]` (`OrpheCoreInsole`) with `on('press' | 'converted_acc' | 'converted_gyro' | 'quat', ...)` and `onEvent('onConnect' | 'onDisconnect' | 'onStartNotify' | 'onError', ...)`, and switches the streaming mode with `commands.setDataStreamingMode()`.
 - The `Six Sensors / Foot` panel now uses the `examples/showcase/` pressure-map graphics: ORPHE INSOLE left/right PNGs, the showcase six-point pressure layout, dynamic blue-to-red pressure scaling, a cyan CoP marker, and left/right volume bars.
 - Metrics are intentionally labelled as normalized units (`u`) until real hardware calibration maps sensor layout and pressure values into physical dimensions.
 - The demo stream is deterministic enough for repeatable UI testing and keeps the page useful without a connected insole.

@@ -4,7 +4,7 @@ last modified: 2023/02/22 00:16:19
 last_modified.trim('\n');
 var bufsize = 128;
 
-//var ble = new Orphe(0);
+// ORPHE CORE は CoreToolkit が bles[0]（OrpheCoreInsole）として生成する
 
 var is_active = false;
 var chart;
@@ -207,23 +207,25 @@ window.onload = function () {
 
   let ble = bles[0];
   // ORPHE CORE Init
-  ble.setup();
-  ble.onConnect = function () {
+  ble.onEvent('onConnect', function () {
     timestamp.start = Date.now();
-  }
-  ble.onDisconnect = function () {
+  });
+  ble.onEvent('onDisconnect', function () {
     timestamp.end = Date.now();
     alert('ORHPE COREとの接続が切れました。接続し直してください。')
     location.reload();
-  }
-  ble.gotStepsNumber = function (number) {
+  });
+  function showStepsNumber(number) {
     //    console.log(number);
     document.querySelector('#td_steps').innerText = document.querySelector('#p_steps').innerText = number;
     document.querySelector('#td_calories').innerText = document.querySelector('#p_calories').innerText = getCalorie(number).toFixed(1);
     document.querySelector('#td_distance').innerText = document.querySelector('#p_distance').innerText = getDistance(number).toFixed(3);
-  };
+  }
+  ble.on('steps_number', function (steps_number) {
+    showStepsNumber(steps_number.value);
+  });
 
-  ble.gotAcc = function (_acc) {
+  ble.on('acc', function (_acc) {
     var distance;
     {
       accs.push(_acc);
@@ -249,7 +251,7 @@ window.onload = function () {
         if (is_active) {
           steps++;
           steps_count_timestamp = timestamp.getElapsedTime();
-          ble.gotStepsNumber(steps);
+          showStepsNumber(steps);
 
           let time_now = timestamp.getElapsedTime();;
           let hours = parseInt((time_now / (1000 * 60 * 60)) % 24);
@@ -287,7 +289,7 @@ window.onload = function () {
       acc_prev = _acc;
 
     }
-  };
+  });
 
   loadHistory();
   loadParameters();

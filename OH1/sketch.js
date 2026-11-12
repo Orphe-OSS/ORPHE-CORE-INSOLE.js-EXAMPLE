@@ -23,30 +23,30 @@ window.onload = function () {
 
   // bles: defined in coreToolkit.js
   for (let ble of bles) {
-    // 最初からanalysisとsensor values両方のnotificationを登録する場合は以下のsetupに置き換える
-    // ble.setup("ANALYSIS_AND_RAW");
-    ble.setup();
+    // bles[i] は CoreToolkit が生成した OrpheCoreInsole。setup() は不要。
+    // 開始する notification は buildCoreToolkit の第4引数で選べる
+    // （省略時は analysis と sensor values 両方の 'STEP_ANALYSIS_AND_SENSOR_VALUES'）
 
     // 接続したときのコールバック
-    ble.onConnect = function (uuid) {
+    ble.onEvent('onConnect', function (uuid) {
       console.log('onConnect:', uuid);
       document.querySelector(`#status${ble.id}`).innerText = 'ONLINE';
       document.querySelector(`#status${ble.id}`).classList = 'bg-primary text-white'
-    }
+    });
     // 切断されたときのコールバック
-    ble.onDisconnect = function () {
+    ble.onEvent('onDisconnect', function () {
       document.querySelector(`#status${ble.id}`).innerText = 'OFFLINE';
       document.querySelector(`#status${ble.id}`).classList = 'bg-secondary text-white'
-    }
-    ble.gotAcc = function (acc) {
+    });
+    ble.on('acc', function (acc) {
       document.querySelector(`#acc${ble.id}`).innerText = `${acc.x.toFixed(2)}`;
-    }
-    ble.gotQuat = function (quat) {
+    });
+    ble.on('quat', function (quat) {
       document.querySelector(`#quat${ble.id}`).innerText = `${quat.w.toFixed(2)}`;
-    }
-    ble.gotStride = function (stride) {
+    });
+    ble.on('stride', function (stride) {
       document.querySelector(`#stride${ble.id}`).innerText = `${stride.x.toFixed(2)}`;
-    }
+    });
 
     buildCoreToolkit(document.querySelector(`#toolkit_placeholder0${ble.id}`),
       `CORE 0${ble.id + 1}`,

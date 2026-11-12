@@ -174,8 +174,8 @@ Result: PASS ✅
 
 ### センサー技術
 - Web Bluetooth API
-- ORPHE-CORE.js SDK
-- CoreToolkit.js
+- ORPHE-CORE-INSOLE.js SDK (`OrpheCoreInsole`)
+- orphe-core-insole-toolkit.js (`buildCoreToolkit`)
 
 ### 音響・視覚効果
 - Web Audio API (OscillatorNode)

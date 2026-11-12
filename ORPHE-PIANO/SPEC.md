@@ -59,14 +59,14 @@ ORPHE Pianoは、左右2つのORPHE COREを使い、歩行・姿勢・空中動�
 
 | コールバック | 使い道 |
 | --- | --- |
-| `gotEuler` | アルペジオ型選択、TOE/FLAT/HEEL推定、円の位置 |
-| `gotGyro` | motion STEP検出、アルペジオ型補助、円の位置 |
-| `gotConvertedAcc` | motion STEP検出、空中KICK検出、Scene 10 granular制御 |
-| `gotAcc` | `gotConvertedAcc` がない場合のmotion STEP代替 |
-| `gotLandingImpact` | jump score用に保存する。KICK直接発火には使わない |
-| `gotFootAngle` | TOE/FLAT/HEEL推定 |
-| `gotStepsNumber` | STEP event |
-| `gotGait` | STEP event |
+| `on('euler')` | アルペジオ型選択、TOE/FLAT/HEEL推定、円の位置 |
+| `on('gyro')` | motion STEP検出、アルペジオ型補助、円の位置 |
+| `on('converted_acc')` | motion STEP検出、空中KICK検出、Scene 10 granular制御 |
+| `on('acc')` | `on('converted_acc')` がない場合のmotion STEP代替 |
+| `on('landing_impact')` | jump score用に保存する。KICK直接発火には使わない |
+| `on('foot_angle')` | TOE/FLAT/HEEL推定 |
+| `on('steps_number')` | STEP event |
+| `on('gait')` | STEP event |
 
 ### 3.3 UI入力
 
@@ -87,7 +87,7 @@ flowchart TD
   A["ORPHE CORE L/R"] --> B["STEP_ANALYSIS_AND_SENSOR_VALUES"]
   B --> C["footState更新: euler, gyro, acc, footAngle, landingImpact"]
   C --> D{"イベント化"}
-  D -->|"gotStepsNumber / gotGait"| E["STEP"]
+  D -->|"on('steps_number') / on('gait')"| E["STEP"]
   D -->|"acc + gyro movement"| F["motion STEP"]
   D -->|"quiet gait + accumulated converted acc"| G["air KICK"]
   E --> H["handleInstrumentEvent"]
@@ -158,8 +158,8 @@ stateDiagram-v2
 
 | 入口 | 条件 | power |
 | --- | --- | ---: |
-| `gotStepsNumber` | `steps.value` が前回値から変化 | `0.72` |
-| `gotGait` | `gait.steps` が前回値から変化 | `0.70` |
+| `on('steps_number')` | `steps.value` が前回値から変化 | `0.72` |
+| `on('gait')` | `gait.steps` が前回値から変化 | `0.70` |
 
 この2つは `lastAnalysisAt` を更新し、空中KICK用のacc蓄積をリセットします。
 
@@ -184,8 +184,8 @@ KICKは「地面に接地した強い着地」ではなく、「歩容解析が�
 
 条件:
 
-- 入力源が `gotConvertedAcc` である。
-- 直近の `gotStepsNumber` / `gotGait` から `650ms` 以上経っている。
+- 入力源が `on('converted_acc')` である。
+- 直近の `on('steps_number')` / `on('gait')` から `650ms` 以上経っている。
 - `480ms` の蓄積窓内で、converted acc由来のenergyがしきい値を超える。
 - 蓄積サンプル数が `4` 以上。
 - 前回KICKから `520ms` 以上経っている。
@@ -433,7 +433,7 @@ Sceneが進むほど、背景wash、secondary arc、tertiary arcが増えます�
 | Scene card | Scene、sample load、`stepProgress`、charging/returning |
 | L/R card | 直近の音名、アルペジオ型、接続状態 |
 | 下部音階strip | 現在Sceneで鳴り得る音。Scene 10は `piano7 granular` も表示 |
-| LED | `setLED(1, 1 + noteIndex % 4)` を試行 |
+| LED | `commands.setLED(true, 1 + noteIndex % 4)` を試行 |
 
 ## 14. チューニングポイント
 

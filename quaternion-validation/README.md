@@ -17,14 +17,14 @@ BLEデバイスの選択だけ手動で行い、接続後は次をページ内�
 ## 起動
 
 ```bash
-cd ORPHE-INSOLE.js
+cd ORPHE-CORE-INSOLE.js-EXAMPLE
 python3 -m http.server 8000
 ```
 
 Chromeで次を開きます。
 
 ```text
-http://localhost:8000/examples/quaternion-validation/
+http://localhost:8000/quaternion-validation/
 ```
 
 1. `DEVICE 0` と `DEVICE 1` から別々のINSOLEを選択
@@ -43,7 +43,7 @@ caffeinate -dimsu
 BLEなしでページの操作とレポート出力を確認できます。
 
 ```text
-http://localhost:8000/examples/quaternion-validation/?sim=1
+http://localhost:8000/quaternion-validation/?sim=1
 ```
 
 シミュレータ結果は実機検証値として使用しないでください。

@@ -40,7 +40,7 @@ let settings = {
 async function init() {
     console.log('🎮 Initializing ORPHE DDR Game...');
     console.log('📊 System Check:');
-    console.log('  - ORPHE-CORE.js loaded:', typeof Orphe !== 'undefined');
+    console.log('  - ORPHE-CORE-INSOLE.js loaded:', typeof OrpheCoreInsoleJS !== 'undefined');
     console.log('  - AudioManager loaded:', typeof AudioManager !== 'undefined');
     console.log('  - ChartManager loaded:', typeof ChartManager !== 'undefined');
     console.log('  - PlayerManager loaded:', typeof PlayerManager !== 'undefined');
@@ -134,19 +134,26 @@ function setupOrpheCORE() {
         
         // Setup connection handlers
         for (let i = 0; i < bles.length; i++) {
-            bles[i].onConnect = function() {
-                connectedDevices++;
+            bles[i].onEvent('onConnect', function() {
+                if (connectedIds.has(i)) return;
+                connectedIds.add(i);
+                connectedDevices = connectedIds.size;
                 console.log(`✅ ORPHE Device ${i} connected! Total: ${connectedDevices}/2`);
-            };
+            });
+
+            bles[i].onEvent('onDisconnect', function() {
+                connectedIds.delete(i);
+                connectedDevices = connectedIds.size;
+            });
             
-            bles[i].gotGait = function(gait) {
+            bles[i].on('gait', function(gait) {
                 orpheData.gaits[i] = gait;
                 
                 // Handle direction change for step input
                 if (gait.direction !== undefined) {
                     handleOrpheInput(gait.direction);
                 }
-            };
+            });
         }
         
         console.log('✅ ORPHE CORE setup complete');
