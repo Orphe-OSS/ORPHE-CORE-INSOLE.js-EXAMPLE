@@ -29,6 +29,7 @@
   const MAX_SAMPLES = 120000;      // 600 s 相当。超えたら結果に truncated 注意を出す
   const TIMELINE_BINS = C.DEFAULT_BIN_COUNT;
   const BAR_FULL_SCALE_MS = 60000; // バッファガイドバーの右端
+  const NO_DATA_WARNING_MS = 3000;  // 収録開始からこの時間データが1件も届かなければ警告する
   const PRESSURE_FULL_SCALE = 20000;
   const DEVICE_COLORS = ["#7fa4ff", "#f6c860"];
 
@@ -75,6 +76,7 @@
       droppedLive: 0,         // onDataLoss(info.cumulative) の最新値
       droppedTotal: null,     // onStopped(info.dropped) = この収録の回復不能ロス累計
       batchCount: 0,
+      noDataWarned: false,
       lastBatchAt: 0,
       lastBatchGapMs: null,
       lastBatchSize: 0,
@@ -396,6 +398,26 @@
     const elapsed = Date.now() - state.startedAt;
     dom.elapsedText.textContent = `${(elapsed / 1000).toFixed(1)} s`;
     updateBufferGuide(elapsed);
+    if (elapsed >= NO_DATA_WARNING_MS) warnNoData();
+  }
+
+  // 開始に成功してもデータが届かないとき（FW とパケット形式が合わないなど）は、黙って 0 件のままにしない
+  function warnNoData() {
+    for (const id of state.runDeviceIds) {
+      const entry = device(id);
+      if (!entry.inRun || entry.batchCount > 0 || entry.noDataWarned) continue;
+      entry.noDataWarned = true;
+      log("warn", "logNoDataDevice", {
+        device: deviceLabel(id),
+        seconds: NO_DATA_WARNING_MS / 1000,
+        firmware: firmwareNameOf(id) || "unknown"
+      });
+    }
+  }
+
+  function firmwareNameOf(id) {
+    const insole = Array.isArray(root.insoles) ? root.insoles[id] : null;
+    return insole && insole.firmware ? insole.firmware.name : null;
   }
 
   async function stopRecording(reason) {
