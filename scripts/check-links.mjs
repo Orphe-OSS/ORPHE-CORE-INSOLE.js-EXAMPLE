@@ -13,7 +13,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const EXPECTED_SDK_VERSION = 'v0.2.1';
+const EXPECTED_SDK_VERSION = 'v0.3.0';
 const errors = [];
 
 /** 同梱の第三者ライブラリ（互換 API の検出対象外） */
@@ -21,7 +21,7 @@ const THIRD_PARTY = /(^|\/)(p5(\.[\w]+)*\.js|chart(\.min)?\.js|gauge\.min\.js|bl
 
 function walk(dir, ext, out = []) {
   for (const name of readdirSync(dir)) {
-    if (['.git', 'node_modules', 'vendor', 'scripts', '_merge-src'].includes(name)) continue;
+    if (['.git', '.tmp', 'node_modules', 'vendor', 'scripts', '_merge-src'].includes(name)) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p, ext, out);
     else if (name.endsWith(ext)) out.push(p);

@@ -18,7 +18,7 @@ const tmp = mkdtempSync(join(tmpdir(), 'orphe-syntax-'));
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
-    if (['.git', 'node_modules', 'vendor', '_merge-src'].includes(name)) continue;
+    if (['.git', '.tmp', 'node_modules', 'vendor', '_merge-src'].includes(name)) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p, out);
     else if (/\.(js|mjs|html)$/.test(name)) out.push(p);

@@ -149,7 +149,7 @@ orphe-fight-core/
 └── README.md               # このファイル
 ```
 
-ORPHE CORE の SDK は共通の `../vendor/orphe-core-insole.js`（ORPHE-CORE-INSOLE.js）を読み込みます。
+ORPHE CORE の SDK は共通の `https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole.js`（ORPHE-CORE-INSOLE.js）を読み込みます。
 
 ## 🐛 トラブルシューティング
 
@@ -255,7 +255,7 @@ core.reset();
 
 ### 依存ライブラリ
 
-- ORPHE-CORE-INSOLE.js（`../vendor/orphe-core-insole.js`）- センサーデータ取得
+- ORPHE-CORE-INSOLE.js（`https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole.js`）- センサーデータ取得
 - [Chart.js](https://www.chartjs.org/) - リアルタイムグラフ表示
 
 ## 🎉 高スコアのコツ

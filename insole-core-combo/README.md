@@ -95,9 +95,9 @@ by service. For CORE units whose names do not start with `CR-`, use
 
 ```html
 <!-- 1. ORPHE-CORE-INSOLE.js (shared CORE / INSOLE SDK, load first) -->
-<script src="../vendor/orphe-core-insole.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole.js"></script>
 <!-- 2. Toolkits (InsoleToolkit / CoreCompanionToolkit / fifo-recording session) -->
-<script src="../vendor/orphe-core-insole-toolkit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 ```
 
 Both INSOLE and CORE are `OrpheCoreInsole` instances (the device type is selected by
