@@ -1,15 +1,18 @@
-// 複数orphe coreを利用する場合は配列つかうと便利
-const bles = [new Orphe(0), new Orphe(1)];
+const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
 
-//--------------------------------------------------
-//ロード時の処理
-//--------------------------------------------------
-window.onload = function () {
-    // ORPHE COREの初期セットアップ
-    for (ble of bles) {
-        ble.setup();
-    }
+// ORPHE CORE を生成する（chooser の条件は名前が 'CR-' で始まるデバイス）
+function createCore(id) {
+    return new OrpheCoreInsole({
+        profile: coreProfile({ namePrefix: 'CR-' }),
+        id,
+        events: {
+            onError(error) { console.error(error); },
+        },
+    });
 }
+
+// 複数orphe coreを利用する場合は配列つかうと便利
+const bles = [createCore(0), createCore(1)];
 
 
 function sendLEDMessage(dom) {
@@ -17,10 +20,10 @@ function sendLEDMessage(dom) {
     const value = json.value;
     const id = json.id;
     if (value >= 0) {
-        bles[id].setLED(1, value);
+        bles[id].commands.setLED(1, value).catch(console.error);
     }
     else {
-        bles[id].setLED(0, value);
+        bles[id].commands.setLED(0, value).catch(console.error);
     }
 }
 
@@ -30,7 +33,7 @@ function toggleConnect(dom) {
     // ble
     if (dom.checked) {
         // 初めてつなぐ時はbegin()で
-        bles[dom.value].begin();
+        bles[dom.value].begin().catch(console.error);
         document.querySelector(`#slider${dom.value}`).disabled = false;
         document.querySelector(`#btnradio${dom.value * 6 + 1}`).checked = true;
         for (let i = 0 + 6 * dom.value; i < 6 + 6 * dom.value; i++) {
@@ -49,9 +52,9 @@ function toggleConnect(dom) {
 }
 
 document.querySelector('#slider0').addEventListener('change', function () {
-    bles[0].setLEDBrightness(this.value);
+    bles[0].commands.setLEDBrightness(Number(this.value)).catch(console.error);
 });
 
 document.querySelector('#slider1').addEventListener('change', function () {
-    bles[1].setLEDBrightness(this.value);
+    bles[1].commands.setLEDBrightness(Number(this.value)).catch(console.error);
 });

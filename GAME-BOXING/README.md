@@ -141,16 +141,15 @@ orphe-fight-core/
 ├── css/
 │   └── style.css           # スタイルシート
 ├── js/
-│   ├── ORPHE-CORE.js       # ORPHE COREライブラリ（改良版）
-│   ├── float16.js          # Float16サポート
-│   ├── quaternion.js       # クォータニオン計算
 │   ├── chart.js            # Chart.js（グラフ描画）
-│   └── game.js             # ゲームロジック
+│   └── game.js             # ゲームロジック（ORPHE CORE 接続を含む）
 ├── images/
 │   └── normal.png          # 対戦相手の顔画像
-├── README.md               # このファイル
-└── CHANGELOG.md            # 変更履歴
+├── music/                  # BGM・効果音
+└── README.md               # このファイル
 ```
+
+ORPHE CORE の SDK は共通の `../vendor/orphe-core-insole.js`（ORPHE-CORE-INSOLE.js）を読み込みます。
 
 ## 🐛 トラブルシューティング
 
@@ -160,21 +159,14 @@ orphe-fight-core/
 
 **原因と対処法**:
 
-1. **ファームウェアのパケット形式が異なる**
+1. **接続シーケンスが完了していない**
    - ブラウザの開発者ツール（F12）を開く
-   - Console タブで以下のログを確認：
-   ```
-   [SENSOR_VALUES] Header: XX, Length: YY bytes
-   ```
-   - ヘッダが 40 または 50 以外の場合、対応が必要
+   - Console タブで `left 接続成功: SENSOR_VALUES`（右手は `right …`）が出ているか確認
+   - `onConnect` は characteristic ごとに呼ばれるので、`DEVICE_INFORMATION` などのログも合わせて出ます
 
-2. **DEVICE_INFORMATION が読み込まれていない**
-   - Console に `Cannot read property 'gyro' of undefined` が出ていないか確認
-   - デバイス接続後、自動的に読み込まれるはず
-
-3. **Notify が開始されていない**
-   - Console に `onStartNotify SENSOR_VALUES` が出ているか確認
-   - 出ていない場合、Bluetooth 接続を確認
+2. **エラーが出ている**
+   - Console に `ORPHE CORE エラー:` / `ORPHE CORE 接続エラー:` が出ていないか確認
+   - 出ている場合、Bluetooth 接続とデバイスの電源を確認
 
 ### グラフは更新されるが、パンチが検出されない
 
@@ -225,16 +217,29 @@ this.hitWindow = {
 
 ORPHE CORE が接続されていない場合、10秒後に自動的にデバッグモードが開始され、擬似センサーデータが生成されます。
 
-### ORPHE-CORE.js の改良点
+### ORPHE CORE の接続コード
 
-このプロジェクトの `ORPHE-CORE.js` は、公式版（v1.3.0）に以下の改良を加えています：
+`js/game.js` の `connectDevice(side)` で、左右それぞれに `OrpheCoreInsole` を生成して接続します。
 
-1. **デバッグログの追加**: パケットのヘッダとサイズを自動ログ出力
-2. **104バイトパケット対応**: 新しいFWの拡張パケットに対応
-3. **フォールバック処理**: 未知のヘッダでも解析を試みる
-4. **エラーハンドリング強化**: オプショナルチェーンでクラッシュを防止
+```javascript
+const { OrpheCoreInsole, coreProfile } = OrpheCoreInsoleJS;
+const core = new OrpheCoreInsole({
+    profile: coreProfile({ namePrefix: 'CR-' }),
+    id: side === 'left' ? 0 : 1,
+    events: {
+        onConnect(uuid) { console.log(`${side} 接続成功:`, uuid); },
+        onError(error) { console.error(`${side} ORPHE CORE エラー:`, error); },
+    },
+});
+// 左右で別のデバイスを選ばせるため、前回のデバイスの記憶を破棄する
+core.transport.forgetRememberedDevice();
+core.on('converted_acc', (acc) => { /* パンチ検出 */ });
+core.on('converted_gyro', (gyro) => { /* パンチ検出 */ });
+await core.begin('SENSOR_VALUES');
 
-詳細は [CHANGELOG.md](CHANGELOG.md) を参照。
+// 切断
+core.reset();
+```
 
 ## 📋 必要要件
 
@@ -250,10 +255,8 @@ ORPHE CORE が接続されていない場合、10秒後に自動的にデバッ�
 
 ### 依存ライブラリ
 
-- [ORPHE-CORE.js](https://github.com/Orphe-OSS/ORPHE-CORE.js) - センサーデータ取得
+- ORPHE-CORE-INSOLE.js（`../vendor/orphe-core-insole.js`）- センサーデータ取得
 - [Chart.js](https://www.chartjs.org/) - リアルタイムグラフ表示
-- [float16.js](https://github.com/petamoriken/float16) - 16bit 浮動小数点サポート
-- [quaternion.js](https://github.com/infusion/Quaternion.js) - クォータニオン計算
 
 ## 🎉 高スコアのコツ
 

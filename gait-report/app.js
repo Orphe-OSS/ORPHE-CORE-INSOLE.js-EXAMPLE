@@ -157,29 +157,27 @@
     return Array.isArray(root.insoles) && deviceId >= 0 ? root.insoles[deviceId] || null : null;
   }
 
-  // SDK が getFirmwareVersion() で解決した版（insole.firmware_version にキャッシュされる）を読む。
+  // SDK の insoleFirmwareVersion() で解決した版（advertisement → FW 情報の順）。切断後も CSV に残せるよう端末ごとに保持する。
+  const firmwareVersions = DEVICE_IDS.map(() => null);
+
   function deviceFirmwareVersion(deviceId) {
-    const insole = insoleAt(deviceId);
-    return insole && insole.firmware_version ? String(insole.firmware_version) : null;
+    refreshFirmwareVersion(deviceId);
+    return firmwareVersions[deviceId] || null;
   }
 
-  // 接続のたびに FW 版の取得を促す（Toolkit の Step 有効化でも読まれるが、CSV の列に確実に載せるため）。
+  // 接続のたびに FW 版を読み直す（CSV の列に確実に載せるため）。
   function refreshFirmwareVersion(deviceId) {
     const insole = insoleAt(deviceId);
-    if (!insole || typeof insole.getFirmwareVersion !== "function") return;
-    let pending;
-    try {
-      pending = insole.getFirmwareVersion();
-    } catch {
-      return;
-    }
-    if (pending && typeof pending.catch === "function") pending.catch(() => null);
+    const sdk = root.OrpheCoreInsoleJS;
+    if (!insole || !sdk || typeof sdk.insoleFirmwareVersion !== "function") return;
+    const version = sdk.insoleFirmwareVersion(insole);
+    if (version) firmwareVersions[deviceId] = String(version);
   }
 
   function resolveDeviceSide(deviceId) {
     const insole = insoleAt(deviceId);
-    const mount = insole && insole.device_information
-      ? insole.device_information.mount_position
+    const mount = insole && insole.profile.device_information
+      ? insole.profile.device_information.mount_position
       : null;
     const side = Stats.sideFromMountPosition(mount, deviceId);
     state.deviceSides[deviceId] = side;
@@ -514,46 +512,44 @@
 
     state.sessions[deviceId] = root.getInsoleToolkitSession(deviceId);
     const insole = root.insoles[deviceId];
-    insole.setup();
-
-    insole.onConnect = function onConnect() {
-      activateLiveConnection(this.id, { forceSource: true });
-    };
-    insole.onDisconnect = function onDisconnect() {
-      notifyCG("disconnect", { side: state.deviceSides[this.id] });
+    insole.onEvent("onConnect", () => {
+      activateLiveConnection(deviceId, { forceSource: true });
+    });
+    insole.onEvent("onDisconnect", () => {
+      notifyCG("disconnect", { side: state.deviceSides[deviceId] });
       if (!state.demo.running) {
         setSourceCopy("waiting", "reconnectTitle", "reconnectWait", {
-          titleParams: { device: this.id + 1 }
+          titleParams: { device: deviceId + 1 }
         });
       }
-    };
-    insole.onReconnectAttempt = function onReconnectAttempt(info) {
+    });
+    insole.onEvent("onReconnectAttempt", (info) => {
       if (!state.demo.running) {
         setSourceCopy("waiting", "reconnectTitle", "reconnectAttempt", {
-          titleParams: { device: this.id + 1 },
+          titleParams: { device: deviceId + 1 },
           detailParams: { attempt: info.attempt, maxAttempts: info.maxAttempts }
         });
       }
-    };
-    insole.onReconnectSuccess = function onReconnectSuccess() {
-      activateLiveConnection(this.id, { forceSource: true });
-    };
-    insole.onReconnectFailed = function onReconnectFailed(info) {
-      state.connected[this.id] = false;
+    });
+    insole.onEvent("onReconnectSuccess", () => {
+      activateLiveConnection(deviceId, { forceSource: true });
+    });
+    insole.onEvent("onReconnectFailed", (info) => {
+      state.connected[deviceId] = false;
       const message = info && info.error && info.error.message ? info.error.message : null;
       setSourceCopy("error", "reconnectFailedTitle", "reconnectFailedFallback", {
-        titleParams: { device: this.id + 1 },
+        titleParams: { device: deviceId + 1 },
         ...(message ? { detailRaw: message } : {})
       });
-    };
-    insole.onError = function onError(error) {
+    });
+    insole.onEvent("onError", (error) => {
       if (error && error.name === "NotFoundError") return;
       const message = error && error.message ? error.message : String(error);
       setSourceCopy("error", "toolkitErrorTitle", "", {
-        titleParams: { device: this.id + 1 },
+        titleParams: { device: deviceId + 1 },
         detailRaw: message
       });
-    };
+    });
   }
 
   // -------------------------------------------------------------- rendering

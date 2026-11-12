@@ -10,8 +10,8 @@ Show steps, motion, and activity in a visual dashboard.
 
 ## 使うデータ
 
-- 加速度 (gotConvertedAcc, 実Gスケール)
-- 歩数 (stepsNumber)
+- 加速度 (`on('acc')`)
+- 歩数 (`on('steps_number')` と加速度からの独自カウント)
 
 ## 必要なORPHE CORE数
 

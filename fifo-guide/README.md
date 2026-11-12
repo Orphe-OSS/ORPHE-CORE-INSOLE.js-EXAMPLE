@@ -45,18 +45,18 @@ ORPHE INSOLE の FIFO バッファが保持できる長さは**約30秒分**で�
 これは推測値ではなく、SDK 実装の定数からの換算です。
 
 ```text
-src/InsoleFifo.js:
-  RING_BUFFER_CAPACITY = 1500   # 追従遅れ(lag)がこれを超えた分を回復不能として扱う上限
-  NOTIFY_DATA_NUM      = 4      # 1 serial packet に含まれるフレーム数
-  decodePacket()                # フレーム間隔は 5 ms（packet_number * 5）
+ORPHE-CORE-INSOLE.js src/fifo/protocol.ts:
+  FIFO_RING_BUFFER_CAPACITY         = 1500  # 追従遅れ(lag)がこれを超えた分を回復不能として扱う上限
+  NOTIFY_DATA_NUM                   = 4     # 1 serial packet に含まれるフレーム数
+  FIFO_LEGACY_CSV_FRAME_INTERVAL_MS = 5     # packetToCsvRows() の CSV 上のフレーム間隔 [ms]
 
 1 serial packet   = 4 frame × 5 ms = 20 ms
 保持できる長さ     = 1500 packet × 20 ms = 30,000 ms ≒ 30 秒
 （等価: 200 sample/s ÷ 4 sample/packet = 50 packet/s → 1500 ÷ 50 = 30 s）
 ```
 
-この換算は `tests/fifo-guide-continuity.test.js` が `src/InsoleFifo.js` の定数と
-`decodePacket()` の実測フレーム間隔に対して検証しています（定数が変わればテストが落ちます）。
+この換算は `tests/fifo-guide-continuity.test.js` が SDK の `src/fifo/protocol.ts` の定数と
+CSV 上のフレーム間隔に対して検証しています（定数が変わればテストが落ちます）。
 
 ### 運用上の注意
 
@@ -140,7 +140,6 @@ buildInsoleToolkit(toolkit, "INSOLE 01", 0, {
   fifo: { startupDelayMs: 1000, drainTimeoutMs: 5000,
           onSamples, onProgress, onDataLoss, onStopped },
 });
-insoles[0].setup();   // 必須（buildInsoleToolkit は setup() を呼びません）
 const session = getInsoleToolkitSession(0);
 
 // FIFO収録（read mode 切替・バッファ消去・ポーリング・再要求はSDKが担当）
@@ -156,8 +155,8 @@ const csv = insoleToolkitMeasurementToCSV(result, "raw");
 
 | 参照先 | 役割 |
 |---|---|
-| [`src/InsoleFifo.js`](../../src/InsoleFifo.js) | FIFO 収集ループ、再要求、drain、`createCheckpoint()` / `summarizeSince()` / `serialsSince()` |
-| [`src/InsoleToolkit.js`](../../src/InsoleToolkit.js) | 接続UI、`fifo-recording` プロファイル、`startMeasurement()` / `stopMeasurement()`、`insoleToolkitMeasurementToCSV()` |
+| [`src/fifo/recorder.ts`](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/blob/main/src/fifo/recorder.ts)（`FifoRecorder`） | FIFO 収集ループ、再要求、drain、`createCheckpoint()` / `summarizeSince()` / `serialsSince()` |
+| [`src/toolkit/insole-toolkit.ts`](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/blob/main/src/toolkit/insole-toolkit.ts) / [`src/session/insole-toolkit-session.ts`](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/blob/main/src/session/insole-toolkit-session.ts) | 接続UI、`fifo-recording` プロファイル、`startMeasurement()` / `stopMeasurement()`、`insoleToolkitMeasurementToCSV()` |
 | [`./continuity.js`](./continuity.js) | 本ページの判定ロジック（serial連続性・欠損range・timeline集約・30秒判定）。純関数のみで Node からテスト可能 |
 | [`./i18n.js`](./i18n.js) | ja / en の表示文言（step-analysis と同じ仕組み） |
 

@@ -6,8 +6,8 @@
  * チャネルの物理配置はモデルにより異なる場合があるため、配置を変えるときは
  * SENSOR_LAYOUT の並びだけを修正すればよい。
  */
-// 画像座標の正は SDK 共通定義（OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE）を参照する。
-const PRESSURE_SENSOR_LAYOUT = OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE;
+// 画像座標の正は SDK 共通定義（OrpheCoreInsoleJS.OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE）を参照する。
+const PRESSURE_SENSOR_LAYOUT = OrpheCoreInsoleJS.OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE;
 
 function createPressurePanel(deviceId, defaultFoot) {
     let foot = defaultFoot;

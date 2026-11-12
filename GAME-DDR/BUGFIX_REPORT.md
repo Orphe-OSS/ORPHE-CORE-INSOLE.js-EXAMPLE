@@ -7,7 +7,7 @@
 
 ### 1. **重大なエラー: SyntaxError**
 - **問題**: `main.js:1` で `bles` が重複宣言されていた
-- **原因**: ORPHE-CORE.jsが読み込まれる前に`new Orphe()`を実行していた
+- **原因**: ライブラリが読み込まれる前に main.js で独自の `bles`（CORE インスタンス）を作ろうとしていた
 - **影響**: ゲームが全く起動しない
 
 ### 2. **404エラー**
@@ -30,19 +30,17 @@
 
 **変更前:**
 ```javascript
-let bles = [new Orphe(0), new Orphe(1)]; // ❌ Orpheクラスが未定義
+let bles = [/* 独自に生成した CORE ×2 */]; // ❌ ライブラリ読み込み前に実行される
 ```
 
-**変更後:**
+**変更後（現在）:** `bles` は orphe-core-insole-toolkit.js が提供する OrpheCoreInsole の配列を使い、main.js では宣言しない。
 ```javascript
-let bles = []; // ✅ 後で初期化
-
 function setupOrpheCORE() {
-    if (typeof Orphe === 'undefined') {
-        console.warn('⚠️ ORPHE-CORE.js not loaded');
+    if (typeof bles === 'undefined' || !bles || bles.length === 0) {
+        console.warn('⚠️ ORPHE devices not initialized');
         return;
     }
-    bles = [new Orphe(0), new Orphe(1)]; // ✅ クラス存在確認後に作成
+    // bles[i].on('gait', …) / bles[i].onEvent('onConnect', …) を登録する
 }
 ```
 
@@ -52,7 +50,7 @@ function setupOrpheCORE() {
 ```javascript
 console.log('🎮 Initializing ORPHE DDR Game...');
 console.log('📊 System Check:');
-console.log('  - ORPHE-CORE.js loaded:', typeof Orphe !== 'undefined');
+console.log('  - ORPHE-CORE-INSOLE.js loaded:', typeof OrpheCoreInsoleJS !== 'undefined');
 console.log('  - AudioManager loaded:', typeof AudioManager !== 'undefined');
 // ... など
 ```
@@ -243,7 +241,7 @@ F12キーを押してコンソールを開く
 💡 Type debugHelper.help() for available commands
 🎮 Initializing ORPHE DDR Game...
 📊 System Check:
-  - ORPHE-CORE.js loaded: true
+  - ORPHE-CORE-INSOLE.js loaded: true
   - AudioManager loaded: true
   - ChartManager loaded: true
   - PlayerManager loaded: true

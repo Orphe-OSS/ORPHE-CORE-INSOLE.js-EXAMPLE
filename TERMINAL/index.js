@@ -194,7 +194,7 @@ function initUI() {
 
 // ─── デバイスのコールバック ─────────────────────────────────────────
 
-device.onConnect = function () {
+device.onEvent('onConnect', () => {
     const wasConnected = is_connected;
     is_connected = true;
     // 初回接続時のみ表示を再開する（再接続では一時停止状態を保つ）
@@ -203,9 +203,9 @@ device.onConnect = function () {
         document.querySelector('#button_ar_pause').textContent = 'Pause';
     }
     setConnectionUI('connected');
-};
+});
 
-device.onDisconnect = function () {
+device.onEvent('onDisconnect', () => {
     const wasConnected = is_connected;
     is_connected = false;
     is_playing = false;
@@ -214,28 +214,28 @@ device.onDisconnect = function () {
     if (wasConnected) {
         alert(`${deviceLabel}との接続が切れました`);
     }
-};
+});
 
-device.lostData = function (num, num_prev) {
+device.on('lost_data', ({ serial, prev }) => {
     const textarea = document.querySelector('#textarea_lost_data');
-    textarea.value += `[${formatNumber(number_of_lost_data)}]: ${num_prev} <-> ${num}\n`;
+    textarea.value += `[${formatNumber(number_of_lost_data)}]: ${prev} <-> ${serial}\n`;
     number_of_lost_data++;
     document.querySelector('#span_lost_data').textContent = number_of_lost_data;
     textarea.scrollTop = textarea.scrollHeight;
-};
+});
 
-// gotData を上書きすると notify の生 DataView が届く（read() の結果はここには来ない）
-device.gotData = function (data, uuid) {
+// onRaw で notify の生 DataView が届く（read() の結果はここには来ない）
+device.onRaw((uuid, data) => {
     if (uuid === 'DEVICE_INFORMATION') {
         diLog.push(data);
     } else if (uuid === 'DATE_TIME') {
         dtLog.push(data);
     } else if (is_playing) {
         // CORE の STEP_ANALYSIS_AND_SENSOR_VALUES では 2 種類が混ざるので先頭列に uuid を入れる
-        const label = device.notification_type === 'STEP_ANALYSIS_AND_SENSOR_VALUES' ? uuid : undefined;
+        const label = device.lastBeginType === 'STEP_ANALYSIS_AND_SENSOR_VALUES' ? uuid : undefined;
         arLog.push(data, label);
     }
-};
+});
 
 // ─── 送受信 ───────────────────────────────────────────────────────
 
@@ -273,7 +273,7 @@ async function send(dom, characteristic = 'DEVICE_INFORMATION') {
     }
     console.log(characteristic, commands);
     try {
-        await device.write(characteristic, new Uint8Array(commands));
+        await device.transport.write(characteristic, new Uint8Array(commands));
     } catch (error) {
         console.error('write error:', error);
         alert(`書き込みに失敗しました: ${error && error.message ? error.message : error}`);
@@ -287,12 +287,12 @@ async function read(dom, characteristic = 'DEVICE_INFORMATION') {
     }
     try {
         if (characteristic === 'DEVICE_INFORMATION') {
-            // read('DEVICE_INFORMATION') では device_information が更新されないので getDeviceInformation() を使う
-            const info = await device.getDeviceInformation();
+            // transport.read('DEVICE_INFORMATION') では profile.device_information が更新されないので commands.readDeviceInformation() を使う
+            const info = await device.commands.readDeviceInformation();
             diLog.push(info.raw);
             renderInfoTable(info);
         } else if (characteristic === 'DATE_TIME') {
-            const ret = await device.getDateTime();
+            const ret = await device.readDateTime();
             dtLog.push(ret.raw);
             document.querySelector('#dt_decoded').textContent = ret.date.toLocaleString();
             document.querySelector('#dt_round_trip_time').textContent = ret.round_trip_time;
@@ -337,7 +337,7 @@ async function connectDevice() {
         }
         setConnectionUI('connected');
         // begin() の中で読んだデバイス情報があればテーブルに出しておく
-        if (device.device_information) renderInfoTable(device.device_information);
+        if (device.profile.device_information) renderInfoTable(device.profile.device_information);
     } catch (error) {
         console.error('Connection error:', error);
         is_connected = false;

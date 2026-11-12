@@ -699,9 +699,11 @@
 
   function triggerLED(id, noteIndex) {
     const ble = window.bles && window.bles[id];
-    if (!ble || typeof ble.setLED !== 'function') return;
+    if (!ble) return;
     try {
-      ble.setLED(1, 1 + (noteIndex % 4));
+      ble.commands.setLED(true, 1 + (noteIndex % 4)).catch((error) => {
+        console.debug('LED update skipped:', error);
+      });
     } catch (error) {
       console.debug('LED update skipped:', error);
     }
@@ -1010,75 +1012,73 @@
   function attachBleCallbacks() {
     if (!window.bles) return;
     window.bles.forEach((ble, id) => {
-      ble.setup();
-
-      ble.onConnect = function () {
+      ble.onEvent('onConnect', function () {
         footState[id].connected = true;
         updateReadout(id, 'connected');
-      };
+      });
 
-      ble.onDisconnect = function () {
+      ble.onEvent('onDisconnect', function () {
         footState[id].connected = false;
         updateReadout(id, 'disconnected');
-      };
+      });
 
-      ble.onStartNotify = function () {
+      ble.onEvent('onStartNotify', function () {
         footState[id].connected = true;
         updateReadout(id, 'streaming');
-      };
+      });
 
-      ble.gotEuler = function (euler) {
+      ble.on('euler', function (euler) {
         footState[id].euler = eulerFrom(euler);
         updateTargets(footState[id]);
-      };
+      });
 
-      ble.gotGyro = function (gyro) {
+      ble.on('gyro', function (gyro) {
         footState[id].gyro = vectorFrom(gyro);
         updateTargets(footState[id]);
-      };
+      });
 
-      ble.gotConvertedGyro = function (gyro) {
+      ble.on('converted_gyro', function (gyro) {
         footState[id].convertedGyro = vectorFrom(gyro);
-      };
+      });
 
-      ble.gotConvertedAcc = function (acc) {
+      ble.on('converted_acc', function (acc) {
         footState[id].hasConvertedAcc = true;
         footState[id].acc = vectorFrom(acc);
         detectImpact(id, 'converted');
-      };
+      });
 
-      ble.gotAcc = function (acc) {
+      ble.on('acc', function (acc) {
         if (footState[id].hasConvertedAcc) return;
         footState[id].acc = vectorFrom(acc);
         detectImpact(id, 'raw');
-      };
+      });
 
-      ble.gotLandingImpact = function (impact) {
+      ble.on('landing_impact', function (impact) {
         const value = Number((impact && impact.value) || 0);
         footState[id].landingImpact = value;
-      };
+      });
 
-      ble.gotFootAngle = function (footAngle) {
+      ble.on('foot_angle', function (footAngle) {
         footState[id].footAngle = Number((footAngle && footAngle.value) || 0);
-      };
+      });
 
-      ble.gotStepsNumber = function (steps) {
+      ble.on('steps_number', function (steps) {
         if (!steps) return;
         footState[id].lastAnalysisAt = performance.now();
         resetAirKickEnergy(footState[id], footState[id].lastAnalysisAt);
         if (steps.value === footState[id].lastStepValue) return;
         footState[id].lastStepValue = steps.value;
         handleInstrumentEvent(id, 'STEP', 'step', 0.72, classifyStepPosition(footState[id]));
-      };
+      });
 
-      ble.gotGait = function (gait) {
+      ble.on('gait', function (gait) {
         if (!gait) return;
         footState[id].lastAnalysisAt = performance.now();
         resetAirKickEnergy(footState[id], footState[id].lastAnalysisAt);
         if (gait.steps === footState[id].lastGaitStep) return;
         footState[id].lastGaitStep = gait.steps;
         handleInstrumentEvent(id, 'STEP', 'step', 0.7, classifyStepPosition(footState[id]));
-      };
+      });
     });
   }
 

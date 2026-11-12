@@ -10,7 +10,7 @@ Record and inspect sensor data for calibration workflows.
 
 ## 使うデータ
 
-- 加速度 (gotConvertedAcc, 実Gスケール)
+- 加速度 (converted_acc, 実Gスケール)
 - ジャイロ (gyro)
 - オイラー角 (euler)
 - 歩行 (gait)

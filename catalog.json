@@ -1,7 +1,7 @@
 {
   "schema_version": "0.3.0",
-  "updated": "2026-10-06",
-  "purpose": "Catalog of ORPHE CORE / ORPHE INSOLE examples built on ORPHE-CORE-INSOLE.js (orphe-core-insole.js). Paths are relative to the repository root.",
+  "updated": "2026-10-07",
+  "purpose": "Catalog of ORPHE CORE / ORPHE INSOLE examples built on ORPHE-CORE-INSOLE.js (orphe-core-insole.js). All examples use the shared OrpheCoreInsole API (v0.2.0+). Paths are relative to the repository root.",
   "status_definitions": {
     "public": "Worth keeping in public navigation. Device verification can still be tracked separately.",
     "public-candidate": "Valuable, but needs copy, thumbnail, validation, or small cleanup before promotion.",
@@ -30,7 +30,7 @@
       ],
       "devices": 1,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "getting-started",
       "difficulty": "beginner",
@@ -68,7 +68,7 @@
       ],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "sensor-basics",
       "difficulty": "beginner",
@@ -107,7 +107,7 @@
       ],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "sensor-basics",
       "difficulty": "beginner",
@@ -143,7 +143,7 @@
       ],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "playable-app",
       "difficulty": "beginner",
@@ -178,7 +178,7 @@
       "devices": 1,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "getting-started",
       "difficulty": "beginner",
@@ -226,7 +226,7 @@
       "devices": 2,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "getting-started",
       "difficulty": "beginner",
@@ -267,7 +267,7 @@
       "devices": 1,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "Directory name contains a space"
@@ -311,7 +311,7 @@
       "devices": 1,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "gait-analysis",
       "difficulty": "intermediate",
@@ -351,7 +351,7 @@
       "devices": 1,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "gait-analysis",
       "difficulty": "intermediate",
@@ -436,7 +436,7 @@
       "devices": 1,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "requires an external BLE heart-rate sensor; current UI has two ORPHE CORE slots"
@@ -481,7 +481,7 @@
       "devices": 1,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "recording-analysis",
       "difficulty": "intermediate",
@@ -521,7 +521,7 @@
       "devices": 1,
       "validation": [
         "existing-public-link",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "sensor-basics",
       "difficulty": "intermediate",
@@ -695,7 +695,7 @@
       "validation": [
         "existing-public-link",
         "thumbnail-exists",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "playable-app",
       "difficulty": "beginner",
@@ -734,7 +734,7 @@
       "validation": [
         "existing-public-link",
         "thumbnail-exists",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "test.html has a broken local SDK path; fix is proposed in PR #40"
@@ -777,7 +777,7 @@
       "validation": [
         "existing-public-link",
         "thumbnail-exists",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "Directory name reads like a test rather than a public app"
@@ -829,7 +829,7 @@
         "pd-scene-tables-ported",
         "sample-bank-copied",
         "browser-static-validation",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "KICK is reconstructed from ORPHE-CORE.js motion callbacks instead of the original Swift gesture enum",
@@ -871,7 +871,7 @@
       "validation": [
         "existing-public-link",
         "thumbnail-exists",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "playable-app",
       "difficulty": "intermediate",
@@ -911,7 +911,7 @@
       "validation": [
         "existing-public-link",
         "thumbnail-exists",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "Many internal docs may be too noisy for learners"
@@ -1072,7 +1072,7 @@
       "devices": 1,
       "validation": [
         "needs-browser-validation",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "Contains a frozen local ORPHE-CORE.js copy"
@@ -1231,7 +1231,7 @@
       "devices": 1,
       "validation": [
         "needs-domain-review",
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "issues": [
         "May be ORPHE INSOLE-specific rather than ORPHE CORE.js general"
@@ -1263,7 +1263,7 @@
       "data": [],
       "devices": 1,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "getting-started",
       "difficulty": "beginner",
@@ -1292,7 +1292,7 @@
       "data": [],
       "devices": 1,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "getting-started",
       "difficulty": "beginner",
@@ -1321,7 +1321,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "sensor-basics",
       "difficulty": "beginner",
@@ -1350,7 +1350,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "gait-analysis",
       "difficulty": "intermediate",
@@ -1379,7 +1379,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "gait-analysis",
       "difficulty": "intermediate",
@@ -1408,7 +1408,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "recording-analysis",
       "difficulty": "intermediate",
@@ -1437,7 +1437,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "recording-analysis",
       "difficulty": "advanced",
@@ -1466,7 +1466,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "recording-analysis",
       "difficulty": "advanced",
@@ -1524,7 +1524,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "creative-coding",
       "difficulty": "intermediate",
@@ -1553,7 +1553,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "creative-coding",
       "difficulty": "intermediate",
@@ -1582,7 +1582,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "creative-coding",
       "difficulty": "intermediate",
@@ -1611,7 +1611,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "creative-coding",
       "difficulty": "beginner",
@@ -1640,7 +1640,7 @@
       "data": [],
       "devices": 1,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "developer-tool",
       "difficulty": "advanced",
@@ -1669,7 +1669,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "developer-tool",
       "difficulty": "advanced",
@@ -1698,7 +1698,7 @@
       "data": [],
       "devices": 1,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "developer-tool",
       "difficulty": "advanced",
@@ -1727,7 +1727,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "virtual-sports",
       "difficulty": "beginner",
@@ -1756,7 +1756,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "virtual-sports",
       "difficulty": "beginner",
@@ -1785,7 +1785,7 @@
       "data": [],
       "devices": 2,
       "validation": [
-        "needs-device-verification"
+        "device-verified-connect-stream"
       ],
       "category": "virtual-sports",
       "difficulty": "beginner",

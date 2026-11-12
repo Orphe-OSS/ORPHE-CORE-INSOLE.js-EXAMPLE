@@ -193,7 +193,7 @@ function init() {
 
     // 8. ORPHE CORE Integration
     if (window.ble) {
-        window.ble.gotEuler = function (_euler) {
+        window.ble.on('euler', function (_euler) {
             if (!coreNeutralEuler) {
                 coreNeutralEuler = {
                     pitch: _euler.pitch,
@@ -206,13 +206,13 @@ function init() {
                 roll: _euler.roll - coreNeutralEuler.roll,
                 yaw: _euler.yaw - coreNeutralEuler.yaw
             };
-        };
-        window.ble.gotAcc = function (_acc) {
+        });
+        window.ble.on('acc', function (_acc) {
             let sum = Math.sqrt(_acc.x * _acc.x + _acc.y * _acc.y + _acc.z * _acc.z);
             if (sum > orpheShotThreshold) {
                 shoot();
             }
-        };
+        });
     }
 
     // Restart Button Logic

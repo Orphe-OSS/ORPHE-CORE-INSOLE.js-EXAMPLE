@@ -1,5 +1,6 @@
 // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言すると Toolkit が接続する実体と別物になるため宣言しない
 var connectedDevices = 0;  // 接続されたデバイスの数を追跡
+const connectedIds = new Set();  // 接続済みデバイスの id（onConnect は characteristic ごとに複数回呼ばれるため id で数える）
 var gameTimer;
 var gameActive = false;  // ゲームがアクティブかどうかを追跡
 var previousAcc = [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }];
@@ -14,24 +15,39 @@ var timer_num;
 
 
 
-bles[0].setup();
 buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'SENSOR_VALUES');
-bles[1].setup();
 buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'SENSOR_VALUES');
 guardCoreToolkitBluetooth({
     coreIds: [0, 1],
     messageElement: '#ble-support-message'
 });
 for (let ble of bles) {
-    ble.onConnect = function () {
-        connectedDevices++;
+    ble.onEvent('onConnect', function () {
+        if (connectedIds.has(ble.id)) return;
+        connectedIds.add(ble.id);
+        connectedDevices = connectedIds.size;
         if (connectedDevices === 2) {
            // document.getElementById('connectionStatus').innerHTML = '２つのデバイスが接続されました';
           //  document.getElementById('startButton').style.display = 'block';
             gamepar =5;
         }
-    };
+    });
 }
+
+// 加速度の購読は 1 回だけ登録する（startGame のたびに登録すると多重登録になる）
+bles.forEach((ble, index) => {
+    ble.on('acc', function (acc) {
+        if (gameActive && (previousAcc[index].x !== 0 || previousAcc[index].y !== 0 || previousAcc[index].z !== 0)) {
+            totalMovement += Math.abs(acc.x - previousAcc[index].x) +
+                                     Math.abs(acc.y - previousAcc[index].y) +
+                                     Math.abs(acc.z - previousAcc[index].z);
+           ltm = Math.abs(acc.x - previousAcc[index].x) +
+           Math.abs(acc.y - previousAcc[index].y) +
+           Math.abs(acc.z - previousAcc[index].z);
+        }
+        previousAcc[index] = { ...acc };
+    });
+});
 
 window.onload = function () {
    // document.getElementById('startButton').addEventListener('click', startGame);
@@ -75,20 +91,6 @@ function startGame() {
 
 
   }, 1000);
-
-  bles.forEach((ble, index) => {
-      ble.gotAcc = function (acc) {
-          if (gameActive && (previousAcc[index].x !== 0 || previousAcc[index].y !== 0 || previousAcc[index].z !== 0)) {
-              totalMovement += Math.abs(acc.x - previousAcc[index].x) +
-                                       Math.abs(acc.y - previousAcc[index].y) +
-                                       Math.abs(acc.z - previousAcc[index].z);
-             ltm = Math.abs(acc.x - previousAcc[index].x) +
-             Math.abs(acc.y - previousAcc[index].y) +
-             Math.abs(acc.z - previousAcc[index].z);
-          }
-          previousAcc[index] = { ...acc };
-      };
-  });
 
   gameTimer = setTimeout(() => {
       clearInterval(timerId);

@@ -3,8 +3,8 @@
  *
  * 校正済みの圧力値（荷重[N]）を 6ch の折れ線グラフで表示する最小サンプル。
  *
- *  - gotPress          : ADC 生値
- *  - gotConvertedPress : 荷重[N]（このサンプルで使う）
+ *  - on('press')           : ADC 生値
+ *  - on('converted_press') : 荷重[N]（このサンプルで使う）
  *
  * 校正値は begin() の中でデバイスから自動取得され、insole.profile.pressure_calibrations に入る
  * （orphe-core-insole.js の形式: 6ch ぶんの { func, coefficients } または null）。
@@ -98,13 +98,13 @@ window.onload = function () {
     });
     charts[id] = createChart(document.getElementById(`chart${id}`));
 
+    // insoles[id] は toolkit が作った OrpheCoreInsole（自分で作り直さない）
     const insole = insoles[id];
-    insole.setup();
 
     // 2. 荷重[N] を受け取る（100Hz で届くので、ここでは溜めるだけ）
-    insole.gotConvertedPress = function (press) {
-      pending[this.id].push(press.values);
-    };
+    insole.on('converted_press', (press) => {
+      pending[id].push(press.values);
+    });
   }
 
   // 3. 描画は requestAnimationFrame でまとめて行う（毎サンプル update すると重い）

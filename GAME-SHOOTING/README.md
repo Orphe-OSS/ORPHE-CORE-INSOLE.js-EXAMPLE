@@ -40,10 +40,9 @@ the CoreToolkit UI, then play the game canvas.
 ## Known implementation notes
 
 - `index.html` initializes CoreToolkit and exposes the shared `bles[0]`
-  instance as `window.ble`. `sketch.js` attaches game callbacks to that same
-  instance.
-- `scripts.js` appears to be legacy helper code and still contains old
-  `ANALYSIS` wording. Confirm whether it is loaded before deleting or editing.
+  instance (an `OrpheCoreInsole`) as `window.ble`. `sketch.js` subscribes to
+  that same instance with `ble.on('euler', …)` / `ble.on('acc', …)`.
+- The legacy `scripts.js` was not loaded by `index.html` and has been removed.
 - Relationship with `GAME-SHOOTING2` is still unclear.
 
 ## Validation status
