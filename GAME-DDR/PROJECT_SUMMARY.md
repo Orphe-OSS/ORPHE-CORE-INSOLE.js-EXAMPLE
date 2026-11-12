@@ -150,8 +150,8 @@ A fully functional DDR-style rhythm game that supports both keyboard and ORPHE C
 - Bluetooth (for ORPHE CORE)
 
 ### Dependencies
-- ORPHE-CORE.js (via CDN)
-- CoreToolkit.js (via CDN)
+- ORPHE-CORE-INSOLE.js `orphe-core-insole.js` (`OrpheCoreInsole`)
+- ORPHE-CORE-INSOLE.js `orphe-core-insole-toolkit.js` (`buildCoreToolkit`, `bles`)
 - Bootstrap 5 (via CDN)
 
 ### Performance Metrics
@@ -185,7 +185,7 @@ A fully functional DDR-style rhythm game that supports both keyboard and ORPHE C
 - ✅ Restart functionality works
 
 ### Integration Testing
-- ✅ ORPHE-CORE.js compatibility
+- ✅ ORPHE-CORE-INSOLE.js (OrpheCoreInsole API) compatibility
 - ✅ CoreToolkit UI integration
 - ✅ Multi-device support
 - ✅ Direction change detection
@@ -230,14 +230,14 @@ A fully functional DDR-style rhythm game that supports both keyboard and ORPHE C
 
 ### ORPHE Integration Pattern
 ```javascript
-// Setup device callbacks
-ble.gotGait = function(_gait) {
+// Setup device listeners (bles[i] is an OrpheCoreInsole provided by the toolkit)
+bles[i].on('gait', (_gait) => {
     const direction = _gait.direction;
     if (direction !== orpheData.lastDirection[id]) {
         orpheData.lastDirection[id] = direction;
         handleOrpheInput(direction);
     }
-};
+});
 ```
 
 ### Chart Format

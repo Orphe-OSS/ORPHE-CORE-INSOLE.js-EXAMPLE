@@ -5,9 +5,10 @@
    * FIFO Guide — 初めてFIFOを使う人向けの実機example。1台でも2台（左右同時）でも収録できる。
    *
    * FIFOプロトコル（serial指定・再要求・drain）はこのファイルでは一切実装しない。
-   *   - src/InsoleFifo.js    … FIFO収集ループ本体（デバイスごとに1インスタンス）
-   *   - src/InsoleToolkit.js … 接続UI / 'fifo-recording' プロファイル /
-   *                            startMeasurement()・stopMeasurement()（drain待ち込み）/
+   *   - FifoRecorder（ORPHE-CORE-INSOLE.js src/fifo/）… FIFO収集ループ本体（デバイスごとに1インスタンス。
+   *                            toolkit のセッションが管理する）
+   *   - buildInsoleToolkit / InsoleToolkitSession（src/toolkit/, src/session/）… 接続UI /
+   *                            'fifo-recording' プロファイル / startMeasurement()・stopMeasurement()（drain待ち込み）/
    *                            insoleToolkitMeasurementToCSV()
    * 判定ロジック（serial連続性・欠損range・timeline集約・30秒バッファ判定・
    * 複数デバイスの判定合成）は ./continuity.js に純関数として切り出し、Node で単体テストしている。
@@ -28,6 +29,7 @@
   const MAX_SAMPLES = 120000;      // 600 s 相当。超えたら結果に truncated 注意を出す
   const TIMELINE_BINS = C.DEFAULT_BIN_COUNT;
   const BAR_FULL_SCALE_MS = 60000; // バッファガイドバーの右端
+  const NO_DATA_WARNING_MS = 3000;  // 収録開始からこの時間データが1件も届かなければ警告する
   const PRESSURE_FULL_SCALE = 20000;
   const DEVICE_COLORS = ["#7fa4ff", "#f6c860"];
 
@@ -74,6 +76,7 @@
       droppedLive: 0,         // onDataLoss(info.cumulative) の最新値
       droppedTotal: null,     // onStopped(info.dropped) = この収録の回復不能ロス累計
       batchCount: 0,
+      noDataWarned: false,
       lastBatchAt: 0,
       lastBatchGapMs: null,
       lastBatchSize: 0,
@@ -301,9 +304,6 @@
       }
     });
     device(id).session = root.getInsoleToolkitSession(id);
-    // buildInsoleToolkit() は setup() を呼ばない（simulator 指定時のみ内部で呼ぶ）。
-    // 未呼び出しだと hashUUID が空のままで、接続時に serviceUUID 参照で失敗する。
-    root.insoles[id].setup();
   }
 
   // ── 計測時間とバッファガイド ─────────────────────────────────────────
@@ -398,6 +398,26 @@
     const elapsed = Date.now() - state.startedAt;
     dom.elapsedText.textContent = `${(elapsed / 1000).toFixed(1)} s`;
     updateBufferGuide(elapsed);
+    if (elapsed >= NO_DATA_WARNING_MS) warnNoData();
+  }
+
+  // 開始に成功してもデータが届かないとき（FW とパケット形式が合わないなど）は、黙って 0 件のままにしない
+  function warnNoData() {
+    for (const id of state.runDeviceIds) {
+      const entry = device(id);
+      if (!entry.inRun || entry.batchCount > 0 || entry.noDataWarned) continue;
+      entry.noDataWarned = true;
+      log("warn", "logNoDataDevice", {
+        device: deviceLabel(id),
+        seconds: NO_DATA_WARNING_MS / 1000,
+        firmware: firmwareNameOf(id) || "unknown"
+      });
+    }
+  }
+
+  function firmwareNameOf(id) {
+    const insole = Array.isArray(root.insoles) ? root.insoles[id] : null;
+    return insole && insole.firmware ? insole.firmware.name : null;
   }
 
   async function stopRecording(reason) {
@@ -557,7 +577,7 @@
 
   /**
    * 接続状態の遷移は Toolkit の onStateChange 経由で拾う。
-   * insole.on* を上書きしないので、Toolkit のヘッダ表示や自動再接続と競合しない。
+   * insole のライフサイクルイベントを購読しなくても、Toolkit のヘッダ表示や自動再接続と同じ状態を参照できる。
    */
   function handleSessionState(id, snapshot) {
     const entry = device(id);
@@ -595,7 +615,7 @@
 
   function mountPositionOf(id) {
     const insole = Array.isArray(root.insoles) ? root.insoles[id] : null;
-    return insole && insole.device_information ? insole.device_information.mount_position : null;
+    return insole && insole.profile.device_information ? insole.profile.device_information.mount_position : null;
   }
 
   function handleSessionError(id, error) {

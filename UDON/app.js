@@ -356,7 +356,7 @@
     REHAB_PERFECT_THRESHOLD: 2.5,
     // --- CORE（IMU-only モード）---
     // 旧 ORPHE-CORE.js 版 GAME-UDON は gotAcc（int16/32768 の正規化値）の連続サンプル差分
-    // |Δx|+|Δy|+|Δz| > 0.06 で1歩と数えていた。gotConvertedAcc [G] では 0.06 × レンジ（CORE 既定 ±16G）
+    // |Δx|+|Δy|+|Δz| > 0.06 で1歩と数えていた。on("converted_acc") [G] では 0.06 × レンジ（CORE 既定 ±16G）
     // ≒ 0.96G に相当するので、踏み込み成立の初期値を 1.0G とする。
     IMU_IMPACT_DIFF: 1.0, // 着地の衝撃（連続サンプル間の加速度差分 [G]）がこれを超えたら踏み込み成立
     IMU_IMPACT_SPAN: 3.0, // 衝撃が IMU_IMPACT_DIFF + この値で踏み込み配点が満点 [G]
@@ -1088,7 +1088,7 @@
   const connected = [false, false];
   const reconnecting = [false, false];
   const deviceToSide = {};
-  // 左右が device_information から決まったか（未取得ならサンプル受信時に取り直す）
+  // 左右が profile.device_information から決まったか（未取得ならサンプル受信時に取り直す）
   const sideFromDevice = [false, false];
   // スロットごとの種別（'core' | 'insole'）。種別変更はページ再読込なのでロード時に決まる
   const slotKinds = ["insole", "insole"];
@@ -1106,14 +1106,15 @@
     return slotKinds.indexOf(kind) !== -1;
   }
 
-  /** CORE は device_information.lr、INSOLE は mount_position。どちらも bit0: 0=LEFT, 1=RIGHT */
+  /** CORE は profile.device_information.lr、INSOLE は mount_position。どちらも bit0: 0=LEFT, 1=RIGHT */
   function mountSideOf(deviceId) {
     const slot = slots[deviceId];
     const device = slot ? slot.device : null;
-    const info = device && device.device_information ? device.device_information : null;
+    const info = device && device.profile.device_information ? device.profile.device_information : null;
     const mount = info ? (slotKinds[deviceId] === "core" ? info.lr : info.mount_position) : null;
-    if (root.OrpheInsoleUtils && typeof root.OrpheInsoleUtils.sideFromMountPosition === "function") {
-      const resolved = root.OrpheInsoleUtils.sideFromMountPosition(mount);
+    const utils = root.OrpheCoreInsoleJS ? root.OrpheCoreInsoleJS.OrpheInsoleUtils : null;
+    if (utils && typeof utils.sideFromMountPosition === "function") {
+      const resolved = utils.sideFromMountPosition(mount);
       if (resolved) return resolved.side;
     }
     return null;
@@ -1227,72 +1228,72 @@
     const device = slot.device;
 
     if (slot.kind === "core") {
-      // gotConvertedAcc → gotConvertedGyro の順に届くので、ジャイロ受信時に1サンプル分を判定する
-      device.gotConvertedAcc = function (acc) {
-        latestSensorValues[this.id].acceleration = [acc.x, acc.y, acc.z];
-      };
-      device.gotConvertedGyro = function (gyro) {
-        const latest = latestSensorValues[this.id];
+      // converted_acc → converted_gyro の順に届くので、ジャイロ受信時に1サンプル分を判定する
+      device.on("converted_acc", function (acc) {
+        latestSensorValues[deviceId].acceleration = [acc.x, acc.y, acc.z];
+      });
+      device.on("converted_gyro", function (gyro) {
+        const latest = latestSensorValues[deviceId];
         latest.gyroscope = [gyro.x, gyro.y, gyro.z];
-        if (!connected[this.id] || !latest.acceleration) return;
+        if (!connected[deviceId] || !latest.acceleration) return;
         processImuStepDetection(
           {
             acceleration: latest.acceleration,
             gyroscope: latest.gyroscope,
-            deviceId: this.id,
+            deviceId: deviceId,
             sensorTimestamp: gyro.timestamp,
             serialNumber: gyro.serial_number
           },
-          sideFor(this.id),
+          sideFor(deviceId),
           "live"
         );
-      };
-      device.onError = reportError;
+      });
+      device.onEvent("onError", reportError);
     } else {
-      device.gotConvertedAcc = function (acc) {
-        latestSensorValues[this.id].acceleration = [acc.x, acc.y, acc.z];
-      };
-      device.gotConvertedGyro = function (gyro) {
-        latestSensorValues[this.id].gyroscope = [gyro.x, gyro.y, gyro.z];
-      };
-      device.gotPress = function (press) {
-        const latest = latestSensorValues[this.id];
+      device.on("converted_acc", function (acc) {
+        latestSensorValues[deviceId].acceleration = [acc.x, acc.y, acc.z];
+      });
+      device.on("converted_gyro", function (gyro) {
+        latestSensorValues[deviceId].gyroscope = [gyro.x, gyro.y, gyro.z];
+      });
+      device.on("press", function (press) {
+        const latest = latestSensorValues[deviceId];
         latest.pressure = press.values;
-        if (!connected[this.id] || !latest.acceleration || !latest.gyroscope) return;
+        if (!connected[deviceId] || !latest.acceleration || !latest.gyroscope) return;
         processStepDetection(
           {
             acceleration: latest.acceleration,
             gyroscope: latest.gyroscope,
             pressureData: latest.pressure,
-            deviceId: this.id,
+            deviceId: deviceId,
             // BLE 1パケットに4サンプル入るため Date.now() は4行同値になる。
             // タイミング解析にはセンサ側のタイムスタンプ/シリアルを使うこと。
             sensorTimestamp: press.timestamp,
             serialNumber: press.serial_number
           },
-          sideFor(this.id),
+          sideFor(deviceId),
           "live"
         );
-      };
+      });
     }
 
-    device.onConnect = function () {
-      if (!connected[this.id]) markConnected(this.id, true);
-    };
-    device.onDisconnect = function () {
-      reconnecting[this.id] = true;
-      markConnected(this.id, false);
-    };
-    device.onReconnectSuccess = function () {
-      reconnecting[this.id] = false;
+    device.onEvent("onConnect", function () {
+      if (!connected[deviceId]) markConnected(deviceId, true);
+    });
+    device.onEvent("onDisconnect", function () {
+      reconnecting[deviceId] = true;
+      markConnected(deviceId, false);
+    });
+    device.onEvent("onReconnectSuccess", function () {
+      reconnecting[deviceId] = false;
       // 再接続で取付位置を読み直しているので左右を取り直す
-      if (connected[this.id]) resolveDeviceSide(this.id);
+      if (connected[deviceId]) resolveDeviceSide(deviceId);
       updateConnectionSource();
-    };
-    device.onReconnectFailed = function () {
-      reconnecting[this.id] = false;
+    });
+    device.onEvent("onReconnectFailed", function () {
+      reconnecting[deviceId] = false;
       updateConnectionSource();
-    };
+    });
   }
 
   function syncGameStateWithConnection() {

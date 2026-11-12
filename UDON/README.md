@@ -12,8 +12,8 @@
 | INSOLE | 加速度・ジャイロ | 6ch圧力の増分（無負荷ベースライン比） | 足上げ時の \|accY\| ピーク・圧力増分・足上げ時間 |
 | CORE（IMU-only モード） | \|gyro\| / \|\|acc\| − 1G\| | 着地の衝撃（連続サンプル間の加速度差分 \|Δx\|+\|Δy\|+\|Δz\| [G]） | 足上げ中の \|gyro\| ピーク・衝撃ピーク・足上げ時間 |
 
-- CORE の衝撃しきい値の初期値 1.0G は、旧 CORE 版の `gotAcc`（正規化値）差分 `> 0.06` を ±16G レンジで換算したものです。
-- 左右は CORE の `device_information.lr`、INSOLE の `mount_position`（どちらも bit0）で決めます。読めないときはスロット番号（01 = 左、02 = 右）を使います。
+- CORE の衝撃しきい値の初期値 1.0G は、旧 CORE 版の `gotAcc`（正規化値。新 API の `on('acc')`）差分 `> 0.06` を ±16G レンジで換算したものです。
+- 左右は CORE の `profile.device_information.lr`、INSOLE の `profile.device_information.mount_position`（どちらも bit0）で決めます。読めないときはスロット番号（01 = 左、02 = 右）を使います。
 - しきい値はページ下部の「しきい値の調整」から変えられます（選んだ種別の項目だけ表示、localStorage に保存）。
 
 ## 接続

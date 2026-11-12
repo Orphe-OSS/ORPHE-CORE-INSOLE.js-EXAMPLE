@@ -51,7 +51,7 @@ GitHub Pagesでも試せます。
 - `index.html` はCoreToolkitを使う現在の公開候補です。
 - このexampleは1台接続に整理しています。2台対応に戻す場合は、接続完了判定と入力値の集約方法を再設計してください。
 - `test.html` は簡易接続テスト用で、ゲーム本体ではありません。
-- `scripts.js` には古い通知タイプ表記が残っています。`index.html` から使われているかを確認したうえで、別PRで整理するのが安全です。
+- `index.html` から読み込まれていなかった旧 `scripts.js` は削除しました。センサーの購読は `index.html` の `mystart()` で `on('euler')` などを 1 回だけ登録しています。
 
 ## 関連example
 

@@ -27,12 +27,18 @@ ORPHE-CORE.js:1414 onError: TypeError: Cannot read properties of undefined (read
 <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE.js/js/CoreToolkit.js"></script>
 ```
 
-**変更後:**
+**変更後（当時）:**
 ```html
 <script src="../../js/float16.min.js"></script>
 <script src="../../js/quaternion.js"></script>
 <script src="../../js/ORPHE-CORE.js"></script>
 <script src="../../js/CoreToolkit.js"></script>
+```
+
+**現在:** ORPHE-CORE-INSOLE.js の 2 ファイルだけを読み込みます（float16 / quaternion などの依存はバンドルに含まれるため個別に読み込みません）。
+```html
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 ```
 
 ### 2. begin()モードを変更
@@ -42,33 +48,31 @@ ORPHE-CORE.js:1414 onError: TypeError: Cannot read properties of undefined (read
 this.begin('SENSOR_VALUES');
 ```
 
-**変更後:**
+**変更後:** 現在は CoreToolkit の notification 引数で開始します（toolkit が `begin()` を呼ぶので、ページ側では呼びません）。
 ```javascript
-this.begin('STEP_ANALYSIS_AND_SENSOR_VALUES');
+buildCoreToolkit(document.querySelector('#toolkit_placeholder'), '01', 0,
+  'STEP_ANALYSIS_AND_SENSOR_VALUES', { forceDeviceSelection: true });
 ```
 
 理由: GAME-HURDLEと同じモードを使用することで、加速度とオイラー角の両方が正しく取得できる
 
 ### 3. コールバック関数の修正
 
-#### 変更前: gotConvertedGyro (存在しないメソッド)
-```javascript
-device.gotConvertedGyro = function(_gyro) {
-  currentSensorData.gyro = _gyro;
-};
-```
+#### 変更前: 旧 API の `gotConvertedGyro`（当時のライブラリでは呼ばれないコールバック）
+角速度を `currentSensorData.gyro` に入れようとしていましたが、データが届きませんでした。
 
-#### 変更後: gotEuler (正しいメソッド)
+#### 変更後: `on('euler')`（オイラー角を購読）
 ```javascript
-ble_device.gotEuler = function(_euler) {
+const id = ble_device.id;
+ble_device.on('euler', function(_euler) {
   gyroDataCount++;
   currentSensorData.gyro = {
     x: _euler.roll,
     y: _euler.pitch,
     z: _euler.yaw
   };
-  window.devices[this.id].eulers = _euler;
-};
+  window.devices[id].eulers = _euler;
+});
 ```
 
 ### 4. デバイスデータストレージの追加
@@ -142,8 +146,8 @@ drawGraph('pitch', currentSensorData.gyro.y, -Math.PI/2, Math.PI/2);     // rad
 ```javascript
 [BLE] onConnect
 [BLE] Starting data stream: STEP_ANALYSIS_AND_SENSOR_VALUES
-[CALLBACK] Setting up gotConvertedAcc callback
-[CALLBACK] Setting up gotEuler callback
+[CALLBACK] Setting up on('converted_acc') listener
+[CALLBACK] Setting up on('euler') listener
 ```
 これらが全て表示されているか？
 
@@ -191,7 +195,7 @@ Identifier 'float16' has already been declared
 主な修正点:
 1. ✅ CDN → ローカルファイル読み込みに変更
 2. ✅ `SENSOR_VALUES` → `STEP_ANALYSIS_AND_SENSOR_VALUES`
-3. ✅ `gotConvertedGyro` → `gotEuler`
+3. ✅ `gotConvertedGyro` → `on('euler')`
 4. ✅ データ構造をHURDLEに合わせる
 5. ✅ グラフ範囲を角度用に調整
 

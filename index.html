@@ -76,7 +76,14 @@
     .top-actions {
       display: flex;
       justify-content: flex-end;
+      gap: 10px;
       margin-bottom: 18px;
+    }
+
+    a.language-toggle {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
     }
 
     .language-toggle {
@@ -249,6 +256,7 @@
 <body>
   <main>
     <div class="top-actions">
+      <a id="sdkLink" class="language-toggle" href="https://orphe-oss.github.io/ORPHE-CORE-INSOLE.js/">ORPHE-CORE-INSOLE.js</a>
       <button id="languageToggle" class="language-toggle" type="button">English</button>
     </div>
     <header class="page-header">

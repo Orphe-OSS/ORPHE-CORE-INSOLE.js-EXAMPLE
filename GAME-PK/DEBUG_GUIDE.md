@@ -60,8 +60,7 @@
 
 ```javascript
 // 1. 初期化
-[INIT] Creating Orphe instance...
-[INIT] Calling ble.setup()...
+[INIT] Using CoreToolkit OrpheCoreInsole instance...
 [INIT] Building CoreToolkit UI...
 
 // 2. 接続ボタンクリック後
@@ -234,8 +233,8 @@
 ```javascript
 // コンソールで確認
 typeof ble          // "object"
-typeof Orphe        // "function"
-ble.isConnected     // false (接続前) / true (接続後)
+typeof OrpheCoreInsoleJS  // "object"
+ble.isConnected()        // false (接続前) / true (接続後)
 ```
 
 ### Step 2: 接続確認

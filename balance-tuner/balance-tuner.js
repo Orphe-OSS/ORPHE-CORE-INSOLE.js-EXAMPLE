@@ -28,11 +28,11 @@
     harmony: "harmony"
   };
 
-  // 圧力チャネルの画像座標は SDK の共通定義（OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE）を正とする。
-  // orphe-core-insole.js が公開するグローバル OrpheInsoleUtils から解決する。
-  const InsoleUtils = root.OrpheInsoleUtils;
+  // 圧力チャネルの画像座標は SDK の共通定義（OrpheCoreInsoleJS.OrpheInsoleUtils.SENSOR_LAYOUT_IMAGE）を正とする。
+  // orphe-core-insole.js が公開する名前空間 OrpheCoreInsoleJS から解決する。
+  const InsoleUtils = root.OrpheCoreInsoleJS && root.OrpheCoreInsoleJS.OrpheInsoleUtils;
   if (!InsoleUtils) {
-    throw new Error('balance-tuner: orphe-core-insole.js を先に読み込んでください（OrpheInsoleUtils が見つかりません）');
+    throw new Error('balance-tuner: orphe-core-insole.js を先に読み込んでください（OrpheCoreInsoleJS.OrpheInsoleUtils が見つかりません）');
   }
   const SensorLayout = InsoleUtils.SENSOR_LAYOUT_IMAGE.map(
     (sensor) => createSensorPoint(sensor.x, sensor.y, sensor.label)
@@ -136,9 +136,14 @@
     };
   }
 
-  function footLocalToImage(point) {
+  // SENSOR_LAYOUT_IMAGE は左足画像のマーカー座標なので、右足画像では x を反転する。
+  function sensorImageX(side, imageX) {
+    return side === SIDE_RIGHT ? 1 - imageX : imageX;
+  }
+
+  function footLocalToImage(side, point) {
     return {
-      x: clamp(point.x / FOOT_LOCAL_X_RANGE + 0.5, 0, 1),
+      x: sensorImageX(side, clamp(point.x / FOOT_LOCAL_X_RANGE + 0.5, 0, 1)),
       y: clamp(0.5 - point.y / FOOT_LOCAL_Y_RANGE, 0, 1)
     };
   }
@@ -500,7 +505,7 @@
       const dot = root.document.createElement("div");
       dot.className = "sensor-dot";
       dot.dataset.index = String(index);
-      dot.style.left = `${sensor.imageX * 100}%`;
+      dot.style.left = `${sensorImageX(side, sensor.imageX) * 100}%`;
       dot.style.top = `${sensor.imageY * 100}%`;
       dot.innerHTML = `<span>${sensor.label}</span><small>0</small>`;
       container.appendChild(dot);
@@ -510,18 +515,17 @@
   }
 
   function setupDevices() {
-    const toolkitInsoles = Array.isArray(root.insoles) ? root.insoles : (typeof insoles !== "undefined" && Array.isArray(insoles) ? insoles : null);
-    const toolkitBles = toolkitInsoles || (Array.isArray(root.bles) ? root.bles : (typeof bles !== "undefined" && Array.isArray(bles) ? bles : null));
-    const insoleBuilder = typeof root.buildInsoleToolkit === "function" ? root.buildInsoleToolkit : (typeof buildInsoleToolkit !== "undefined" ? buildInsoleToolkit : null);
-    const coreBuilder = typeof root.buildCoreToolkit === "function" ? root.buildCoreToolkit : (typeof buildCoreToolkit !== "undefined" ? buildCoreToolkit : null);
-    const toolkitBuilder = insoleBuilder || coreBuilder;
-    if (!toolkitBles || typeof toolkitBuilder !== "function") {
-      renderToolkitMessage("InsoleToolkit を読み込めません。src/ORPHE-INSOLE.js と src/InsoleToolkit.js を確認してください。");
+    // orphe-core-insole-toolkit.js がグローバルに置く insoles（OrpheCoreInsole）と buildInsoleToolkit を使う
+    const toolkitInsoles = Array.isArray(root.insoles) ? root.insoles : null;
+    const toolkitBuilder = typeof root.buildInsoleToolkit === "function" ? root.buildInsoleToolkit : null;
+    if (!toolkitInsoles || !toolkitBuilder) {
+      renderToolkitMessage("InsoleToolkit を読み込めません。orphe-core-insole.js と orphe-core-insole-toolkit.js を確認してください。");
       return;
     }
 
     appState.devices = [0, 1].map((deviceIndex) => {
-      const instance = toolkitBles[deviceIndex];
+      // toolkit が作った OrpheCoreInsole（自分で作り直さない）
+      const instance = toolkitInsoles[deviceIndex];
       const deviceState = {
         index: deviceIndex,
         insole: instance,
@@ -529,29 +533,19 @@
         side: deviceIndex === 0 ? SIDE_LEFT : SIDE_RIGHT
       };
 
-      instance.setup();
-      instance.onConnect = () => {
+      instance.onEvent("onConnect", () => {
         deviceState.connected = true;
         appState.runningDemo = false;
         updateBadges();
         refreshToolkitButton(deviceIndex);
-      };
-      instance.onDisconnect = () => {
-        deviceState.connected = false;
-        appState.feet[deviceState.side].connected = false;
-        updateBadges();
-        refreshToolkitButton(deviceIndex);
-      };
-      instance.onClear = () => {
-        deviceState.connected = false;
-        appState.feet[deviceState.side].connected = false;
-        updateBadges();
-        refreshToolkitButton(deviceIndex);
-      };
-      instance.onStartNotify = () => {
+      });
+      instance.onEvent("onDisconnect", () => {
+        markDeviceCleared(deviceState);
+      });
+      instance.onEvent("onStartNotify", () => {
         applyStreamingMode(deviceState);
-      };
-      instance.onError = (error) => {
+      });
+      instance.onEvent("onError", (error) => {
         if (isConnectionCancelError(error)) {
           showTransientStatus("接続キャンセル");
         } else {
@@ -559,18 +553,14 @@
           showTransientStatus("接続エラー");
         }
         root.setTimeout(() => refreshToolkitButton(deviceIndex), 0);
-      };
-      instance.gotPress = (press) => {
+      });
+      instance.on("press", (press) => {
         const side = resolveDeviceSide(deviceState);
         updateFootPressure(side, press.values, press.timestamp || nowMs(), true);
-      };
+      });
 
       const toolkitOptions = { streamingMode: appState.selectedMode, autoReconnect: true };
-      if (toolkitBuilder === insoleBuilder) {
-        toolkitBuilder(appState.dom.toolkitPlaceholder, `INSOLE 0${deviceIndex + 1}`, deviceIndex, toolkitOptions);
-      } else {
-        toolkitBuilder(appState.dom.toolkitPlaceholder, `INSOLE 0${deviceIndex + 1}`, deviceIndex, "SENSOR_VALUES", toolkitOptions);
-      }
+      toolkitBuilder(appState.dom.toolkitPlaceholder, `INSOLE 0${deviceIndex + 1}`, deviceIndex, toolkitOptions);
       enhanceToolkitControl(deviceIndex);
       return deviceState;
     });
@@ -594,7 +584,7 @@
   }
 
   function enhanceToolkitControl(deviceIndex) {
-    const control = root.document.getElementById(`insole_toolkit${deviceIndex}`) || root.document.getElementById(`core_toolkit${deviceIndex}`);
+    const control = root.document.getElementById(`insole_toolkit${deviceIndex}`);
     const input = root.document.getElementById(`switch_ble${deviceIndex}`);
     const label = control ? control.querySelector(".form-check-label") : null;
     if (!control || !input || !label) {
@@ -604,12 +594,25 @@
     control.classList.add("toolkit-connect-control");
     label.setAttribute("for", input.id);
     label.innerHTML = `<strong>INSOLE 0${deviceIndex + 1}</strong><small>connect</small>`;
-    input.addEventListener("change", () => refreshToolkitButton(deviceIndex));
+    input.addEventListener("change", () => {
+      // トグル OFF で toolkit が reset() する（reset() では onDisconnect が来ないので、ここで切断扱いにする）
+      if (!input.checked && appState.devices[deviceIndex]) {
+        markDeviceCleared(appState.devices[deviceIndex]);
+      }
+      refreshToolkitButton(deviceIndex);
+    });
     refreshToolkitButton(deviceIndex);
   }
 
+  function markDeviceCleared(deviceState) {
+    deviceState.connected = false;
+    appState.feet[deviceState.side].connected = false;
+    updateBadges();
+    refreshToolkitButton(deviceState.index);
+  }
+
   function refreshToolkitButton(deviceIndex) {
-    const control = root.document.getElementById(`insole_toolkit${deviceIndex}`) || root.document.getElementById(`core_toolkit${deviceIndex}`);
+    const control = root.document.getElementById(`insole_toolkit${deviceIndex}`);
     const input = root.document.getElementById(`switch_ble${deviceIndex}`);
     if (!control || !input) {
       return;
@@ -622,18 +625,18 @@
   }
 
   async function applyStreamingMode(deviceState) {
-    if (!deviceState || !deviceState.connected || !deviceState.insole || typeof deviceState.insole.setDataStreamingMode !== "function") {
+    if (!deviceState || !deviceState.connected || !deviceState.insole || !deviceState.insole.commands) {
       return;
     }
     try {
-      await deviceState.insole.setDataStreamingMode(appState.selectedMode);
+      await deviceState.insole.commands.setDataStreamingMode(appState.selectedMode);
     } catch (error) {
       console.error("BalanceTuner mode change failed:", error);
     }
   }
 
   function resolveDeviceSide(deviceState) {
-    const deviceInfo = deviceState.insole && deviceState.insole.device_information;
+    const deviceInfo = deviceState.insole && deviceState.insole.profile.device_information;
     if (deviceInfo && Number.isFinite(deviceInfo.mount_position)) {
       deviceState.side = (deviceInfo.mount_position & 1) === 0 ? SIDE_LEFT : SIDE_RIGHT;
     }
@@ -1023,7 +1026,7 @@
 
     const marker = container.querySelector(".foot-estimated-center");
     if (marker && foot.local) {
-      const imagePoint = footLocalToImage(foot.local);
+      const imagePoint = footLocalToImage(foot.side, foot.local);
       marker.style.left = `${imagePoint.x * 100}%`;
       marker.style.top = `${imagePoint.y * 100}%`;
       marker.classList.add("is-visible");

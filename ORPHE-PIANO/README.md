@@ -1,4 +1,4 @@
-# Orphe Piano for ORPHE-CORE.js
+# Orphe Piano for ORPHE-CORE-INSOLE.js
 
 This example is a browser port of [`Orphe-OSS/Orphe-Piano`](https://github.com/Orphe-OSS/Orphe-Piano).
 
@@ -15,10 +15,10 @@ The original app is an iOS project built with Swift 3.1, `Orphe-SDK-Swift-1.1.0`
 
 ## Porting Scope
 
-This Web version keeps the musical interaction model but replaces iOS/libpd dependencies with ORPHE-CORE.js and Web Audio:
+This Web version keeps the musical interaction model but replaces iOS/libpd dependencies with ORPHE-CORE-INSOLE.js (`OrpheCoreInsole`) and Web Audio:
 
 - CoreToolkit connects two ORPHE CORE modules using `STEP_ANALYSIS_AND_SENSOR_VALUES`.
-- `gotEuler`, `gotGyro`, `gotConvertedAcc`, `gotStepsNumber`, `gotGait`, and `gotLandingImpact` replace the Swift notification bridge.
+- `on('euler')`, `on('gyro')`, `on('converted_acc')`, `on('steps_number')`, `on('gait')`, and `on('landing_impact')` replace the Swift notification bridge.
 - The reachable `Resources/pd-patches/allpiano/piano*.wav` sample set is copied into `examples/ORPHE-PIANO/allpiano/`.
 - The browser UI treats walking and strong motion as a decaying progress value: every STEP, motion STEP, KICK, or test event from either CORE advances the meter, and stopping gradually rolls the meter and scene backward.
 - Scene thresholds are spaced every eight progress events: 0, 8, 16, 24, 32, 40, 48, 56, 64, and 72.
@@ -32,7 +32,7 @@ This Web version keeps the musical interaction model but replaces iOS/libpd depe
 
 ## Fidelity Notes
 
-- ORPHE-CORE.js does not expose the original Swift `STEP_TOE`, `STEP_FLAT`, `STEP_HEEL`, and `KICK` gesture callback. This port reconstructs STEP behavior from step/gait updates and motion thresholds. KICK is tuned for airborne vigorous movement by accumulating `gotConvertedAcc` energy when no recent gait/step analysis event is present.
+- ORPHE-CORE-INSOLE.js does not expose the original Swift `STEP_TOE`, `STEP_FLAT`, `STEP_HEEL`, and `KICK` gesture callback. This port reconstructs STEP behavior from step/gait updates and motion thresholds. KICK is tuned for airborne vigorous movement by accumulating `on('converted_acc')` energy when no recent gait/step analysis event is present.
 - TOE/FLAT/HEEL labels are threshold-based approximations. Tune the pitch/foot-angle thresholds in `classifyStepPosition()` if the mounted device orientation differs.
 - Pure Data sends a `Scene11` flag at StepSUM 47, but the source patch has no `r Scene11` receiver. The browser port cuts this no-sound scene and keeps Scene 10 as the last musical scene.
 - Exact threshold tuning still requires two real ORPHE CORE devices in Chrome.

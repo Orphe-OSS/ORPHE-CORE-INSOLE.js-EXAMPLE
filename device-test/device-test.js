@@ -2,24 +2,39 @@
 // 通知（SENSOR_VALUES）中の read/write（DEVICE_INFORMATION）が通知を壊さないことを
 // 実機で確認する自動テストシーケンス。
 
-/* global OrpheInsole */
+/* global OrpheCoreInsoleJS */
 
-var insole = new OrpheInsole(0);
-insole.setup();
-insole.debug = true;
+var OrpheCoreInsole = OrpheCoreInsoleJS.OrpheCoreInsole;
+var insoleProfile = OrpheCoreInsoleJS.insoleProfile;
+
+// SDK の内部ログ（log オプション）。verbose が true の間だけコンソールに出す（T8 で切り替えを検証する）
+var verbose = true;
+function sdkLog(message, detail) {
+  if (!verbose) return;
+  if (detail === undefined) console.log('[OrpheCoreInsole]', message);
+  else console.log('[OrpheCoreInsole]', message, detail);
+}
+
+var insole = new OrpheCoreInsole({
+  profile: insoleProfile(),
+  id: 0,
+  log: sdkLog,
+  events: {
+    onConnect: function () { setText('mConn', insole.connectionState); },
+    onDisconnect: function () { setText('mConn', insole.connectionState); },
+    onError: function (error) { log('onError: ' + error, true); },
+    onReconnectSuccess: function (info) { log('自動再接続に成功 (attempt ' + info.attempt + ')'); }
+  }
+});
 
 // ── 受信カウンタ ─────────────────────────────────────────────
 var counters = { press: 0, quat: 0, lost: 0 };
 var lastFreq = 0;
 
-insole.gotPress = function () { counters.press++; };
-insole.gotQuat = function () { counters.quat++; };
-insole.gotBLEFrequency = function (frequency) { lastFreq = frequency; };
-insole.lostData = function () { counters.lost++; setText('mLost', String(counters.lost)); };
-insole.onConnect = function () { setText('mConn', insole.connectionState); };
-insole.onDisconnect = function () { setText('mConn', insole.connectionState); };
-insole.onError = function (error) { log('onError: ' + error, true); };
-insole.onReconnectSuccess = function (info) { log('自動再接続に成功 (attempt ' + info.attempt + ')'); };
+insole.on('press', function () { counters.press++; });
+insole.on('quat', function () { counters.quat++; });
+insole.on('ble_frequency', function (frequency) { lastFreq = frequency; });
+insole.on('lost_data', function () { counters.lost++; setText('mLost', String(counters.lost)); });
 
 // ── UI ヘルパ ────────────────────────────────────────────────
 function $(id) { return document.getElementById(id); }
@@ -69,11 +84,11 @@ var tests = [
     }
   },
   {
-    name: 'T2: 通知中に getDeviceInformation() ×5 → 全て成功しデータ継続',
+    name: 'T2: 通知中に commands.readDeviceInformation() ×5 → 全て成功しデータ継続',
     run: async function () {
       var batteries = [];
       for (var i = 0; i < 5; i++) {
-        var info = await insole.getDeviceInformation();
+        var info = await insole.commands.readDeviceInformation();
         batteries.push(info.battery);
         setText('mBatt', String(info.battery));
         await wait(150);
@@ -88,9 +103,9 @@ var tests = [
     run: async function () {
       // 修正前の実装で最も壊れやすいパターン:
       // stopNotify → startNotify の通知再確立中に read を並行実行する
-      await insole.stopNotify('SENSOR_VALUES');
-      var notifyPromise = insole.startNotify('SENSOR_VALUES');
-      var readPromise = insole.getDeviceInformation(); // await せずに並行実行
+      await insole.transport.stopNotify('SENSOR_VALUES').catch(function () { });
+      var notifyPromise = insole.transport.startNotify('SENSOR_VALUES');
+      var readPromise = insole.commands.readDeviceInformation(); // await せずに並行実行
       await Promise.all([notifyPromise, readPromise]);
       var rates = await measureRates(3000);
       var ok = rates.press > RATE_MIN;
@@ -98,12 +113,12 @@ var tests = [
     }
   },
   {
-    name: 'T4: 通知中に setDataStreamingMode(3→4) → quat 停止と再開',
+    name: 'T4: 通知中に commands.setDataStreamingMode(3→4) → quat 停止と再開',
     run: async function () {
-      await insole.setDataStreamingMode(3);
+      await insole.commands.setDataStreamingMode(3);
       await wait(500);
       var mode3 = await measureRates(2000);
-      await insole.setDataStreamingMode(4);
+      await insole.commands.setDataStreamingMode(4);
       await wait(500);
       var mode4 = await measureRates(2000);
       var ok = mode3.quat < 5 && mode3.press > RATE_MIN && mode4.quat > RATE_MIN;
@@ -116,7 +131,7 @@ var tests = [
   {
     name: 'T5: stopNotify で1秒以内にデータ停止',
     run: async function () {
-      await insole.stopNotify('SENSOR_VALUES');
+      await insole.transport.stopNotify('SENSOR_VALUES').catch(function () { });
       await wait(1000); // 停止反映を待つ
       var rates = await measureRates(1500);
       var ok = rates.press < 5;
@@ -126,7 +141,7 @@ var tests = [
   {
     name: 'T6: startNotify 再開 → レートが正常（リスナー二重登録で2倍になっていない）',
     run: async function () {
-      await insole.startNotify('SENSOR_VALUES');
+      await insole.transport.startNotify('SENSOR_VALUES');
       await wait(500);
       var rates = await measureRates(3000);
       var ok = rates.press > RATE_MIN && rates.press < 160; // 2重登録なら ~200Hz になる
@@ -138,11 +153,10 @@ var tests = [
     run: async function () {
       var stateOk = insole.connectionState === 'connected';
       // 未接続の別インスタンスで NO_DEVICE エラーの code を確認
-      var probe = new OrpheInsole(1);
-      probe.onError = function () { };
+      var probe = new OrpheCoreInsole({ profile: insoleProfile(), id: 1, events: { onError: function () { } } });
       var codeOk = false;
       try {
-        await probe.connectGATT('DEVICE_INFORMATION');
+        await probe.transport.connectGATT('DEVICE_INFORMATION');
       } catch (error) {
         codeOk = error && error.code === 'NO_DEVICE';
       }
@@ -153,25 +167,27 @@ var tests = [
     }
   },
   {
-    name: 'T8: 既定ログが debug=false で沈黙し debug=true で出る（v1.2.0 挙動変更）',
+    name: 'T8: SDK ログが log オプション経由でのみ出る（verbose=false で沈黙し verbose=true で出る）',
     run: async function () {
       var captured = [];
       var originalLog = console.log;
       console.log = function () { captured.push(arguments); originalLog.apply(console, arguments); };
+      // 未接続の別インスタンスで、内部ログを 1 件だけ出す操作（デバイス未選択の watchAdvertisements）を呼んで確認
+      var probe = new OrpheCoreInsole({ profile: insoleProfile(), id: 1, log: sdkLog, events: { onError: function () { } } });
       try {
-        insole.debug = false;
-        insole.onStartNotify('SENSOR_VALUES'); // 既定実装を直接呼んで確認
+        verbose = false;
+        await probe.watchAdvertisements();
         var silentCount = captured.length;
-        insole.debug = true;
-        insole.onStartNotify('SENSOR_VALUES');
+        verbose = true;
+        await probe.watchAdvertisements();
         var verboseCount = captured.length;
         return {
           ok: silentCount === 0 && verboseCount === 1,
-          observed: 'debug=false: ' + silentCount + '件 / debug=true: ' + (verboseCount - silentCount) + '件'
+          observed: 'verbose=false: ' + silentCount + '件 / verbose=true: ' + (verboseCount - silentCount) + '件'
         };
       } finally {
         console.log = originalLog;
-        insole.debug = true; // このページでは以後もデバッグログを有効にしておく
+        verbose = true; // このページでは以後もデバッグログを有効にしておく
       }
     }
   }
@@ -232,7 +248,7 @@ function buildReport() {
   Array.prototype.forEach.call(document.querySelectorAll('#manualChecks input[type=checkbox]'), function (box) {
     lines.push('- ' + (box.checked ? '✅' : '⬜') + ' ' + box.parentElement.textContent.trim());
   });
-  lines.push('', '- lostData 累計: ' + counters.lost);
+  lines.push('', '- lost_data 累計: ' + counters.lost);
   return lines.join('\n');
 }
 
@@ -258,7 +274,7 @@ $('btnDisconnect').addEventListener('click', function () {
 
 $('btnSelect').addEventListener('click', async function () {
   try {
-    await insole.selectBluetoothDevice();
+    await insole.transport.selectDevice();
     await insole.begin('SENSOR_VALUES', { streamingMode: 4, autoReconnect: true });
     log('デバイス切替 + begin() 完了');
   } catch (error) {
@@ -270,9 +286,17 @@ $('btnRun').addEventListener('click', runAll);
 
 $('btnTimeout').addEventListener('click', async function () {
   log('接続タイムアウトテスト: chooser でデバイスを選択してください（1ms でタイムアウトさせます）');
+  // connectTimeoutMs はコンストラクタオプション。このテスト専用のインスタンスで 1ms を指定する
+  var timeoutProbe = new OrpheCoreInsole({
+    profile: insoleProfile(),
+    id: 0,
+    connectTimeoutMs: 1,
+    log: sdkLog,
+    events: { onError: function () { } }
+  });
   try {
     insole.reset();
-    await insole.begin('SENSOR_VALUES', { streamingMode: 4, connectTimeoutMs: 1 });
+    await timeoutProbe.begin('SENSOR_VALUES', { streamingMode: 4, forceDeviceSelection: true });
     log('タイムアウトが発生しませんでした（想定外: 接続が 1ms 未満で完了）', true);
   } catch (error) {
     if (error && error.code === 'CONNECT_TIMEOUT') {
@@ -282,6 +306,8 @@ $('btnTimeout').addEventListener('click', async function () {
     } else {
       log('FAIL — 期待外のエラー: ' + error + ' (code=' + (error && error.code) + ')', true);
     }
+  } finally {
+    timeoutProbe.reset();
   }
 });
 

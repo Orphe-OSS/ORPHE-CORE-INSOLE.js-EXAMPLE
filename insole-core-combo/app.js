@@ -5,7 +5,7 @@
 // 高頻度データは buffer に溜め、描画は rAF で間引く（CLAUDE.md Pattern 5）
 //
 // 時刻同期の設計:
-//   両SDKとも begin() 時に syncCoreTime() でデバイス時計をPC時刻へ同期する（誤差 ≈ RTT/2）。
+//   INSOLE / CORE とも begin() 時に syncTime() でデバイス時計をPC時刻へ同期する（誤差 ≈ RTT/2）。
 //   - INSOLE FIFO サンプルの t は「0時からのms」→ 当日0時のepochを足してepoch msに変換
 //   - CORE は SDK が各コールバックに epoch timestamp を付与済み（同じ規約: 今日の日付+デバイス時刻）
 //   → CSV の timestamp 列は全行が同一のPC時計基準 epoch ms。
@@ -137,7 +137,7 @@ let pressurePanels = [];
 // ── CSV記録 ─────────────────────────────────────────────────────
 // INSOLE: FIFO（ロスレス収録、Toolkit の fifo-recording プロファイル経由）
 //   → stopMeasurement() の result.raw.samples（正式計測区間のみ・欠損は再要求済み）
-// CORE:   Realtime（gotConvertedGyro が各サンプル最後のコールバック → そこで1行確定）
+// CORE:   Realtime（converted_gyro が各サンプル最後のイベント → そこで1行確定）
 // 全行を timestamp（epoch ms、両デバイスともPC時計に同期済み）でマージソートして1ファイルへ。
 const CSV_HEADER = [
   'device', 'side', 'timestamp', 'serial_number', 'packet_number',
@@ -225,15 +225,14 @@ window.onload = function () {
 
   // INSOLE 2台（Realtime時のライブ表示。FIFO収録中は toolkit options の fifo.onSamples が代替）
   for (let i = 0; i < 2; i++) {
-    insoles[i].setup();
-    insoles[i].gotPress = function (press) {
+    insoles[i].on('press', (press) => {
       const values = press.values.slice(0, 6);
-      latest.press[this.id] = values;
-      pressurePanels[this.id].push({ press: values });
-    };
-    insoles[i].onDisconnect = function () {
-      latest.press[this.id] = null;
-    };
+      latest.press[i] = values;
+      pressurePanels[i].push({ press: values });
+    });
+    insoles[i].onEvent('onDisconnect', () => {
+      latest.press[i] = null;
+    });
   }
 
   // CORE IMU チャート初期化
@@ -243,38 +242,38 @@ window.onload = function () {
 
   // CORE 1台
   const coreMountEl = document.getElementById('core_mount');
-  orpheCore.gotConvertedAcc = function (acc) {
+  orpheCore.on('converted_acc', (acc) => {
     latest.acc = acc;
     accFeed.push([acc.x, acc.y, acc.z]);
-  };
-  orpheCore.gotConvertedGyro = function (gyro) {
+  });
+  orpheCore.on('converted_gyro', (gyro) => {
     latest.gyro = gyro;
     gyroFeed.push([gyro.x, gyro.y, gyro.z]);
-    // CORE は gotConvertedGyro が各サンプル最後のコールバック → ここで1行確定。
+    // CORE は converted_gyro が各サンプル最後のイベント → ここで1行確定。
     // timestamp / serial_number / packet_number は SDK がコールバック引数に付与済み
     // （SDK側がオブジェクトを使い回すため値コピーで保存する）
     Recorder.addCoreRow({
       device: 'core',
       side: coreMountEl ? coreMountEl.value : 'waist',  // 装着位置（waist/chest/head）
       t: gyro.timestamp ?? Date.now(),
-      serial: gyro.serial_number ?? this.serial_number,
+      serial: gyro.serial_number,
       packet: gyro.packet_number,
       press: null,
       acc: latest.acc ? { x: latest.acc.x, y: latest.acc.y, z: latest.acc.z } : null,
       gyro: { x: gyro.x, y: gyro.y, z: gyro.z },
     });
-  };
-  orpheCore.onDisconnect = function () {
+  });
+  orpheCore.onEvent('onDisconnect', () => {
     latest.acc = latest.gyro = null;
-  };
+  });
 
   // ── notify計測（実機デバッグ用） ─────────────────────────────
   // characteristicごとの受信数と SENSOR_VALUES のヘッダバイト分布を数える。
   // 「eulerは来るのにaccが来ない」のような症状の切り分けに使う:
   //   - SV:0                → SENSOR_VALUES notifyが届いていない
   //   - SVは増えるがacc "-"  → 未知ヘッダ（40/50以外）でパーサが捨てている
-  // orphe-core-insole.js では notify の生データを device.onRaw() で横取りせずに購読できる
-  orpheCore.device.onRaw(function (uuid, data) {
+  // OrpheCoreInsole では notify の生データを onRaw() で横取りせずに購読できる
+  orpheCore.onRaw(function (uuid, data) {
     notifyDebug[uuid] = (notifyDebug[uuid] || 0) + 1;
     if (uuid === 'SENSOR_VALUES' && data && data.getUint8) {
       const h = data.getUint8(0);
@@ -293,11 +292,10 @@ window.onload = function () {
   });
 
   // notify購読の成否もconsoleへ（SENSOR_VALUESのstartNotifyが通ったかの確認用）
-  const origOnStartNotify = orpheCore.onStartNotify ? orpheCore.onStartNotify.bind(orpheCore) : null;
-  orpheCore.onStartNotify = function (uuid) {
+  // onEvent は既存の購読者（Toolkit 側）を上書きせずに追加できる
+  orpheCore.onEvent('onStartNotify', (uuid) => {
     console.log('onStartNotify:', uuid);
-    if (origOnStartNotify) return origOnStartNotify(uuid);
-  };
+  });
 
   // ── CSV記録UI（REC/STOP トグル + ダウンロード。計測は30秒で自動停止） ──
   const recordToggle = document.getElementById('record_toggle');
@@ -503,11 +501,11 @@ function fmtSigned(v, digits) {
 }
 
 /**
- * insoles[i] の装着左右（'L'|'R'|null）を device_information から取得
+ * insoles[i] の装着左右（'L'|'R'|null）を profile.device_information から取得
  * @param {number} i
  */
 function insoleSide(i) {
-  const info = insoles[i].device_information;
+  const info = insoles[i].profile.device_information;
   if (!info || typeof info.mount_position === 'undefined') return null;
   return (info.mount_position & 0b1) === 1 ? 'R' : 'L';
 }

@@ -6,7 +6,7 @@
  * toxiclibs の Quaternion で axis-angle に変換して回転を適用する。
  * モデル (assets/models/orphe_shoeL3.stl / R3.stl) も ORPHE-CORE.js リポジトリ由来。
  *
- * INSOLE SDK には CORE の resetMotionSensorAttitude() が無いため、
+ * INSOLE には CORE の姿勢リセット（commands.resetAttitude()）が無いため、
  * 「姿勢リセット」は基準クォータニオンの共役を掛けるオフセット方式で実装している。
  */
 
