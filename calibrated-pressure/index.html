@@ -19,7 +19,7 @@
     </nav>
     <p class="small text-secondary">
       接続時にデバイスから取得した校正値で、6ch の圧力を荷重[N]に換算して表示します。
-      校正値を取得できない場合は既定係数で換算します。
+      校正値を取得できない ch は既定係数（ch ごとの 4 次多項式）で換算します。
     </p>
 
     <div class="row">
@@ -28,13 +28,16 @@
         <canvas id="chart0"></canvas>
         <section class="mt-3" aria-labelledby="calibration-heading0">
           <h2 id="calibration-heading0" class="h6">INSOLE 01 の校正値</h2>
-          <p id="calibration-status0" class="small" role="status">未接続・校正値未取得</p>
+          <p class="small mb-1">
+            <span id="calibration-status0" role="status">未接続・校正値未取得</span>
+            <button id="calibration-refetch0" type="button" class="btn btn-outline-light btn-sm ms-2" disabled hidden>校正値を取り直す</button>
+          </p>
           <div id="calibration-table0" class="table-responsive" hidden>
             <table class="table table-dark table-sm small text-nowrap">
-              <caption class="text-light">デバイスの校正係数（a〜e）</caption>
+              <caption class="text-light">換算に使っている係数（a〜e。個体別＝デバイスの校正値／既定＝SDK 内蔵）</caption>
               <thead>
                 <tr>
-                  <th scope="col">センサー</th><th scope="col">換算式 (func)</th>
+                  <th scope="col">センサー</th><th scope="col">係数</th><th scope="col">換算式 (func)</th>
                   <th scope="col">a</th><th scope="col">b</th><th scope="col">c</th>
                   <th scope="col">d</th><th scope="col">e</th>
                 </tr>
@@ -49,13 +52,16 @@
         <canvas id="chart1"></canvas>
         <section class="mt-3" aria-labelledby="calibration-heading1">
           <h2 id="calibration-heading1" class="h6">INSOLE 02 の校正値</h2>
-          <p id="calibration-status1" class="small" role="status">未接続・校正値未取得</p>
+          <p class="small mb-1">
+            <span id="calibration-status1" role="status">未接続・校正値未取得</span>
+            <button id="calibration-refetch1" type="button" class="btn btn-outline-light btn-sm ms-2" disabled hidden>校正値を取り直す</button>
+          </p>
           <div id="calibration-table1" class="table-responsive" hidden>
             <table class="table table-dark table-sm small text-nowrap">
-              <caption class="text-light">デバイスの校正係数（a〜e）</caption>
+              <caption class="text-light">換算に使っている係数（a〜e。個体別＝デバイスの校正値／既定＝SDK 内蔵）</caption>
               <thead>
                 <tr>
-                  <th scope="col">センサー</th><th scope="col">換算式 (func)</th>
+                  <th scope="col">センサー</th><th scope="col">係数</th><th scope="col">換算式 (func)</th>
                   <th scope="col">a</th><th scope="col">b</th><th scope="col">c</th>
                   <th scope="col">d</th><th scope="col">e</th>
                 </tr>
