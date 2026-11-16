@@ -1,0 +1,115 @@
+# ORPHE-CORE-INSOLE.js の新しいタグ（v<version>）を検知し、example の CDN 参照を上げる PR を develop 向けに作る
+#
+# 流れ: SDK の main マージ → SDK の release.yml がタグを作成 → この workflow（毎日 / 手動）が検知
+#       → jsDelivr で配信を確認 → scripts/bump-sdk.mjs → チェック → chore/sdk-<version> から develop へ PR
+#
+# すぐ反映したいとき: gh workflow run sdk-bump.yml -R Orphe-OSS/ORPHE-CORE-INSOLE.js-EXAMPLE [-f version=v0.3.1]
+# GITHUB_TOKEN で作った PR では check.yml が動かないため、チェックはここで済ませる。
+# リポジトリ設定 > Actions > General の "Allow GitHub Actions to create and approve pull requests" を有効にしておく必要がある。
+name: SDK bump
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 毎日 9:00 JST
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 上げる SDK の版（例 v0.3.1）。空なら最新タグ
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    # ブランチの push と PR の作成にだけ write が要る
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # action は SHA で固定する（tag は書き換え可能なため）。更新は dependabot に任せる
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: 上げる版を決める
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          CURRENT="$(node scripts/bump-sdk.mjs --current)"
+          if [ -n "$INPUT_VERSION" ]; then
+            NEXT="$INPUT_VERSION"
+          else
+            # v<major>.<minor>.<patch> のタグのうち最大のもの（プレリリースは除く）
+            NEXT="$(gh api --paginate repos/Orphe-OSS/ORPHE-CORE-INSOLE.js/tags --jq '.[].name' \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+          fi
+          echo "current=$CURRENT next=$NEXT"
+          BRANCH="chore/sdk-$NEXT"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          if [ -z "$NEXT" ] || [ "$NEXT" = "$CURRENT" ]; then
+            echo "更新なし"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ -z "$INPUT_VERSION" ] && [ "$(printf '%s\n%s\n' "$CURRENT" "$NEXT" | sort -V | tail -n 1)" = "$CURRENT" ]; then
+            echo "$NEXT は $CURRENT より古いためスキップ"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
+            echo "$BRANCH は作成済み（PR 対応待ち）のためスキップ"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # タグ直後は jsDelivr が 404 を返すことがある。届かなければ失敗させ、翌日に再試行する
+      - name: jsDelivr から配信されているか確認
+        if: steps.version.outputs.skip == 'false'
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
+          for f in orphe-core-insole.js orphe-core-insole.min.js orphe-core-insole-toolkit.js orphe-core-insole-toolkit.min.js; do
+            curl -fsSI "https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@$NEXT/dist/browser/$f" > /dev/null
+            echo "ok $f"
+          done
+
+      - if: steps.version.outputs.skip == 'false'
+        run: node scripts/bump-sdk.mjs "${{ steps.version.outputs.next }}"
+      - if: steps.version.outputs.skip == 'false'
+        run: node scripts/check-links.mjs
+      - if: steps.version.outputs.skip == 'false'
+        run: node scripts/check-syntax.mjs
+
+      - name: ブランチを push して develop へ PR を作る
+        if: steps.version.outputs.skip == 'false'
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+          BRANCH: ${{ steps.version.outputs.branch }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -am "chore(sdk): ORPHE-CORE-INSOLE.js を $NEXT に上げる"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$BRANCH"
+          gh pr create --repo "$REPO" --base develop --head "$BRANCH" \
+            --title "chore(sdk): ORPHE-CORE-INSOLE.js を $NEXT に上げる" \
+            --body "ORPHE-CORE-INSOLE.js の [$NEXT](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js/tree/$NEXT) が jsDelivr から配信されたため、example の CDN 参照を上げます（\`scripts/bump-sdk.mjs\` で自動生成。\`check-links.mjs\` / \`check-syntax.mjs\` は通過済み）。
+
+          マージ前に人が行うこと:
+          - [ ] 主要な example を実機（CORE / INSOLE）で接続・受信できるか確認する
+          - [ ] 確認した example の catalog.json の検証状態を更新する
+
+          develop へマージした後、develop → main の PR をマージすると GitHub Pages に公開されます。"

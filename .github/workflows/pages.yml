@@ -1,0 +1,62 @@
+# GitHub Pages（https://orphe-oss.github.io/ORPHE-CORE-INSOLE.js-EXAMPLE/）を組み立てて公開する
+#
+# main への push で、静的チェックを通したものだけを公開する。
+# 公開しないもの: .github / scripts / .tmp / vendor / _merge-src（開発用）
+#
+# リポジトリ設定 > Pages > Build and deployment > Source を "GitHub Actions" にしておく必要がある。
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # action は SHA で固定する（tag は書き換え可能なため）。更新は dependabot に任せる
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - run: node scripts/check-links.mjs
+      - run: node scripts/check-syntax.mjs
+
+      - name: _site を組み立てる
+        run: |
+          rm -rf _site
+          mkdir _site
+          tar -c --exclude=./.git --exclude=./.github --exclude=./scripts --exclude=./.tmp \
+            --exclude=./vendor --exclude=./_merge-src --exclude=./_site -f - . | tar -x -C _site
+          # Jekyll を通さない（_ で始まるパスをそのまま配信する）
+          touch _site/.nojekyll
+          find _site -type f | wc -l
+
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
