@@ -13,9 +13,9 @@ ORPHE-CORE.js と ORPHE-INSOLE.js にあった examples を集め、ライブラ
 
 ```html
 <!-- SDK 本体。公開 API はグローバル OrpheCoreInsoleJS に入る -->
-<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.1/dist/browser/orphe-core-insole.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole.js"></script>
 <!-- 接続 UI（buildCoreToolkit / buildInsoleToolkit / buildCoreCompanionToolkit）。使う example だけ -->
-<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.1/dist/browser/orphe-core-insole-toolkit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole-toolkit.js"></script>
 ```
 
 example のコードはすべて新しい共通 API の `OrpheCoreInsole` で書いています。
@@ -39,7 +39,7 @@ insoles[0].on('press', (press) => draw(press.values));
 - 実機が無いときは `OrpheCoreInsoleJS.createInsoleSimulator()` で擬似 INSOLE を使えます（例: `quaternion-validation/?sim=1`）。
 - 旧 API との対応表は [ORPHE-CORE-INSOLE.js の README](https://github.com/Orphe-OSS/ORPHE-CORE-INSOLE.js#旧-api-からの移行) にあります。
 
-上記URLは公開済みの `v0.2.1` タグを参照します。未リリースのSDKを検証する場合は、下記のローカル切替手順を使ってください。
+上記URLは公開済みの `v0.3.0` タグを参照します。未リリースのSDKを検証する場合は、下記のローカル切替手順を使ってください。
 
 ## 構成
 
@@ -84,7 +84,29 @@ node scripts/check-links.mjs    # 参照切れ・旧ライブラリ / 互換 API
 node scripts/check-syntax.mjs   # 全 .js と HTML の inline script の構文
 ```
 
-`check-links.mjs` は相対パスの参照切れ、catalog.json のリンク・サムネイル、旧ライブラリの `<script>`、互換 API（`new Orphe(` や `got* =` など）の残り、`@v0.2.1` 以外の CDN 版、`../vendor/` 参照の戻し忘れを検出します。
+`check-links.mjs` は相対パスの参照切れ、catalog.json のリンク・サムネイル、旧ライブラリの `<script>`、互換 API（`new Orphe(` や `got* =` など）の残り、`@v0.3.0` 以外の CDN 版、`../vendor/` 参照の戻し忘れを検出します。
+PR と push では `.github/workflows/check.yml` が同じチェックを実行します。
+
+## リリース（公開）の流れ
+
+`develop` で開発し、`main` に反映すると GitHub Pages（https://orphe-oss.github.io/ORPHE-CORE-INSOLE.js-EXAMPLE/）に公開されます。
+
+1. ORPHE-CORE-INSOLE.js の `main` に新しい版が入ると、SDK の release workflow がタグ `v<version>` を作り、jsDelivr から配信されます。
+2. このリポジトリの `.github/workflows/sdk-bump.yml`（毎日 9:00 JST）が新しいタグを検知し、jsDelivr で配信を確認してから `scripts/bump-sdk.mjs` で CDN 参照を上げ、`chore/sdk-<version>` から `develop` への PR を作ります。
+   すぐ反映したいときは手動で実行します。
+   ```bash
+   gh workflow run sdk-bump.yml -R Orphe-OSS/ORPHE-CORE-INSOLE.js-EXAMPLE                  # 最新タグ
+   gh workflow run sdk-bump.yml -R Orphe-OSS/ORPHE-CORE-INSOLE.js-EXAMPLE -f version=v0.3.1  # 版を指定
+   ```
+3. PR で主要な example を実機で確認し、`catalog.json` の検証状態を更新してから `develop` にマージします。
+4. `develop` → `main` の PR をマージすると、`.github/workflows/pages.yml` がチェックを通してから GitHub Pages に公開します（`scripts/`・`vendor/` などの開発用ファイルは公開しません）。
+
+手元で版を上げる場合は次を使います。
+
+```bash
+node scripts/bump-sdk.mjs --current   # 現在の版
+node scripts/bump-sdk.mjs v0.3.1      # example・README・scripts の CDN 参照を一括で上げる
+```
 
 ## example を追加するとき
 

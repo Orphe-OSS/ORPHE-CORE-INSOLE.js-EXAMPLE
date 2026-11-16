@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const CDN = 'https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.2.1/dist/browser/';
+const CDN = 'https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/';
 const LOCAL = '../vendor/';
 const mode = process.argv[2];
 if (mode !== 'local' && mode !== 'cdn') {
@@ -25,7 +25,7 @@ const re = new RegExp(`(["'])${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(orph
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
-    if (['.git', 'node_modules', 'vendor', 'scripts'].includes(name)) continue;
+    if (['.git', '.tmp', 'node_modules', 'vendor', 'scripts'].includes(name)) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p, out);
     else if (name.endsWith('.html')) out.push(p);
