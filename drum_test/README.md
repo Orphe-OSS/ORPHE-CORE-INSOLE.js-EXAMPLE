@@ -33,7 +33,7 @@ Sound interaction driven by body motion.
 
 - [`examples/GAME-UDON/`](../GAME-UDON/README.md) — Udon Kneading Game
 - [`examples/MOVEYOURFEET/`](../MOVEYOURFEET/README.md) — Move Your Feet
-- [`examples/GAME-DDR/`](../GAME-DDR/README.md) — DDR Game
+- [`examples/GAME-DDR/`](../GAME-DDR/README.md) — ORPHE STEP BEAT
 
 ## 元データ
 

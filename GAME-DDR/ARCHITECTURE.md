@@ -1,4 +1,4 @@
-# 🏗️ ORPHE DDR GAME - System Architecture
+# 🏗️ ORPHE STEP BEAT - System Architecture
 
 ## 📐 Complete System Diagram
 
@@ -137,16 +137,12 @@ USER INPUT
            │
            └─> bles[i].on('gait', _gait => …)
                   │
-                  └─> direction = _gait.direction
+                  └─> handleOrpheInput(_gait.direction, i)  // lr: bles[i].profile.device_information.lr
+                         │   ('gait' fires once per new step; no de-dup needed)
                          │
-                         ├─> Check: direction !== lastDirection
-                         │       │
-                         │       └─> YES: Continue
-                         │       └─> NO: Ignore (prevent duplicate)
-                         │
-                         └─> orpheDirectionMap[direction] → lane
+                         └─> handleOrpheInput(direction, deviceIndex)
                                 │
-                                └─> handleOrpheInput(direction)
+                                └─> directionToLane(direction, lr) → lane
                                        │
                                        └─> handleGameInput(lane)
 
@@ -252,18 +248,15 @@ GAME INPUT HANDLER
                       │
                       └─> Receive _gait object
                              │
-                             ├─> Extract direction (0, 2, 4, 6)
+                             ├─> Extract direction (1: forward, 2: backward,
+                             │                      3: inside, 4: outside)
                              │
-                             ├─> Check for direction change
+                             ├─> Map to lane (inside/outside depend on the foot)
                              │      │
-                             │      └─> Prevent duplicate triggers
-                             │
-                             ├─> Map to lane
-                             │      │
-                             │      ├─> 0 → Lane 0 (←)
-                             │      ├─> 2 → Lane 2 (↑)
-                             │      ├─> 4 → Lane 1 (↓)
-                             │      └─> 6 → Lane 3 (→)
+                             │      ├─> 1 → Lane 2 (↑)
+                             │      ├─> 2 → Lane 1 (↓)
+                             │      ├─> 3 → Lane 3 (→) left foot / Lane 0 (←) right foot
+                             │      └─> 4 → Lane 0 (←) left foot / Lane 3 (→) right foot
                              │
                              └─> Trigger input handler
 ```
