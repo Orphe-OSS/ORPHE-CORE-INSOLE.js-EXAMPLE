@@ -126,24 +126,28 @@
     },
     {
       "id": "udon",
-      "title": "UDON",
+      "title": "Udon Kneading Game",
       "path": "UDON/",
       "type": "web-app",
       "status": "public",
       "audience": [],
-      "value": "Knead udon dough by stepping in place. INSOLE uses IMU + pressure, CORE uses IMU impact. Demo plays while disconnected.",
+      "value": "Step in place to knead, roll and cut udon. Adjustable step sensitivity (gentle or seated stepping still makes progress), 12 bowls decided by how you stepped, and a stepping report with a radar chart (rhythm, tempo, left/right balance, power, stamina, steadiness). Playable with 1 or 2 COREs, with ORPHE INSOLE (the feet on screen press the dough as your soles do), or keyboard-only demo mode.",
       "topics": [
         "game",
-        "steps"
+        "creative-coding",
+        "step-detection",
+        "exercise-log"
       ],
       "data": [
-        "acc",
-        "gyro",
+        "convertedAcc",
+        "convertedGyro",
         "press"
       ],
       "devices": 2,
       "validation": [
-        "device-verified-connect-stream"
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
       ],
       "category": "playable-app",
       "difficulty": "beginner",
@@ -584,6 +588,52 @@
       "device": "core"
     },
     {
+      "id": "game-super-hurdle",
+      "title": "SUPER VIRTUAL HURDLE",
+      "path": "GAME-SUPER-HURDLE/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "educator"
+      ],
+      "value": "Stadium edition of the 110m hurdle race: 3D night stadium, two-player VS, ORPHE INSOLE support, post-race analysis and raw-data recording. Heavier than GAME-HURDLE.",
+      "topics": [
+        "game",
+        "virtual sports",
+        "running",
+        "track",
+        "hurdle",
+        "versus",
+        "insole",
+        "analysis"
+      ],
+      "data": [
+        "convertedAcc",
+        "euler"
+      ],
+      "devices": 2,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/super-hurdle.png",
+      "sort_order": 205,
+      "links": {
+        "demo": "GAME-SUPER-HURDLE/index.html",
+        "source": "GAME-SUPER-HURDLE/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "both"
+    },
+    {
       "id": "game-sprint-100m-vs",
       "title": "100m Sprint VS",
       "path": "GAME-SPRINT-100M-VS/",
@@ -755,6 +805,50 @@
       "device": "core"
     },
     {
+      "id": "game-super-pingpong",
+      "title": "Super Ping Pong",
+      "path": "GAME-SUPER-PINGPONG/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "fitness"
+      ],
+      "value": "3D hot-spring ping pong played with ankle flexion or thigh raises: the control adapts to each player during play, six selectable characters, versus / co-op / solo modes and a post-match movement report with a radar chart.",
+      "topics": [
+        "game",
+        "two-player",
+        "fitness",
+        "calibration",
+        "analysis",
+        "3d"
+      ],
+      "data": [
+        "quat",
+        "euler"
+      ],
+      "devices": 2,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "playable-app",
+      "difficulty": "advanced",
+      "featured": true,
+      "thumbnail": "_thumbnails/super-pingpong.png",
+      "sort_order": 235,
+      "links": {
+        "demo": "GAME-SUPER-PINGPONG/index.html",
+        "source": "GAME-SUPER-PINGPONG/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "featured",
+      "device": "core"
+    },
+    {
       "id": "drum-test",
       "title": "Drum Game",
       "path": "drum_test/",
@@ -890,7 +984,7 @@
     },
     {
       "id": "game-ddr",
-      "title": "DDR Game",
+      "title": "ORPHE STEP BEAT",
       "path": "GAME-DDR/",
       "type": "web-app",
       "status": "public",
