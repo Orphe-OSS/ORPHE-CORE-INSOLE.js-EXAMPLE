@@ -145,6 +145,10 @@
       title: '110m ハードル走',
       value: 'Gait Analysisと足の動きで走る、Virtual Sportsの代表Exampleです。'
     },
+    'game-super-hurdle': {
+      title: 'SUPER VIRTUAL HURDLE',
+      value: '110mハードル走のスタジアム版です。3Dの夜のスタジアム、2人対戦、ORPHE INSOLE対応、ゴール後の分析つき。110mハードル走より動作が重めです。'
+    },
     'game-sprint-100m-vs': {
       title: '100m走 VS',
       value: '2台のORPHE COREで対戦するバーチャル短距離走です。'
@@ -161,6 +165,10 @@
       title: 'ピンポンゲーム',
       value: '2人で遊べるシンプルな対戦ゲームです。'
     },
+    'game-super-pingpong': {
+      title: 'スーパーピンポン',
+      value: '足首の曲げ伸ばしや太もも上げで遊ぶ3Dの温泉卓球。キャラクターを選べて、試合後に動きの分析レポートが出ます。'
+    },
     'drum-test': {
       title: 'ドラムゲーム',
       value: '身体の動きで音を鳴らすサウンドExampleです。'
@@ -174,7 +182,7 @@
       value: 'パンチ動作を使うアクションゲームです。'
     },
     'game-ddr': {
-      title: 'DDRゲーム',
+      title: 'ステップビート',
       value: '音楽と足の動きを組み合わせたリズムゲームです。'
     },
     'game-mario': {
@@ -342,8 +350,8 @@
           "value": "2台のセンサー値・靴の3D表示・左右割当を確認できます。COREは歩容解析、INSOLEは圧力も表示します。"
       },
       "udon": {
-          "title": "おいしいうどんを作ろう！",
-          "value": "その場で足踏みしてうどんをこねるゲーム。INSOLEはIMU＋圧力、COREはIMUの衝撃で1歩を判定します。未接続の間はデモで動きます。"
+          "title": "うどんふみふみゲーム",
+          "value": "足踏みでうどんをこねて、のばして、きるゲームです。感度を選べるので、やさしい足踏みでも少しずつ進みます。ふみかたで12種類のうどんができあがり、リズムや左右バランスをレーダーチャートでふり返れます。ORPHE INSOLE でも遊べます。"
       },
       "game-hurdle-vs": {
           "title": "110mハードル 2人対戦",

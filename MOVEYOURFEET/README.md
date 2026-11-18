@@ -27,7 +27,7 @@ Exercise-style game using foot movement.
 ## 関連example
 
 - [`examples/drum_test/`](../drum_test/README.md) — Drum Game
-- [`examples/GAME-DDR/`](../GAME-DDR/README.md) — DDR Game
+- [`examples/GAME-DDR/`](../GAME-DDR/README.md) — ORPHE STEP BEAT
 
 ## 元データ
 

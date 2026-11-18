@@ -98,54 +98,7 @@
       coreIds: [0, 1],
       messageElement: '#ble-support-message'
     });
-    var connectedDevices = 0;
-    // 接続済みデバイスの id（onConnect は characteristic ごとに複数回呼ばれるため id で数える）
-    const connectedIds = new Set();
-    // センサー購読を登録済みのデバイス（on() は代入と違い多重登録になるため 1 回だけ登録する）
-    const subscribedDevices = new Set();
     var gamestage = 0;
-
-    /*
-    ble1.onEvent('onConnect', function () {
-        console.log('ble1 connected');
-        if (connectedDevices == 3) {
-          mystart(ble1);
-          mystart(ble2);
-        }
-        connectedDevices++;
-      });
-    ble2.onEvent('onConnect', function () {
-        console.log('ble1 connected');
-        if (connectedDevices == 3) {
-          mystart(ble1);
-          mystart(ble2);
-        }
-        connectedDevices++;
-      });
-
-      */
-      for (let ble of bles) {
-        ble.onEvent('onConnect', function () {
-
-            // onConnect は 1 デバイスにつき characteristic ごとに複数回発火するため、
-            // デバイスの id で数えて 2 台揃ったときに 1 回だけ start する。
-            if (connectedIds.has(ble.id)) return;
-            connectedIds.add(ble.id);
-            connectedDevices = connectedIds.size;
-            if (connectedDevices === 2) {
-            //接続されたときの処理
-
-            mystart(bles[0]);
-            mystart(bles[1]);
-
-            gamestage = 1;
-
-
-            }
-
-      });
-    }
-
 
     var devices = {
       0: {
@@ -203,15 +156,28 @@
     };
 
 
+    // パドル操作に必要な Euler 値を受信したプレイヤー ID を保持する。
+    const readyDeviceIds = new Set();
+
+    // 両 CORE の Euler 受信がそろったら 1 回だけカウントダウンを始める。
+    function markDeviceReady(deviceId) {
+      readyDeviceIds.add(deviceId);
+
+      if (readyDeviceIds.size === bles.length && gamestage === 0) {
+        beginGameCountdown();
+      }
+    }
+
+    // センサー購読は初期化時に 1 回だけ登録する（on() は多重登録になるため）。
+    // 接続と通知開始は CoreToolkit が行う。
     function mystart(ble_device) {
-      if (subscribedDevices.has(ble_device)) return;
-      subscribedDevices.add(ble_device);
       const id = ble_device.id;
       ble_device.on('quat', function (_quat) {
         devices[id].quats = _quat;
       });
       ble_device.on('euler', function (_euler) {
         devices[id].eulers = _euler;
+        markDeviceReady(id);
       });
       ble_device.on('gait', function (_gait) {
         devices[id].gaits = _gait;
@@ -225,7 +191,16 @@
       ble_device.on('pronation', function (_pronation) {
         devices[id].pronations = _pronation;
       });
-      // gotDuration は SDK に存在しないコールバックのため削除
+    }
+
+    for (const ble of bles) {
+      mystart(ble);
+
+      // 切断されたらそのプレイヤーを未準備に戻し、ゲームを止めて接続待ちに戻す。
+      ble.onEvent('onDisconnect', function () {
+        readyDeviceIds.delete(ble.id);
+        stopGameForDisconnect();
+      });
     }
     
     // スライダーの値変更イベントリスナー

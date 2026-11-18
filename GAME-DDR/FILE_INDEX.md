@@ -1,4 +1,4 @@
-# 📂 ORPHE DDR GAME - Complete File Index
+# 📂 ORPHE STEP BEAT - Complete File Index
 
 ## 🎮 Game Files (8 files)
 
@@ -39,7 +39,6 @@
 6. **game/player.js** (225 lines)
    - `PlayerManager` class
    - Keyboard input handling
-   - ORPHE direction mapping
    - Scoring and combo system
    - Judgment processing
 

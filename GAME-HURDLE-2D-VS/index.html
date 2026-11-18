@@ -763,15 +763,10 @@
     // ORPHE CORE setup
     // bles（= cores）は orphe-core-insole-toolkit.js が提供する。再宣言すると Toolkit が接続する実体と別物になるため宣言しない
 
-    buildCoreToolkit(document.querySelector('#toolkit_p1'), 'Player 1', 0, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
-    buildCoreToolkit(document.querySelector('#toolkit_p2'), 'Player 2', 1, 'STEP_ANALYSIS_AND_SENSOR_VALUES');
+    buildCoreToolkit(document.querySelector('#toolkit_p1'), 'Player 1', 0, 'STEP_ANALYSIS_AND_SENSOR_VALUES', { forceDeviceSelection: true });
+    buildCoreToolkit(document.querySelector('#toolkit_p2'), 'Player 2', 1, 'STEP_ANALYSIS_AND_SENSOR_VALUES', { forceDeviceSelection: true });
     guardCoreToolkitBluetooth({ coreIds: [0, 1], messageElement: '#ble-support-message' });
 
-    // 接続済みデバイスの id（onConnect は characteristic ごとに複数回呼ばれるため id で数える）
-    const connectedIds = new Set();
-    var connectedDevices = 0;
-    // 2 台揃ったらセンサー入力を有効にする（以後は有効のまま）
-    let sensorsReady = false;
     window.devices = {
       0: { acc: { x: 0, y: 0, z: 0 }, eulers: { pitch: 0, roll: 0, yaw: 0 } },
       1: { acc: { x: 0, y: 0, z: 0 }, eulers: { pitch: 0, roll: 0, yaw: 0 } }
@@ -783,33 +778,16 @@
     const accelCooldownMs = 250;
     const jumpCooldownMs = 200;
 
-    for (let ble of bles) {
-      ble.onEvent('onConnect', function() {
-        if (connectedIds.has(ble.id)) return;
-        connectedIds.add(ble.id);
-        connectedDevices = connectedIds.size;
-        console.log('ORPHE Device ' + ble.id + ' connected');
-
-        if (connectedDevices === 2 && !sensorsReady) {
-          // （通知は buildCoreToolkit の notification 引数で begin 済みなので begin し直さない）
-          sensorsReady = true;
-        }
-      });
-
-      ble.onEvent('onDisconnect', function() {
-        connectedIds.delete(ble.id);
-        connectedDevices = connectedIds.size;
-        console.log('ORPHE Device ' + ble.id + ' disconnected');
-      });
-
-      // センサー購読は初期化時に 1 回だけ登録する
+    // 接続と通知開始は CoreToolkit が各プレイヤーのトグル操作で行う（forceDeviceSelection でプレイヤーごとにデバイスを選ばせる）。
+    // onConnect は characteristic ごとに来るため、ここでは begin() を呼ばない。
+    // センサー購読は初期化時に 1 回だけ登録し、接続したセンサーからすぐ入力を受け付ける。
+    for (const ble of bles) {
       setupDataCallbacks(ble);
     }
 
     function setupDataCallbacks(ble_device) {
       const id = ble_device.id;
       ble_device.on('converted_acc', function(_acc) {
-        if (!sensorsReady) return;
         if (!_acc) return;
         window.devices[id].acc = _acc;
 
@@ -832,7 +810,6 @@
       });
 
       ble_device.on('euler', function(_euler) {
-        if (!sensorsReady) return;
         if (!_euler) return;
         window.devices[id].eulers = _euler;
 
