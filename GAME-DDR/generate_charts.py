@@ -2,8 +2,10 @@
 import json
 import random
 
-def generate_chart(difficulty, duration=120):
-    """Generate a random DDR chart"""
+def generate_chart(difficulty, duration=113):
+    # The music is about 115s and the chart offset is 2s, so notes stop at 112.5s
+    # (judged by 114.5s) to be hittable before the game ends with the music.
+    """Generate a random step chart"""
     charts = {
         'Easy': {
             'name': 'Easy Mode',
