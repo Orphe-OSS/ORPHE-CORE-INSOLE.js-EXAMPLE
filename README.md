@@ -114,6 +114,10 @@ node scripts/bump-sdk.mjs v0.3.1      # example・README・scripts の CDN 参�
 2. `catalog.json` の `entries` に追加します。パスはリポジトリルート基準で、`device` に `core` / `insole` / `both` を書きます。
 3. 日本語のタイトルと説明は `gallery.js` の `entryTextJa` に追加します。
 4. `node scripts/check-links.mjs` と `node scripts/check-syntax.mjs` を実行します。
+5. example の `README.md` に「作成情報」（作成者・対応 FW・前提にしている仕様・動作確認済み FW）を書きます。書式とルールは [AGENTS.md](AGENTS.md) にあります。
+
+FIFO や欠損判定のように複数の example で使う処理は、ページごとに実装しません。
+SDK の責務はライブラリ（ORPHE-CORE-INSOLE.js の `develop` への PR）に、UI 向けの処理は `assets/js/` にまとめます。詳しくは [AGENTS.md](AGENTS.md) を参照してください。
 
 ## 移元から変えたこと
 

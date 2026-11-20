@@ -8,6 +8,21 @@
 | ORPHE INSOLE | 圧力(6ch) / 加速度 / ジャイロ / クォータニオン / オイラー角 | InsoleToolkit（streaming mode 4 = 100Hz 全データ、自動再接続） |
 | ORPHE CORE | 加速度 / ジャイロ / クォータニオン / オイラー角 | CoreToolkit（`SENSOR_VALUES`、自動再接続） |
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者（CORE 版） | Tetsuaki Baba |
+| 作成者（INSOLE 版） | Yuya Kikukawa（kiku） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## 使い方
 
 1. Chrome / Edge でこのディレクトリの `index.html` を開く（要 HTTPS または localhost）

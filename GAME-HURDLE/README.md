@@ -2,6 +2,20 @@
 
 ORPHE COREを足に装着して走る動きで進み、ハードルを越えてゴールを目指すVirtual Sports Exampleです。
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（菊川裕也） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## What It Does
 
 - Uses ORPHE CORE motion and gait data as the game input.

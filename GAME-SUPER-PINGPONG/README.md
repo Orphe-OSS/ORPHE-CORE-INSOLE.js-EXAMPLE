@@ -6,6 +6,20 @@
 
 A hot-spring ping-pong rehabilitation game: wear an ORPHE CORE on the instep or the thigh and move the paddle by flexing the ankle or raising the thigh. After each match a report scores the movement on six axes.
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（kiku） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## あそびかた
 
 1. ORPHE CORE を **足の甲**（足首の運動）か **太もも**（太もも上げ）に固定して、いすに深く座ります。向きは問いません。
