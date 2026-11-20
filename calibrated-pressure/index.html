@@ -19,7 +19,7 @@
     </nav>
     <p class="small text-secondary">
       接続時にデバイスから取得した校正値で、6ch の圧力を荷重[N]に換算して表示します。
-      校正値を取得できない ch は既定係数（ch ごとの 4 次多項式）で換算します。
+      校正値を取得できない ch は既定式（全 ch 共通の指数関数。ADC ≤ 240 は 0）で換算します。
     </p>
 
     <div class="row">
@@ -76,6 +76,7 @@
     <div class="small mt-3">
       <p class="mb-1">指数関数 (func=0)：N = a × exp(b × ADC) + c（d・e は未使用）</p>
       <p class="mb-1">4次多項式 (func=1)：N = a × ADC⁴ + b × ADC³ + c × ADC² + d × ADC + e</p>
+      <p class="mb-1">既定式（校正値が無い ch）：ADC ≤ 240 は 0、それ以外は指数関数 (func=0) で換算</p>
       <p class="mb-0">ADC は圧力の生値、N は荷重 [N]。計算結果が負の場合は0に補正します。</p>
     </div>
 

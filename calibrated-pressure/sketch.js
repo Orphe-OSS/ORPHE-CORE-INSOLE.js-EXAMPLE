@@ -8,7 +8,7 @@
  *
  * 校正値は begin() の中でデバイスから自動取得され、insole.profile.pressure_calibrations に入る
  * （orphe-core-insole.js の形式: 6ch ぶんの { func, coefficients } または null）。
- * 取得できない ch・デバイスは null になり、SDK 内蔵の既定係数（ch ごとの 4 次多項式）で換算される。
+ * 取得できない ch・デバイスは null になり、SDK 内蔵の既定式（全 ch 共通の指数関数。ADC ≤ 240 は 0）で換算される。
  * 接続中は insole.commands.fetchPressureCalibrations() で取り直せる（失敗しても例外は出ず null）。
  */
 
@@ -28,10 +28,15 @@ function pressureCalibrationOf(insole) {
   return list.map((c, index) => c && { sensor_index: index, func: c.func, coeffs: c.coefficients });
 }
 
-// SDK の既定係数（ch ごとの 4 次多項式）。古い SDK では無いので表に出さない
-function defaultCoefficientsOf(index) {
-  const table = window.OrpheCoreInsoleJS && window.OrpheCoreInsoleJS.DEFAULT_PRESSURE_COEFFICIENTS;
-  return table ? table[index] : null;
+// SDK の既定式を { func, coeffs } で返す。
+// v0.4.0 以降は全 ch 共通の指数関数（DEFAULT_PRESSURE_CALIBRATION）、それより前は ch ごとの 4 次多項式。どちらも無ければ表に出さない
+function defaultCalibrationOf(index) {
+  const sdk = window.OrpheCoreInsoleJS || {};
+  if (sdk.DEFAULT_PRESSURE_CALIBRATION) {
+    return { func: sdk.DEFAULT_PRESSURE_CALIBRATION.func, coeffs: sdk.DEFAULT_PRESSURE_CALIBRATION.coefficients };
+  }
+  const table = sdk.DEFAULT_PRESSURE_COEFFICIENTS;
+  return table && table[index] ? { func: 1, coeffs: table[index] } : null;
 }
 
 // 校正値の取り直し（SDK が対応していれば使える）
@@ -71,10 +76,9 @@ function renderCalibration(id) {
   if (connected) {
     LABELS.forEach((label, index) => {
       const row = calibration && calibration[index];
-      const defaults = row ? null : defaultCoefficientsOf(index);
-      if (!row && !defaults) return;
-      const func = row ? row.func : 1;
-      const coeffs = row ? row.coeffs : defaults;
+      const source = row || defaultCalibrationOf(index);
+      if (!source) return;
+      const { func, coeffs } = source;
       const tr = document.createElement('tr');
       const values = [label, row ? '個体別' : '既定', func === 0 ? '指数関数 (0)' : '4次多項式 (1)',
         ...coeffs.map((value, i) => func === 0 && i > 2
