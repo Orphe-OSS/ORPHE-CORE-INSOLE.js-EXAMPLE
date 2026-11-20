@@ -41,6 +41,10 @@ if (typeof buildCoreToolkit === 'function' && typeof bles !== 'undefined') {
         ble.on('converted_gyro', function (gyro) {
             UdonGame.pushGyro(index, gyro);
         });
+        // 届かなかったパケット（シリアル番号の飛び）。欠けた区間の「ふみ」を補うのに使います（game.js の fillMissed）
+        ble.on('lost_data', function (info) {
+            if (UdonGame.noteLoss) UdonGame.noteLoss(index, info);
+        });
         ble.onEvent('onConnect', function () {
             UdonGame.coreEvent(index, 'connect');
         });

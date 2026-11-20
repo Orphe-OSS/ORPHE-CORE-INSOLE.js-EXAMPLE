@@ -112,7 +112,7 @@
       env: 0, dyn: 0, noise: 0.01,
       armed: false, peak: 0, valley: 0, level: 0, ivl: 1000, lastStepT: -1e9, firstT: null,
       dvx: 0, dvy: 0, dvz: 0, ux: 0, uy: 0, uz: 0,
-      prevSampleTs: null, cur: null,
+      prevSampleTs: null, cur: null, hist: [],
       dtEst: null, rateT0: null, rateN: 0,
       lastT: -1e9, samples: 0
     };
@@ -157,6 +157,21 @@
   };
 
   UdonStepDetector.prototype.getThreshold = function () { return this.cfg.threshold; };
+
+  /**
+   * t0〜t1（受信時刻 [ms]）に届いたサンプルの動きの大きさ。n = サンプル数、max = 重力との差の最大 [G]。
+   * 通信で欠けた歩を補う前に、その足が本当に動いていたかを確かめるのに使う（game.js の fillMissed）。
+   */
+  UdonStepDetector.prototype.motion = function (foot, t0, t1) {
+    var h = this.feet[foot] && this.feet[foot].hist, n = 0, max = 0;
+    if (!h) return { n: 0, max: 0 };
+    for (var i = 0; i < h.length; i += 2) {
+      if (h[i] < t0 || h[i] > t1) continue;
+      n++;
+      if (h[i + 1] > max) max = h[i + 1];
+    }
+    return { n: n, max: max };
+  };
 
   /** いま実際に効いているしきい値（ノイズが大きい個体ではノイズフロアぶん持ち上がる） */
   UdonStepDetector.prototype.effectiveThreshold = function (foot) {
@@ -286,6 +301,9 @@
     // --- 3) 包絡線 ---
     var aE = 1 - Math.exp(-dt / (dyn > st.env ? c.attackTauMs : c.releaseTauMs));
     st.env += (dyn - st.env) * aE;
+    // 直近の動きの大きさを残す（通信で欠けた歩を補うとき、その間に足が動いていたかを見るため。motion()）
+    st.hist.push(tMs, dyn);
+    while (st.hist.length > 2 && tMs - st.hist[0] > 4000) st.hist.splice(0, 2);
 
     // 検出済みのふみは、しばらく最大値を追いかけて「強さ」を確定させる
     if (st.cur) {

@@ -543,8 +543,96 @@
     });
   }
 
-  function registerStep(step) {
+  // ---------------------------------------------------------------------------
+  // 通信で欠けた「ふみ」を補う
+  //
+  // 2 台を同時につなぐと、片方の足の BLE 通知がまとまって欠けることがある（Mac で 1〜5 割）。
+  // 欠けた区間にあった 1 歩は検出できないので、左右交互の足踏みが「いつもの 2 倍（3 倍）の間隔で
+  // 同じ側が続いた」ように見え、数もリズム（コンボ・ばらつき）も崩れる。
+  // 次の 4 つがそろったときだけ、抜けた歩を間に補う（本当に止まった・片足で 2 回ふんだときは補わない）:
+  //   1) 両足のデータが届いていて、直前の 2 歩は左右交互
+  //   2) 今回の間隔が、いつもの間隔のほぼ 2 倍か 3 倍
+  //   3) 補う側の足のデータが、その間に実際に欠けていた（SDK の lost_data。シリアル番号の飛び）
+  //   4) 補う時刻のまわりで届いたデータがあれば、その足は動いていた（じっとしていたら補わない）
+  // ---------------------------------------------------------------------------
+  var FILL = { minSteps: 3, tolerance: 0.22, maxGap: 3, keepMs: 6000 };
+  var lossLog = [[], []];   // 足ごとの「欠けたと分かった時刻」（performance.now()）
+
+  /** scripts.js / insole-connect.js の on('lost_data') から呼ばれる */
+  function noteLoss(foot, info) {
+    if (foot !== 0 && foot !== 1) return;
+    var now = performance.now(), log = lossLog[foot];
+    log.push(now);
+    while (log.length && now - log[0] > FILL.keepMs) log.shift();
+    if (run && !run.done) run.lostPackets = (run.lostPackets || 0) + Math.max(1, info && isFinite(info.serial) && isFinite(info.prev) ? ((info.serial - info.prev + 65536) % 65536) - 1 : 1);
+  }
+  /** foot のデータが t0〜t1 の間に欠けていたか（欠けは次のパケットが届いたときに分かるので、少しあとまで見る） */
+  function lostBetween(foot, t0, t1) {
+    var log = lossLog[foot];
+    for (var i = log.length - 1; i >= 0; i--) if (log[i] > t0 && log[i] <= t1 + 120) return true;
+    return false;
+  }
+  function recentPeak(foot) {
+    var sum = 0, n = 0;
+    for (var i = run.steps.length - 1; i >= 0 && n < 3; i--) {
+      var e = run.steps[i];
+      if (e.foot === foot && e.ref && !e.ref.fill && isFinite(e.ref.peak)) { sum += e.ref.peak; n++; }
+    }
+    return n ? sum / n : 1;
+  }
+  function fillMissed(step) {
+    if (!run || run.restNext || state.mode === 'demo') return;
+    var live = liveFeet();
+    if (!live[0] || !live[1]) return;
+    var s = run.steps, n = s.length;
+    if (n < FILL.minSteps) return;
+    // 直前の 2 歩が左右交互（それより前に補えなかった歩があっても、ここから先は補えるように）
+    if (s[n - 1].foot === s[n - 2].foot || s[n - 1].rest) return;
+    // いつもの間隔: 直近 6 回の中央値。ただし抜けた歩をまたいだ長い間隔（最短の 1.6 倍以上）は除く
+    var iv = [];
+    for (var j = n - 1; j >= 1 && iv.length < 6; j--) {
+      if (s[j].rest) break;
+      iv.push(s[j].t - s[j - 1].t);
+    }
+    if (iv.length < FILL.minSteps - 1) return;
+    var shortest = Math.min.apply(null, iv);
+    iv = iv.filter(function (x) { return x < shortest * 1.6; }).sort(function (a, b) { return a - b; });
+    if (iv.length < 2) return;
+    var usual = (iv[(iv.length - 1) >> 1] + iv[iv.length >> 1]) / 2;
+    if (!(usual > 150)) return;
     var now = performance.now();
+    var prev = s[n - 1];
+    var prevAt = run.clockStart + run.pausedMs + prev.t;      // その歩のページ上の時刻
+    var gap = now - prevAt;
+    var k = Math.round(gap / usual);
+    if (k < 2 || k > FILL.maxGap || Math.abs(gap / k - usual) > usual * FILL.tolerance) return;
+    var feet = [];
+    for (var m = 1; m <= k; m++) feet.push(m % 2 ? 1 - prev.foot : prev.foot);
+    if (feet[k - 1] !== step.foot) return;
+    for (var q = 0; q < k - 1; q++) {
+      if (!lostBetween(feet[q], prevAt, now)) return;
+      // 届いたぶんのデータでその足がじっとしていたなら、ふんでいない（止まっていた）とみなす
+      var mid = prevAt + gap * (q + 1) / k;
+      var mo = detector.motion(feet[q], mid - 250, mid + 250);
+      if (mo.n > 0 && mo.max < Math.max(0.05, detector.getThreshold() * 0.35)) return;
+    }
+    for (var r = 1; r < k; r++) {
+      var at = prevAt + gap * r / k;
+      registerStep({ foot: feet[r - 1], t: at, peak: recentPeak(feet[r - 1]), source: 'fill', fill: true }, at);
+    }
+    run.filled = (run.filled || 0) + (k - 1);
+  }
+
+  /**
+   * @param {object} step 検出した 1 ふみ
+   * @param {number} [atMs] その歩のページ上の時刻（補った歩だけ。ふだんは今）
+   */
+  function registerStep(step, atMs) {
+    if (!step.fill) {
+      fillMissed(step);
+      if (run.done) return;   // 補った歩でできあがった
+    }
+    var now = isFinite(atMs) ? atMs : performance.now();
     if (run.count === 0) { run.clockStart = now; run.clock = 0; }
     run.clock = now - run.clockStart - run.pausedMs;
     var entry = { t: run.clock, foot: step.foot, ref: step, rest: run.restNext };
@@ -2396,6 +2484,8 @@
     pushInsoleAcc: pushInsoleAcc,
     pushInsoleGyro: pushInsoleGyro,
     pushPress: pushPress,
+    /** scripts.js / insole-connect.js の on('lost_data') から: その足の BLE 通知が欠けた */
+    noteLoss: noteLoss,
     /** insole-connect.js から: 接続・切断・左右の割り当て直しの通知 */
     insoleEvent: function (foot, type) {
       if (!isInsole()) return;

@@ -192,7 +192,11 @@
       if (press && press.values && game()) game().pushPress(s.foot, press.values);
     });
     // 届かなかったパケットの数（生データのきろくの先頭に書く。通信の落ち方の目安）
-    insole.on('lost_data', function () { s.lost++; });
+    insole.on('lost_data', function (info) {
+      s.lost++;
+      // 欠けた区間の「ふみ」を補うのに使う（game.js の fillMissed）
+      if (s.state !== 'off' && game() && game().noteLoss) game().noteLoss(s.foot, info);
+    });
     insole.on('ble_frequency', function (hz) { s.hz = hz; });
 
     insole.onEvent('onDisconnect', function () {
