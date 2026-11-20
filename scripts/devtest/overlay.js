@@ -190,8 +190,18 @@
     },
   };
   var cfg = PAGES[PAGE] || { expect: [], manual: [], metrics: function () { return null; } };
-  var EXPECT_HZ = { core: 160, insole1: 160, insole3: 160, insole4: 80 };
-  function minHz(r) { return r.kind === 'insole' ? (EXPECT_HZ['insole' + (r.mode || 4)] || 80) : EXPECT_HZ.core; }
+  // CORE 3.0 (CR-3) streams 200 Hz (header 50); CORE 2.0 (CR-2) streams about 50 Hz (header 40, one sample a packet)
+  var EXPECT_HZ = { core3: 160, core2: 40, insole1: 160, insole3: 160, insole4: 80 };
+  function model(r) {
+    var n = r.name || '';
+    if (r.kind === 'core') return /^CR-2/.test(n) ? 'CORE 2.0' : /^CR-3/.test(n) ? 'CORE 3.0' : 'CORE';
+    if (r.kind === 'insole') return /^INS2/.test(n) ? 'INSOLE 2.0' : 'INSOLE';
+    return r.kind;
+  }
+  function minHz(r) {
+    if (r.kind === 'insole') return EXPECT_HZ['insole' + (r.mode || 4)] || 80;
+    return model(r) === 'CORE 3.0' ? EXPECT_HZ.core3 : EXPECT_HZ.core2;
+  }
 
   function autoChecks() {
     var live = devices.filter(function (r) { return r.connects > 0; });
@@ -200,8 +210,8 @@
     live.forEach(function (r) { kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
     var out = [];
     out.push({ id: 'auto-connect', label: '必要な台数がつながった（' + need + ' 台）', ok: need === 0 ? null : live.length >= need, detail: JSON.stringify(kinds) });
-    out.push({ id: 'auto-rate', label: '受信レートが足りている（CORE ≥160 Hz、INSOLE mode4 ≥80 Hz）', ok: live.length ? live.every(function (r) { return r.peakHz >= minHz(r); }) : null,
-      detail: live.map(function (r) { return r.slot + ':' + r.peakHz; }).join(' ') });
+    out.push({ id: 'auto-rate', label: '受信レートが足りている（CORE 3.0 ≥160 Hz・CORE 2.0 ≥40 Hz・INSOLE mode4 ≥80 Hz）', ok: live.length ? live.every(function (r) { return r.peakHz >= minHz(r); }) : null,
+      detail: live.map(function (r) { return r.slot + ':' + r.peakHz + '/' + minHz(r); }).join(' ') });
     out.push({ id: 'auto-fw', label: 'FW 版を読めた', ok: live.length ? live.every(function (r) { return !!r.fw; }) : null, detail: live.map(function (r) { return r.fw || '?'; }).join(' / ') });
     out.push({ id: 'auto-errors', label: 'ページのエラーなし', ok: errors.length === 0, detail: errors.length ? errors[errors.length - 1].msg : '' });
     out.push({ id: 'auto-reconnect', label: '電源を切って入れ直すと自動で再接続する（任意）', ok: devices.some(function (r) { return r.reconnects > 0; }) ? true : null,
@@ -278,7 +288,7 @@
     function paint() {
       devices.forEach(refresh);
       q('dev').innerHTML = devices.map(function (r) {
-        return '<tr><td>' + r.slot + '</td><td>' + r.kind + (r.kind === 'insole' && r.mode ? '/m' + r.mode : '') + '</td><td>' + esc(r.name || '-') + '</td><td>' + (r.fw || '-') + '</td><td>' + r.state +
+        return '<tr><td>' + r.slot + '</td><td>' + model(r) + (r.kind === 'insole' && r.mode ? '/m' + r.mode : '') + '</td><td>' + esc(r.name || '-') + '</td><td>' + (r.fw || '-') + '</td><td>' + r.state +
           '</td><td class="' + (r.hz >= minHz(r) ? 'ok' : (r.hz > 0 ? 'ng' : 'na')) + '">' + Math.round(r.hz) + '</td><td>' + r.lost + '</td><td>' + r.disconnects + '/' + r.reconnects + '</td></tr>';
       }).join('') || '<tr><td colspan="8" class="na">まだ接続していません（接続ドックのスイッチで接続）</td></tr>';
       q('auto').innerHTML = autoChecks().map(function (c) {
@@ -306,7 +316,7 @@
       page: PAGE, url: location.pathname + location.search, savedAt: localIso(new Date()), tester: tester, note: note,
       sdk: sdkSrc ? (sdkSrc.match(/@(v[\d.]+)/) || [null, sdkSrc])[1] : null,
       devices: devices.filter(function (r) { return r.connects > 0 || r.samples > 0; }).map(function (r) {
-        return { slot: r.slot, kind: r.kind, name: r.name, fw: r.fw, fwName: r.fwName, mode: r.mode, beginType: r.beginType, state: r.state, peakHz: r.peakHz,
+        return { slot: r.slot, kind: r.kind, model: model(r), name: r.name, fw: r.fw, fwName: r.fwName, mode: r.mode, beginType: r.beginType, state: r.state, peakHz: r.peakHz,
           samples: r.samples, lost: r.lost, lostFrames: r.lostFrames, connects: r.connects, disconnects: r.disconnects, reconnects: r.reconnects, reconnectFailed: r.reconnectFailed, errors: r.errors.slice(-5) };
       }),
       auto: autoChecks(), manual: cfg.manual.map(function (x) { var st = manual[x[0]]; return { id: x[0], label: x[1], ok: st ? st.ok : null }; }),
@@ -322,8 +332,11 @@
   function save() {
     var msg = box.querySelector('[data-ref="msg"]');
     var body = JSON.stringify(snapshot());
+    var btn = box.querySelector('button[data-act="save"]');
     fetch('/__devtest/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body }).then(function (r) { return r.json(); }).then(function (j) {
-      msg.textContent = '保存しました: ' + j.file;
+      msg.textContent = '保存しました: ' + j.file.split('/').pop();
+      btn.textContent = '保存済み ✓'; btn.classList.add('on-ok');
+      setTimeout(function () { btn.textContent = '保存'; btn.classList.remove('on-ok'); }, 2500);
     }).catch(function (e) {
       msg.textContent = '保存できませんでした（serve.py で開いていますか？）: ' + e;
     });

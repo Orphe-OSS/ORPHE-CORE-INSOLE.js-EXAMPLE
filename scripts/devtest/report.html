@@ -39,12 +39,12 @@
   var LABEL = { core: 'ORPHE CORE', insole: 'ORPHE INSOLE' };
   function deviceText(r) {
     var by = {};
-    (r.devices || []).forEach(function (d) { by[d.kind] = (by[d.kind] || 0) + 1; });
-    return Object.keys(by).map(function (k) { return (LABEL[k] || k) + ' ×' + by[k]; }).join(' + ');
+    (r.devices || []).forEach(function (d) { var k = d.model ? 'ORPHE ' + d.model : (LABEL[d.kind] || d.kind); by[k] = (by[k] || 0) + 1; });
+    return Object.keys(by).map(function (k) { return k + ' ×' + by[k]; }).join(' + ');
   }
   function fwText(r) {
     var seen = {};
-    (r.devices || []).forEach(function (d) { var key = (LABEL[d.kind] || d.kind).replace('ORPHE ', '') + ': ' + (d.fw || '不明'); seen[key] = true; });
+    (r.devices || []).forEach(function (d) { var key = (d.model || (LABEL[d.kind] || d.kind).replace('ORPHE ', '')) + ': ' + (d.fw || '不明'); seen[key] = true; });
     return Object.keys(seen).join(' / ');
   }
   function passed(r) {
