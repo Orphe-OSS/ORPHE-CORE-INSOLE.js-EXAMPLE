@@ -6,6 +6,20 @@ Fourier transform / DFT exercises.
 It is linked from the ORPHE CORE WS YouTube lesson materials. The page content
 is kept as workshop material rather than rewritten as a beginner example.
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（kiku） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## What It Does
 
 - Connects one ORPHE CORE with CoreToolkit.js.

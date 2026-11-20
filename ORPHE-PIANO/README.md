@@ -4,6 +4,20 @@ This example is a browser port of [`Orphe-OSS/Orphe-Piano`](https://github.com/O
 
 For the current interaction, sensor, scene, and sound-routing details, see [`SPEC.md`](./SPEC.md).
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（kikyu） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## Source Project Analysis
 
 The original app is an iOS project built with Swift 3.1, `Orphe-SDK-Swift-1.1.0`, C4, and libpd. Its runtime flow is:

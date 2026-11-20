@@ -2,6 +2,21 @@
 
 ORPHE CORE / ORPHE INSOLE の BLE 通信を hex のまま確認するためのターミナルです。旧 ORPHE-INSOLE.js の `terminal` と ORPHE-CORE.js の `INFORMATION` を統合しています。
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者（CORE 版） | Tetsuaki Baba |
+| 作成者（INSOLE 版） | Tetsuaki Baba（tetsuakibaba） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## 使い方
 
 1. 上部のセレクトで `ORPHE CORE` / `ORPHE INSOLE` を選びます（変更するとページを再読込します。既定は INSOLE）。
