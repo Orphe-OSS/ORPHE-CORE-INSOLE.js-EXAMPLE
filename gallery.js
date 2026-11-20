@@ -145,6 +145,10 @@
       title: '110m ハードル走',
       value: 'Gait Analysisと足の動きで走る、Virtual Sportsの代表Exampleです。'
     },
+    'connection-hub': {
+      title: '接続ハブ',
+      value: 'ORPHE COREを1回つなげば、ゲームを切り替えてもつなぎ直さずに遊べます。ゲームはハブの中で開き、ハブの接続を共有します。展示・体験会向け。'
+    },
     'game-super-hurdle': {
       title: 'SUPER VIRTUAL HURDLE',
       value: '110mハードル走のスタジアム版です。3Dの夜のスタジアム、2人対戦、ORPHE INSOLE対応、ゴール後の分析つき。110mハードル走より動作が重めです。'
