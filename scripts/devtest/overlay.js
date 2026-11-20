@@ -9,8 +9,14 @@
   'use strict';
   if (window.__devtest) return;
   var SDK = window.OrpheCoreInsoleJS;
-  var PAGE = (location.pathname.replace(/^\/+|\/+$/g, '').split('/')[0]) || '(top)';
-  var STORE_KEY = 'devtest.v1.' + PAGE;
+  var PARTS = location.pathname.replace(/\/[^/]*\.html?$/, '').replace(/^\/+|\/+$/g, '').split('/');
+  var PAGE = PARTS[PARTS.length - 1] || '(top)';
+  // ORPHE-CORE.js（旧 SDK）のページ。class 宣言は window のプロパティにならないので、識別子で参照する
+  /* global Orphe */
+  var LegacyOrphe = typeof Orphe === 'function' ? Orphe : null;
+  var LEGACY = !SDK && !!LegacyOrphe;
+  var ALIAS = { 'GAME-UDON': 'UDON' };
+  var STORE_KEY = 'devtest.v1.' + PAGE + (LEGACY ? '.legacy' : '');
   var t0 = Date.now();
 
   // ---------------------------------------------------------------- devices
@@ -30,11 +36,15 @@
     if (!r) {
       r = { ble: ble, slot: ble.id, kind: '?', name: null, fw: null, fwName: null, state: 'connecting', connects: 0, disconnects: 0,
         reconnects: 0, reconnectFailed: 0, lost: 0, lostFrames: 0, samples: 0, hz: 0, peakHz: 0, window: [], errors: [], beginType: type || null,
+        packets: 0, lastSerial: null, lossHist: [], lossPct: null, lossPct10s: null,
         mode: options && (options.streamingMode || options.dataStreamingMode) || null, firstDataAt: null, lastDataAt: null };
       devices.push(r);
       ble.on('*', function (s) {
         if (!s || !(s.acc || s.converted_acc || s.press || s.quat)) return;
         var now = performance.now();
+        var stamp = s.converted_acc || s.acc || s.quat || s.press;
+        var serial = stamp && stamp.serial_number;
+        if (typeof serial === 'number' && serial !== r.lastSerial) { r.packets++; r.lastSerial = serial; }
         r.samples++; r.window.push(now); r.lastDataAt = now;
         // data again after a disconnect = the link came back (auto-reconnect, or the page connected it again)
         if (r.awaitReconnect) { r.awaitReconnect = false; r.reconnects++; }
@@ -55,6 +65,12 @@
   }
   function refresh(r) {
     var ble = r.ble;
+    if (r.legacy) {
+      if (ble.bluetoothDevice && ble.bluetoothDevice.name) r.name = ble.bluetoothDevice.name;
+      r.state = ble.bluetoothDevice && ble.bluetoothDevice.gatt && ble.bluetoothDevice.gatt.connected ? 'connected' : 'disconnected';
+      if (r.state === 'disconnected' && !r.awaitReconnect && r.samples > 0) { r.disconnects++; r.awaitReconnect = true; }
+      return refreshRates(r);
+    }
     r.kind = kindOf(ble);
     var dev = ble.transport && ble.transport.device;
     if (dev && dev.name) r.name = dev.name;
@@ -68,11 +84,22 @@
     var st = ble.connectionState;
     if (st) r.state = st;
     if (ble.sharedBridgeRole === 'secondary') r.state = 'secondary';
+    refreshRates(r);
+  }
+  function refreshRates(r) {
     var now = performance.now();
     while (r.window.length && now - r.window[0] > 2000) r.window.shift();
     r.hz = r.window.length / 2;
     if (r.lastDataAt !== null && now - r.lastDataAt > 2000) r.hz = 0;
     if (r.hz > r.peakHz) r.peakHz = r.hz;
+    // packet loss: cumulative, and over the last 10 s (snapshots once a second)
+    if (r.packets + r.lostFrames > 0 && r.packets > 0) r.lossPct = Math.round(1000 * r.lostFrames / (r.packets + r.lostFrames)) / 10;
+    var h = r.lossHist, last = h[h.length - 1];
+    if (!last || now - last.t >= 1000) { h.push({ t: now, p: r.packets, l: r.lostFrames }); if (h.length > 11) h.shift(); }
+    if (h.length >= 2) {
+      var a = h[0], b = h[h.length - 1], dp = b.p - a.p, dl = b.l - a.l;
+      r.lossPct10s = dp + dl > 0 ? Math.round(1000 * dl / (dp + dl)) / 10 : null;
+    }
   }
   if (SDK && SDK.OrpheCoreInsole && SDK.OrpheCoreInsole.prototype && !SDK.OrpheCoreInsole.prototype.__devtestWrapped) {
     var proto = SDK.OrpheCoreInsole.prototype;
@@ -87,6 +114,49 @@
       return p;
     };
     proto.__devtestWrapped = true;
+  }
+  // ORPHE-CORE.js（旧 SDK）: 同じ記録を取り、旧版と新版を同じ条件で比べられるようにする
+  if (LEGACY && !LegacyOrphe.prototype.__devtestWrapped) {
+    var op = LegacyOrphe.prototype;
+    var legacyRecord = function (ble) {
+      var r = recordOf(ble);
+      if (!r) {
+        r = { ble: ble, legacy: true, slot: ble.id, kind: 'core', name: null, fw: null, fwName: null, state: 'connected', connects: 1, disconnects: 0,
+          reconnects: 0, reconnectFailed: 0, lost: 0, lostFrames: 0, samples: 0, hz: 0, peakHz: 0, window: [], errors: [], beginType: null, mode: null,
+          firstDataAt: null, lastDataAt: null, packets: 0, lastSerial: null, lossHist: [], lossPct: null, lossPct10s: null };
+        devices.push(r);
+      }
+      return r;
+    };
+    var onRead = op.onRead;
+    op.onRead = function (data, uuid) {
+      try {
+        if (uuid === 'SENSOR_VALUES' && data && data.byteLength) {
+          var r = legacyRecord(this), now = performance.now();
+          var head = data.getUint8(0);
+          var frames = head === 50 ? Math.max(1, Math.min(8, Math.floor((data.byteLength - 8 + 1) / 21))) : 1;
+          for (var i = 0; i < frames; i++) r.window.push(now);
+          r.samples += frames; r.lastDataAt = now; if (r.firstDataAt === null) r.firstDataAt = now;
+          if (r.awaitReconnect) { r.awaitReconnect = false; r.reconnects++; }
+        }
+      } catch (e) { /* never break the SDK */ }
+      return onRead.apply(this, arguments);
+    };
+    var gap = op._checkSerialGap;
+    if (typeof gap === 'function') {
+      op._checkSerialGap = function (current) {
+        try {
+          var r = legacyRecord(this);
+          r.packets++;
+          if (this._serialInitialized) {
+            var d = (current - this.serial_number + 65536) % 65536;
+            if (d !== 1) { r.lost++; r.lostFrames += Math.max(0, d - 1); }
+          }
+        } catch (e) { /* ignore */ }
+        return gap.apply(this, arguments);
+      };
+    }
+    op.__devtestWrapped = true;
   }
 
   // ---------------------------------------------------------------- page errors
@@ -189,7 +259,7 @@
       },
     },
   };
-  var cfg = PAGES[PAGE] || { expect: [], manual: [], metrics: function () { return null; } };
+  var cfg = PAGES[ALIAS[PAGE] || PAGE] || { expect: [], manual: [], metrics: function () { return null; } };
   // CORE 3.0 (CR-3) streams 200 Hz (header 50); CORE 2.0 (CR-2) streams about 50 Hz (header 40, one sample a packet)
   var EXPECT_HZ = { core3: 160, core2: 40, insole1: 160, insole3: 160, insole4: 80 };
   function model(r) {
@@ -212,7 +282,9 @@
     out.push({ id: 'auto-connect', label: '必要な台数がつながった（' + need + ' 台）', ok: need === 0 ? null : live.length >= need, detail: JSON.stringify(kinds) });
     out.push({ id: 'auto-rate', label: '受信レートが足りている（CORE 3.0 ≥160 Hz・CORE 2.0 ≥40 Hz・INSOLE mode4 ≥80 Hz）', ok: live.length ? live.every(function (r) { return r.peakHz >= minHz(r); }) : null,
       detail: live.map(function (r) { return r.slot + ':' + r.peakHz + '/' + minHz(r); }).join(' ') });
-    out.push({ id: 'auto-fw', label: 'FW 版を読めた', ok: live.length ? live.every(function (r) { return !!r.fw; }) : null, detail: live.map(function (r) { return r.fw || '?'; }).join(' / ') });
+    out.push({ id: 'auto-loss', label: 'BLE の欠損が少ない（累計 5% 以下）', ok: live.some(function (r) { return r.lossPct !== null; }) ? live.every(function (r) { return r.lossPct === null || r.lossPct <= 5; }) : null,
+      detail: live.map(function (r) { return r.slot + ':' + (r.lossPct === null ? '-' : r.lossPct + '%'); }).join(' ') });
+    out.push({ id: 'auto-fw', label: 'FW 版を読めた', ok: live.length && !LEGACY ? live.every(function (r) { return !!r.fw; }) : null, detail: live.map(function (r) { return r.fw || '?'; }).join(' / ') });
     out.push({ id: 'auto-errors', label: 'ページのエラーなし', ok: errors.length === 0, detail: errors.length ? errors[errors.length - 1].msg : '' });
     out.push({ id: 'auto-reconnect', label: '電源を切って入れ直すと自動で再接続する（任意）', ok: devices.some(function (r) { return r.reconnects > 0; }) ? true : null,
       detail: devices.map(function (r) { return r.slot + ':' + r.disconnects + '/' + r.reconnects; }).join(' ') });
@@ -241,9 +313,9 @@
   var style = document.createElement('style'); style.textContent = css;
   var box = document.createElement('div'); box.id = 'devtest';
   if (localStorage.getItem('devtest.min') === '1') box.className = 'min';
-  box.innerHTML = '<div class="dt-head"><b>実機テスト · ' + PAGE + '</b><button data-act="save" title="結果を保存（serve.py の結果フォルダへ）">保存</button>' +
+  box.innerHTML = '<div class="dt-head"><b>実機テスト · ' + PAGE + (LEGACY ? '（旧 SDK）' : '') + '</b><button data-act="save" title="結果を保存（serve.py の結果フォルダへ）">保存</button>' +
     '<button data-act="report" title="これまでの結果">一覧</button><button data-act="min">_</button></div><div class="dt-body">' +
-    '<div class="sec">デバイス（自動）</div><table><thead><tr><th>#</th><th>種別</th><th>名前</th><th>FW</th><th>状態</th><th>Hz</th><th>欠損</th><th>切/再</th></tr></thead><tbody data-ref="dev"></tbody></table>' +
+    '<div class="sec">デバイス（自動）</div><table><thead><tr><th>#</th><th>種別</th><th>名前</th><th>FW</th><th>状態</th><th>Hz</th><th>欠損%<br><small>10s/累計</small></th><th>切/再</th></tr></thead><tbody data-ref="dev"></tbody></table>' +
     '<div class="sec">自動チェック</div><div data-ref="auto"></div><div class="sec">手で確かめる</div><div data-ref="manual"></div>' +
     '<div class="sec">メモ（気づいたこと・症状）</div><textarea data-ref="note" rows="2"></textarea>' +
     '<div class="row"><span>確認者</span><input data-ref="tester" style="width:60%"></div>' +
@@ -289,7 +361,7 @@
       devices.forEach(refresh);
       q('dev').innerHTML = devices.map(function (r) {
         return '<tr><td>' + r.slot + '</td><td>' + model(r) + (r.kind === 'insole' && r.mode ? '/m' + r.mode : '') + '</td><td>' + esc(r.name || '-') + '</td><td>' + (r.fw || '-') + '</td><td>' + r.state +
-          '</td><td class="' + (r.hz >= minHz(r) ? 'ok' : (r.hz > 0 ? 'ng' : 'na')) + '">' + Math.round(r.hz) + '</td><td>' + r.lost + '</td><td>' + r.disconnects + '/' + r.reconnects + '</td></tr>';
+          '</td><td class="' + (r.hz >= minHz(r) ? 'ok' : (r.hz > 0 ? 'ng' : 'na')) + '">' + Math.round(r.hz) + '</td><td class="' + (r.lossPct10s === null ? 'na' : r.lossPct10s <= 2 ? 'ok' : 'ng') + '">' + (r.lossPct10s === null ? '-' : r.lossPct10s) + ' / ' + (r.lossPct === null ? '-' : r.lossPct) + '</td><td>' + r.disconnects + '/' + r.reconnects + '</td></tr>';
       }).join('') || '<tr><td colspan="8" class="na">まだ接続していません（接続ドックのスイッチで接続）</td></tr>';
       q('auto').innerHTML = autoChecks().map(function (c) {
         var cls = c.ok === true ? 'ok' : c.ok === false ? 'ng' : 'na', mark = c.ok === true ? '✓' : c.ok === false ? '✗' : '…';
@@ -313,11 +385,11 @@
     var m = null; try { m = cfg.metrics(); } catch (e) { m = { error: String(e) }; }
     var sdkSrc = Array.prototype.map.call(document.scripts, function (s) { return s.src; }).filter(function (s) { return /orphe-core-insole\.js(\?|$)/.test(s); })[0] || null;
     return {
-      page: PAGE, url: location.pathname + location.search, savedAt: localIso(new Date()), tester: tester, note: note,
-      sdk: sdkSrc ? (sdkSrc.match(/@(v[\d.]+)/) || [null, sdkSrc])[1] : null,
+      page: ALIAS[PAGE] || PAGE, sourcePage: PAGE, legacySdk: LEGACY, url: location.pathname + location.search, savedAt: localIso(new Date()), tester: tester, note: note,
+      sdk: LEGACY ? 'ORPHE-CORE.js (legacy)' : (sdkSrc ? (sdkSrc.match(/@(v[\d.]+)/) || [null, sdkSrc])[1] : null),
       devices: devices.filter(function (r) { return r.connects > 0 || r.samples > 0; }).map(function (r) {
         return { slot: r.slot, kind: r.kind, model: model(r), name: r.name, fw: r.fw, fwName: r.fwName, mode: r.mode, beginType: r.beginType, state: r.state, peakHz: r.peakHz,
-          samples: r.samples, lost: r.lost, lostFrames: r.lostFrames, connects: r.connects, disconnects: r.disconnects, reconnects: r.reconnects, reconnectFailed: r.reconnectFailed, errors: r.errors.slice(-5) };
+          samples: r.samples, packets: r.packets, lost: r.lost, lostPackets: r.lostFrames, lossPct: r.lossPct, connects: r.connects, disconnects: r.disconnects, reconnects: r.reconnects, reconnectFailed: r.reconnectFailed, errors: r.errors.slice(-5) };
       }),
       auto: autoChecks(), manual: cfg.manual.map(function (x) { var st = manual[x[0]]; return { id: x[0], label: x[1], ok: st ? st.ok : null }; }),
       metrics: m, errors: errors.slice(-20), userAgent: navigator.userAgent, minutesOnPage: Math.round((Date.now() - t0) / 6000) / 10,

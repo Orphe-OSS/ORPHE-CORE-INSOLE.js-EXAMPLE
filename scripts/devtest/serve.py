@@ -16,7 +16,8 @@ import argparse, datetime, http.server, json, os, pathlib, re, subprocess, sys, 
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-SDK_TAG = re.compile(rb'(<script[^>]*orphe-core-insole\.js["\'][^>]*>\s*</script>)', re.I)
+# 新 SDK（orphe-core-insole.js）か、旧 SDK（ORPHE-CORE.js）の <script> の直後に差し込む
+SDK_TAG = re.compile(rb'(<script[^>]*(?:orphe-core-insole|ORPHE-CORE)\.js["\'][^>]*>\s*</script>)')
 INJECT = '\n  <script src="/__devtest/overlay.js"></script><!-- devtest: serve.py が差し込み -->'.encode('utf-8')
 
 
