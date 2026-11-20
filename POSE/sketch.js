@@ -33,7 +33,10 @@ function onResults(results) {
   grid.updateLandmarks(results.poseWorldLandmarks);
 }
 
-const MEDIAPIPE_POSE_ASSET_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/';
+// wasm / graph / model は同梱の pose.js と同じビルドでないと推論が返らず、骨格が止まる。
+// 範囲指定（@0.5）にすると CDN の新しいビルドに解決されるので、版を固定する
+const MEDIAPIPE_POSE_VERSION = '0.5.1635988162';
+const MEDIAPIPE_POSE_ASSET_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MEDIAPIPE_POSE_VERSION}/`;
 const pose = new Pose({
   locateFile: (file) => `${MEDIAPIPE_POSE_ASSET_BASE}${file}`
 });
@@ -74,7 +77,12 @@ function setup() {
 
   const camera = new Camera(videoElement, {
     onFrame: async () => {
-      await pose.send({ image: videoElement });
+      // camera_utils は onFrame が失敗すると次のフレームを予約しないので、ここで握りつぶして続ける
+      try {
+        await pose.send({ image: videoElement });
+      } catch (error) {
+        console.error('pose.send failed', error);
+      }
     },
     width: 1280,
     height: 720
