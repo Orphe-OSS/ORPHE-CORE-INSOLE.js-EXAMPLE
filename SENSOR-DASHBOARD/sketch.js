@@ -398,11 +398,13 @@ function formatTimestamp(timestamp) {
 //--------------------------------------------------
 // p5.js（WEBGL）: 靴モデルを quat で回転して表示
 //--------------------------------------------------
-let shoeModels = [null, null]; // [Left, Right]
+let shoeModels = [null, null]; // [Left Foot 用, Right Foot 用]
 function preload() {
+    // STL は VIEW のカメラ・rotateZ(PI) 前提で作られており、装着位置と左右反転のモデルを当てると
+    // 正しい向きで表示される（showcase/viz-3d.js と同じ）
     shoeModels = [
-        loadModel('../assets/models/orphe_shoeL3.stl'),
         loadModel('../assets/models/orphe_shoeR3.stl'),
+        loadModel('../assets/models/orphe_shoeL3.stl'),
     ];
 }
 
@@ -419,7 +421,7 @@ function setup() {
 
 function draw() {
     background(200);
-    // VIEW と同じ視点（上下反転のため x=-100 が画面右、x=+100 が画面左に見える）
+    // VIEW と同じ視点（+X が画面右に見える）
     camera(
         0, 400, 400,
         0, 0, 0,
@@ -429,11 +431,11 @@ function draw() {
         const quat = sideQuats[side];
         push();
         // Left Foot を画面左、Right Foot を画面右に置く
-        translate(side === 0 ? 100 : -100, 0, 0);
+        translate(side === 0 ? -100 : 100, 0, 0);
+        rotateZ(PI);
         if (quat) {
             const quatr = new toxi.geom.Quaternion(quat.z, -quat.x, quat.y, quat.w);
             const axisAngle = quatr.toAxisAngle();
-            rotateZ(PI);
             rotate(axisAngle[0], createVector(axisAngle[1], axisAngle[2], axisAngle[3]));
         }
         // 太陽光が手前上から当たる
