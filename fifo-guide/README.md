@@ -17,6 +17,20 @@ URLの `?lang=ja` / `?lang=en` でも指定できます。指定がない場合�
 example テンプレート（header + control-strip + settings-guide + chart-card +
 table-frame + scope-note + code-card）に揃えています。
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（kiku） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## Toolkit UI の設定
 
 FIFO収録を使いたいときは、Toolkit UI の歯車を開き、次のように設定してください。

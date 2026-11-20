@@ -4,6 +4,20 @@ A four-lane arrow-step rhythm game that can be played with both keyboard and ORP
 
 ![Game Preview](../GAME-PINGPONG/rogo.png)
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（菊川裕也） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## 🎮 Overview
 
 This is a vertical scrolling rhythm game with four arrow lanes (← ↓ ↑ →). Arrows scroll toward the step zone, a row of arrow outlines. Press the corresponding arrow key, or step in that direction with ORPHE CORE, when a scrolling arrow exactly covers its outline. Either foot can be used; only the direction matters.

@@ -2,6 +2,20 @@
 
 This example prototypes a stabilometry-like balance view for ORPHE INSOLE. It estimates an insole-relative center of pressure (CoP) from each foot's six pressure channels, combines left and right feet into a global CoP trace, and shows sway-style metrics before real-device calibration.
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（kikyu） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## Reference UI/UX Findings
 
 - Tekscan SAM frames balance analysis around weight bearing, symmetry, center of force, sway direction/amount, pressure distribution, elliptical sway pattern, CoF distance, variability, and fore/rear or left/right weight-bearing percentages: https://www.tekscan.com/products-solutions/software/sway-analysis-module-sam

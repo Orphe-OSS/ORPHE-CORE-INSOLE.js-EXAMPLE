@@ -7,6 +7,20 @@ ORPHE INSOLE から届く Step Analysis の完成行と Realtime Raw を同時�
 URLの `?lang=ja` / `?lang=en` でも表示言語を直接指定できます。指定がない場合は、
 端末のタイムゾーンが `Asia/Tokyo` なら日本語、それ以外は英語で表示します。
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者 | Yuya Kikukawa（kiku） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## Toolkit UI の設定
 
 Step Analysis + RAW Data を使いたいときは、Toolkit UI の歯車を開き、

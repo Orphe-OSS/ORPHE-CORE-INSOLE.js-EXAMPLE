@@ -5,6 +5,21 @@ ORPHE CORE / ORPHE INSOLE を最大2台同時に接続し、センサー値と�
 
 ![data-viewer](./data-viewer.gif)
 
+## 作成情報
+
+| 項目 | 内容 |
+|---|---|
+| 作成者（CORE 版） | Tetsuaki Baba |
+| 作成者（INSOLE 版） | Tetsuaki Baba（tetsuakibaba） |
+| 対応 FW | 未記入 |
+| 前提にしている仕様 | 未記入 |
+
+### 動作確認済み FW
+
+| FW | デバイス | 確認者 | 確認日 |
+|---|---|---|---|
+| （未確認） | | | |
+
 ## できること
 
 - スロットごとに `ORPHE CORE` / `ORPHE INSOLE` を選択（変更するとページを再読み込みします）
