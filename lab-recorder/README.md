@@ -21,7 +21,7 @@
 | 3 | **セッションのメタデータ** | participant_id / trial_number / condition / surface / footwear / notes（すべて任意）。localStorage に保持し次回の既定値に。trial_number は保存時に自動 +1（`T03 → T04` も対応） |
 | 4 | **CSV の来歴列** | `device_id, side, firmware_version, sdk_version, sample_index, serial_number, packet_number, device_time_ms, host_time_est, host_time_est_ms, host_rx_ms, elapsed_ms, sampling_rate_hz, gyro_*_dps, acc_*_g, press_1..6_adc`（単位は列名に含める）。冒頭に `# key: value` のメタデータ行と時刻源の注記 |
 | 5 | **データ辞書** | `orphe-lab-recorder_data-dictionary.md`。列名・単位・定義・取りうる値・欠損時の表現、読み込みヒント（pandas `comment='#'` / MATLAB `CommentStyle`） |
-| 6 | **欠損レポート** | `expected / received / missing / missing_rate / dropped / max_lag / missing_ranges / drain_recovered / catchup_recovered / measured_rate_hz / truncated / complete`。試行 JSON に内包し、単独 JSON でも保存可 |
+| 6 | **欠損レポート** | `expected / received / missing / missing_rate / frames_per_serial_packet / missing_frames / dropped / max_lag / missing_ranges / drain_recovered / catchup_recovered / measured_rate_hz / truncated / complete`。試行 JSON に内包し、単独 JSON でも保存可 |
 | 7 | **試行の連続実行** | 「保存して次へ」でサンプル CSV・マーカー CSV・試行 JSON を保存し、メタデータを引き継いで次の試行へ。セッション内の試行一覧（要約）を画面に持ち、`*_trials.csv` / セッション JSON で書き出し |
 | 8 | **左右2台のアライメント表示** | 収録開始からの serial の進みの差（packets ≈ ms 換算）と端末時刻差をライブ表示 |
 | 10 | **端末時計の自動校正**（収録前後） | 収録開始の直前と drain 完了直後に N 秒（既定 3 s、0 で無効）Realtime 通知を受け、`hostMs − deviceMs` の最小値から offset、前後の差から drift [ppm] を推定。全サンプル・マーカー・インパルス候補の `host_time_est` がこの写像で付く。FIFO 到着ベースとの整合チェックも出す |

@@ -29,6 +29,7 @@
   const SERIAL_MOD = 65536;
   const HALF_SERIAL = 32768;
   const DAY_MS = 86400000;
+  /** 1 serial あたりのフレーム数の既定値。INSOLE FW 20260924.1 以降の FIFO は 8 なので、実データから {@link framesPerPacketOf} で求める */
   const FRAMES_PER_PACKET = 4;
   /** 実測 IMU ODR。ORPHE-CORE-INSOLE.js の FIFO_IMU_ODR_HZ（src/fifo/protocol.ts）と一致することをテストで保証する。 */
   const NOMINAL_IMU_ODR_HZ = 208;
@@ -114,7 +115,8 @@
   /**
    * FIFO で回収したサンプル（到着順・順不同・重複あり）を serial → packet_number の順に並べ、
    * 端末時刻（FW の時刻カウンタ ms。日跨ぎで 0 に戻る）を単調増加へ unwrap する。
-   * 重複（同じ serial + packet_number）は最初の1件だけ残す。
+   * 重複（同じ serial + packet_number）は最初の1件だけ残す。1 serial のフレーム数（4 / 8）は FW で変わるので、
+   * キーはフレーム数に依存させない。
    *
    * @param {Array<{serial_number:number, packet_number:number, t:number}>} samples
    * @returns {Array<{sample_index:number, serial_number:number, packet_number:number,
@@ -130,7 +132,7 @@
       const serial = normalizeSerial(sample.serial_number);
       if (anchor === null) anchor = serial;
       const packet = Number.isInteger(sample.packet_number) ? sample.packet_number : 0;
-      const key = serial * FRAMES_PER_PACKET + packet;
+      const key = `${serial}:${packet}`;
       if (seen.has(key)) continue;
       seen.add(key);
       entries.push({
@@ -479,6 +481,18 @@
     };
   }
 
+  /**
+   * 1 serial あたりのフレーム数を順序付け済みサンプルの packet_number の最大値から求める（サンプルなしは既定の 4）。
+   * @param {Array<{packet_number:number}>} entries
+   */
+  function framesPerPacketOf(entries) {
+    let max = -1;
+    for (const entry of entries || []) {
+      if (entry && Number.isInteger(entry.packet_number) && entry.packet_number > max) max = entry.packet_number;
+    }
+    return max >= 0 ? Math.max(FRAMES_PER_PACKET, max + 1) : FRAMES_PER_PACKET;
+  }
+
   // ── serial 連続性 ────────────────────────────────────────────────
   /**
    * 回収済み serial（順不同・重複可・wraparound 可）の連続性と欠損 range。
@@ -582,6 +596,9 @@
       clock.fifoCheckMs = null;
     }
     const continuity = serialContinuity(entries.map((entry) => entry.serial_number));
+    // 受信した serial の中で欠けたフレーム（serial 単位の missing には現れない）
+    const framesPerPacket = framesPerPacketOf(entries);
+    const missingFrames = Math.max(0, continuity.received * framesPerPacket - entries.length);
     const impulse = detectImpulse(entries, { windowMs: input.impulseWindowMs });
     const hostRxBySerial = new Map();
     for (const batch of Array.isArray(input.batches) ? input.batches : []) {
@@ -618,6 +635,8 @@
       hostRxBySerial,
       clock,
       continuity,
+      framesPerPacket,
+      missingFrames,
       impulse: impulseDetail,
       dropped,
       maxLag: Math.max(0, Number(input.maxLag) || 0),
@@ -628,14 +647,14 @@
       sampleCount: entries.length,
       deviceSpanMs,
       measuredRateHz,
-      complete: continuity.missing === 0 && dropped === 0 && !input.truncated
+      complete: continuity.missing === 0 && missingFrames === 0 && dropped === 0 && !input.truncated
     };
   }
 
   // ── 左右アライメント（ライブ表示用） ────────────────────────────
   /**
    * 2台の「収録開始からの進み」を比較する。
-   * @param {{firstSerial:number, latestSerial:number, firstDeviceTimeMs:number, latestDeviceTimeMs:number}|null} a
+   * @param {{firstSerial:number, latestSerial:number, firstDeviceTimeMs:number, latestDeviceTimeMs:number, framesPerPacket?:number}|null} a
    * @param {{...}|null} b
    */
   function alignmentSummary(a, b) {
@@ -653,12 +672,16 @@
       return { available: false, a: advanceA, b: advanceB, deltaSerials: null, deltaTimeMs: null, deltaSerialsAsMs: null };
     }
     const deltaSerials = advanceB.serials - advanceA.serials;
+    const frames = Math.max(
+      Number.isInteger(a.framesPerPacket) ? a.framesPerPacket : FRAMES_PER_PACKET,
+      Number.isInteger(b.framesPerPacket) ? b.framesPerPacket : FRAMES_PER_PACKET
+    );
     return {
       available: true,
       a: advanceA,
       b: advanceB,
       deltaSerials,
-      deltaSerialsAsMs: deltaSerials * PACKET_INTERVAL_MS,
+      deltaSerialsAsMs: deltaSerials * FRAME_INTERVAL_MS * frames,
       deltaTimeMs: advanceA.timeMs !== null && advanceB.timeMs !== null ? advanceB.timeMs - advanceA.timeMs : null
     };
   }
@@ -800,7 +823,7 @@
       "# device_time_source: firmware time-of-day counter at packet base (HH:MM:SS.mmm), plus packet_number * 1000/208 ms; unwrapped across midnight",
       "# host_time_est_method: device_time_ms + clock_offset_ms + clock_drift_ppm*1e-6*(device_time_ms - clock_device_ref_ms); realtime-pre-post = offset from min-latency of realtime notifications received for a few seconds before and after the FIFO recording (drift from the two), fifo-min-latency = fallback from FIFO batch arrival times (100 ms class)",
       "# host_time_est_bias_note: a residual constant bias up to one BLE connection interval (about 7.5-15 ms) remains in host_time_est; clock_uncertainty_ms is the jitter of the low-latency tail, not that bias",
-      `# sampling_rate_hz_note: nominal IMU ODR ${NOMINAL_IMU_ODR_HZ} Hz (4 frames per serial packet); see loss report for the measured rate`,
+      `# sampling_rate_hz_note: nominal IMU ODR ${NOMINAL_IMU_ODR_HZ} Hz (4 or 8 frames per serial packet depending on firmware; see loss report frames_per_serial_packet); see loss report for the measured rate`,
       "# pressure_note: press_N_adc uses the official sensor numbering 1..6 (SDK press.values[N-1]); raw ADC counts, not calibrated force",
       "# missing_value: empty field",
       "# read_hint: skip lines starting with '#' (pandas comment='#', MATLAB detectImportOptions + CommentStyle '#')"
@@ -885,15 +908,16 @@
       recording_start_host: formatIsoWithOffset(trial.startedHostMs, trial.tzOffsetMinutes),
       recording_stop_host: formatIsoWithOffset(trial.stoppedHostMs, trial.tzOffsetMinutes),
       nominal_rate_hz: NOMINAL_IMU_ODR_HZ,
-      frames_per_serial_packet: FRAMES_PER_PACKET,
+      frames_per_serial_packet: Math.max(FRAMES_PER_PACKET, ...(trial.devices || []).map((report) => report.framesPerPacket || FRAMES_PER_PACKET)),
       definitions: {
         expected: "number of serial packets between the first and last received serial (inclusive, uint16 wraparound aware)",
         received: "number of distinct serial packets recovered",
         missing: "expected - received; serial packets absent from the CSV",
         missing_rate: "missing / expected",
+        missing_frames: "received * frames_per_serial_packet - samples; frames absent inside serial packets that were received",
         dropped: "serial packets the FIFO loop declared unrecoverable during recording (FifoRecorder droppedCount); may differ from missing",
         max_lag: "maximum number of not-yet-fetched serials observed while polling; the device ring buffer holds 1500",
-        complete: "true only when missing == 0 and dropped == 0 and the sample buffer was not truncated"
+        complete: "true only when missing == 0 and missing_frames == 0 and dropped == 0 and the sample buffer was not truncated"
       },
       devices: (trial.devices || []).slice().sort((a, b) => a.deviceId - b.deviceId).map((report) => ({
         device_id: report.deviceId,
@@ -909,6 +933,8 @@
         received: report.continuity.received,
         missing: report.continuity.missing,
         missing_rate: report.continuity.missingRate,
+        frames_per_serial_packet: report.framesPerPacket,
+        missing_frames: report.missingFrames,
         dropped: report.dropped,
         max_lag: report.maxLag,
         drain_recovered: report.drainRecovered,
@@ -1049,8 +1075,8 @@
     firmware_version: ["—", "Device firmware version read from the BLE Device Information service, or from the advertisement when DIS is unavailable. Known firmware differences affect axis conventions and Step Analysis availability, so always keep this column.", "e.g. `1.2.3`", "empty"],
     sdk_version: ["—", "ORPHE-INSOLE.js version that produced the file (from package.json).", "e.g. `1.3.4`", "empty"],
     sample_index: ["—", "0-based index of the sample within this device's ordered series (serial then packet_number).", "integer", "never empty"],
-    serial_number: ["—", "Firmware serial number of the FIFO packet the sample belongs to. uint16, wraps 65535 → 0. Each serial packet carries 4 frames.", "0–65535", "never empty"],
-    packet_number: ["—", "Frame index inside the serial packet (oldest first).", "0–3", "never empty"],
+    serial_number: ["—", "Firmware serial number of the FIFO packet the sample belongs to. uint16, wraps 65535 → 0. Each serial packet carries 4 or 8 frames depending on firmware (see the loss report's `frames_per_serial_packet`).", "0–65535", "never empty"],
+    packet_number: ["—", "Frame index inside the serial packet (oldest first).", "0–3 or 0–7", "never empty"],
     device_time_ms: ["ms", "Device clock: firmware time-of-day counter at the packet base plus `packet_number × 1000/208` ms, unwrapped across midnight so it increases monotonically within a trial. The firmware clock is not synchronised to wall time.", "≥ 0", "empty"],
     host_time_est: ["ISO 8601", "Estimated host (PC) wall-clock time of the sample, with milliseconds and the host timezone offset. `device_time_ms + clock_offset_ms + clock_drift_ppm × 1e-6 × (device_time_ms − clock_device_ref_ms)` (header lines). With `clock_method = realtime-pre-post` the offset comes from the minimum latency of realtime BLE notifications received for a few seconds before and after the FIFO recording, and the drift from the difference between the two; a constant bias of up to one BLE connection interval (about 7.5–15 ms) remains. With `fifo-min-latency` (fallback, no calibration) the accuracy is only 100 ms class.", "e.g. `2026-09-16T13:45:12.345+09:00`", "empty"],
     host_time_est_ms: ["ms (Unix epoch)", "Same instant as `host_time_est` as milliseconds since 1970-01-01T00:00Z.", "number", "empty"],
@@ -1158,13 +1184,14 @@
       "| `expected` | serial packets between first and last received serial, inclusive (uint16 wraparound aware) |",
       "| `received` | distinct serial packets recovered |",
       "| `missing`, `missing_rate` | `expected − received` and its ratio; these serials are absent from the samples CSV |",
+      "| `frames_per_serial_packet`, `missing_frames` | frames per serial packet observed in the data (4 or 8 depending on firmware), and `received × frames_per_serial_packet − samples` (frames missing inside received serials) |",
       "| `missing_ranges` | contiguous runs of missing serials (`start`, `end`, `count`) |",
       "| `dropped` | serial packets declared unrecoverable by the FIFO loop during recording; a different tally from `missing` — only `missing == 0 && dropped == 0` means lossless |",
       "| `max_lag` | maximum number of not-yet-fetched serials observed while polling (device ring buffer: 1500 packets ≈ 30 s) |",
       "| `drain_recovered`, `catchup_recovered` | serials recovered after the stop button during the drain / catch-up phase |",
       "| `measured_rate_hz` | `(samples − 1) / device_time_span`; compare with the nominal 208 Hz |",
       "| `truncated` | true if the in-browser sample buffer limit was hit (the CSV is then incomplete even if `missing == 0`) |",
-      "| `complete` | `missing == 0 && dropped == 0 && !truncated` |",
+      "| `complete` | `missing == 0 && missing_frames == 0 && dropped == 0 && !truncated` |",
       "",
       "## Coordinate frame",
       "",
@@ -1202,6 +1229,7 @@
     formatTimezoneLabel,
     compactTimestamp,
     orderSamples,
+    framesPerPacketOf,
     estimateClockMap,
     deviceToHostMs,
     hostToDeviceMs,

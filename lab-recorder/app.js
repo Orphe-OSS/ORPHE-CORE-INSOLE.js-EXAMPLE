@@ -47,7 +47,7 @@
   function createLive() {
     return {
       firstSerial: null, latestSerial: null, firstDeviceTimeMs: null, latestDeviceTimeMs: null,
-      samples: 0, batches: [], lag: 0, maxLag: 0, droppedLive: 0,
+      samples: 0, framesPerPacket: Core.FRAMES_PER_PACKET, batches: [], lag: 0, maxLag: 0, droppedLive: 0,
       droppedTotal: null, drainRecovered: 0, catchupRecovered: 0
     };
   }
@@ -447,6 +447,10 @@
     for (const sample of samples) {
       if (!sample || !Number.isInteger(sample.serial_number)) continue;
       serials.add(sample.serial_number);
+      // 1 serial のフレーム数は FW で 4 / 8 と変わるので、packet_number の最大値から覚えておく
+      if (Number.isInteger(sample.packet_number) && sample.packet_number + 1 > live.framesPerPacket) {
+        live.framesPerPacket = sample.packet_number + 1;
+      }
       if (Number.isFinite(sample.t) && sample.t > maxT) maxT = sample.t;
       if (live.firstSerial === null) {
         live.firstSerial = sample.serial_number;
