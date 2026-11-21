@@ -75,7 +75,10 @@
     noiseGuardMaxRatio: 3,   // かつ、選んだしきい値のこの倍まで
     lsbGuard: 1.8,        // しきい値は、センサーの量子化ステップのこの倍以上（8 bit のデータで 1 目盛りの変化を数えない）
     lsbWindowMs: 5000,    // 量子化ステップを覚えておく時間
-    defaultDtMs: 10       // サンプル間隔が分かるまでの仮の値
+    defaultDtMs: 10,      // サンプル間隔が分かるまでの仮の値
+    alignClock: true,     // センサーの時刻があれば、ふみの時刻をセンサーの時計で決める（BLE の届き方のばらつきを消す）
+    clockResetMs: 1000,   // 受信とセンサーの時刻差が、これ以上ふえたら時計を合わせ直す（センサー側の時刻の巻き戻りなど）
+    clockCreep: 0.00005   // 時刻差の最小値を、1 ms あたりこれだけゆるめる（センサーの時計が遅れていく個体のため。50 ppm）
   };
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -113,6 +116,7 @@
       armed: false, peak: 0, valley: 0, level: 0, ivl: 1000, lastStepT: -1e9, firstT: null,
       dvx: 0, dvy: 0, dvz: 0, ux: 0, uy: 0, uz: 0,
       prevSampleTs: null, cur: null, hist: [],
+      clockOff: null, clockFar: 0, lastArr: -1e9, lastAligned: -1e9, delays: [],
       dtEst: null, rateT0: null, rateN: 0,
       lastT: -1e9, samples: 0
     };
@@ -120,7 +124,11 @@
 
   /**
    * @param {object} [options] DEFAULTS を上書きする設定。onStep(step) を渡すと検出ごとに呼ばれる。
-   *   step = { foot: 0|1, t: 検出時刻[ms], peak: ふみの強さ[G]（検出後 peakWindowMs の間は更新され続ける） }
+   *   step = { foot: 0|1, t: 動き出しを検出した時刻[ms], at: そのデータが届いた時刻[ms],
+   *            aligned: t をセンサーの時計で決めたか, peak: ふみの強さ[G],
+   *            impactT: いちばん大きく動いた（着地した）時刻[ms], impact: そのときの動き[G],
+   *            settled: peak / impactT が確定したか }
+   *   peak・impact・impactT・settled は、検出後 peakWindowMs の間に届いたサンプルで更新され続ける
    */
   function UdonStepDetector(options) {
     options = options || {};
@@ -190,7 +198,24 @@
 
   /** その足のデータが最近（既定 1.5 秒以内）届いているか */
   UdonStepDetector.prototype.isLive = function (foot, nowMs, withinMs) {
-    return (nowMs - this.feet[foot].lastT) <= (withinMs || 1500);
+    return (nowMs - this.feet[foot].lastArr) <= (withinMs || 1500);
+  };
+
+  /**
+   * その足の通信の遅れ（直近 400 サンプル、いちばん速く届いたときとの差）[ms]。センサーの時刻がなければ null。
+   * 2 台つないだとき、片足だけ大きいなら、その足の BLE が混んでいる（解析・表示用）
+   */
+  UdonStepDetector.prototype.linkDelay = function (foot) {
+    var d = this.feet[foot] && this.feet[foot].delays;
+    if (!d || d.length < 20) return null;
+    var a = d.slice().sort(function (x, y) { return x - y; });
+    return { p50: Math.round(a[a.length >> 1]), p90: Math.round(a[Math.floor(a.length * 0.9)]), max: Math.round(a[a.length - 1]) };
+  };
+
+  /** その足の「受信時刻 − センサー時刻」の最小値（センサーの時刻が来ていなければ null）。解析・表示用 */
+  UdonStepDetector.prototype.clockOffset = function (foot) {
+    var st = this.feet[foot];
+    return st ? st.clockOff : null;
   };
 
   UdonStepDetector.prototype.reset = function (foot) {
@@ -205,8 +230,9 @@
    * @param {number} foot 0 | 1
    * @param {number} ax,ay,az 加速度 [G]（重力込み）
    * @param {number} tMs 共通の時計での受信時刻 [ms]（performance.now()）
-   * @param {number} [sampleTs] センサー側のサンプル時刻 [ms]。あればフィルタの dt に使う
-   *   （BLE は 1 パケットに複数サンプルが入るため、受信時刻だけでは間隔が 0 になる）
+   * @param {number} [sampleTs] センサー側のサンプル時刻 [ms]。あればフィルタの dt と、ふみの時刻に使う
+   *   （BLE は 1 パケットに複数サンプルが入るため、受信時刻だけでは間隔が 0 になる。
+   *    また、届くまでの時間は毎回ばらつく。2 台つなぐと片方だけ 100〜300 ms 遅れることもある）
    * @returns {object|null} このサンプルで「ふみ」を検出したら step、なければ null
    */
   UdonStepDetector.prototype.push = function (foot, ax, ay, az, tMs, sampleTs) {
@@ -214,11 +240,37 @@
     if (!isFinite(ax) || !isFinite(ay) || !isFinite(az) || !isFinite(tMs)) return null;
     var c = this.cfg;
     var st = this.feet[foot];
+    var tArr = tMs;
 
     // 長く途切れたあと（再接続など）は状態を作り直す
-    if (st.ready && (tMs - st.lastT) > 1500) {
+    if (st.ready && (tArr - st.lastArr) > 1500) {
       this.feet[foot] = st = makeFootState();
     }
+
+    // --- 受信時刻を、センサーの時計にそろえる ---
+    // 「受信時刻 − センサー時刻」は、届くのにかかった時間ぶん毎回ばらつく。その最小値（いちばん速く
+    // 届いたとき）をセンサー時刻に足せば、ばらつきのない共通の時計になる。同じ足のふみの間隔は、
+    // センサー自身の時計で測ったのとほぼ同じになる。センサーの時刻がないとき（INSOLE など）は受信時刻のまま
+    var aligned = false;
+    if (c.alignClock && isFinite(sampleTs)) {
+      var lag = tArr - sampleTs;
+      if (st.clockOff !== null && st.lastArr > -1e9) st.clockOff += (tArr - st.lastArr) * c.clockCreep;
+      // ずっと（40 サンプル続けて）大きくずれたままなら、センサーの時刻が変わったとみなして合わせ直す。
+      // 一時的な通信の詰まり（まとめて遅れて届く）では合わせ直さない
+      st.clockFar = (st.clockOff !== null && lag - st.clockOff > c.clockResetMs) ? (st.clockFar || 0) + 1 : 0;
+      if (st.clockOff === null || lag < st.clockOff || st.clockFar >= 40) {
+        if (st.clockFar >= 40) st.lastAligned = -1e9;
+        st.clockOff = lag;
+        st.clockFar = 0;
+      }
+      tMs = Math.min(tArr, sampleTs + st.clockOff);
+      if (tMs < st.lastAligned) tMs = st.lastAligned;   // 合わせ直した直後でも、時刻は逆もどりさせない
+      st.lastAligned = tMs;
+      aligned = true;
+      st.delays.push(tArr - tMs);
+      if (st.delays.length > 400) st.delays.splice(0, st.delays.length - 400);
+    }
+    st.lastArr = tArr;
 
     // --- サンプル間隔 dt の決定 ---
     if (st.rateT0 === null) { st.rateT0 = tMs; st.rateN = 0; }
@@ -305,11 +357,15 @@
     st.hist.push(tMs, dyn);
     while (st.hist.length > 2 && tMs - st.hist[0] > 4000) st.hist.splice(0, 2);
 
-    // 検出済みのふみは、しばらく最大値を追いかけて「強さ」を確定させる
+    // 検出済みのふみは、しばらく最大値を追いかけて「強さ」を確定させる。
+    // いちばん大きく動いた瞬間（＝足が床に当たった瞬間）の時刻も残す。検出するのは動き出し（足を
+    // 上げはじめたところ）で、着地までの時間は毎回 0〜200 ms ほどばらつくので、リズムは着地の時刻で見る
     if (st.cur) {
       if (tMs - st.cur.t <= c.peakWindowMs) {
         if (dyn > st.cur.peak) st.cur.peak = dyn;
+        if (dyn > st.cur.impact) { st.cur.impact = dyn; st.cur.impactT = tMs; }
       } else {
+        st.cur.settled = true;
         st.cur = null;
       }
     }
@@ -346,7 +402,8 @@
     // 反対の足の直後で、しかもずっと小さい動きなら、床を伝わってきた振動かもしれない。
     // まだ数えずに様子を見る（本当にふんでいれば、このあと大きくなって数えられる）
     var other = this.feet[1 - foot];
-    if (this.lastStepFoot !== foot && (tMs - this.lastStepAnyT) < c.crossLockMs && st.env < other.level * c.crossRatio) {
+    // （遅れて届いた足のふみは、反対の足のふみより前の時刻になることがあるので、差は絶対値で見る）
+    if (this.lastStepFoot !== foot && Math.abs(tMs - this.lastStepAnyT) < c.crossLockMs && st.env < other.level * c.crossRatio) {
       return null;
     }
 
@@ -371,7 +428,8 @@
     st.lastStepT = tMs;
     this.lastStepAnyT = tMs;
     this.lastStepFoot = foot;
-    var step = { foot: foot, t: tMs, peak: Math.max(dyn, st.env) };
+    if (st.cur) st.cur.settled = true;
+    var step = { foot: foot, t: tMs, at: tArr, aligned: aligned, peak: Math.max(dyn, st.env), impact: dyn, impactT: tMs, settled: false };
     st.cur = step;
     if (this.onStep) this.onStep(step);
     return step;

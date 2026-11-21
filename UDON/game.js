@@ -566,10 +566,13 @@
     while (log.length && now - log[0] > FILL.keepMs) log.shift();
     if (run && !run.done) run.lostPackets = (run.lostPackets || 0) + Math.max(1, info && isFinite(info.serial) && isFinite(info.prev) ? ((info.serial - info.prev + 65536) % 65536) - 1 : 1);
   }
-  /** foot のデータが t0〜t1 の間に欠けていたか（欠けは次のパケットが届いたときに分かるので、少しあとまで見る） */
+  /**
+   * foot のデータが t0〜t1 の間に欠けていたか。欠けは次のパケットが届いたときに分かり、
+   * t0・t1 はセンサーの時計にそろえた時刻（届いた時刻より前）なので、届くまでの遅れのぶん少しあとまで見る
+   */
   function lostBetween(foot, t0, t1) {
     var log = lossLog[foot];
-    for (var i = log.length - 1; i >= 0; i--) if (log[i] > t0 && log[i] <= t1 + 120) return true;
+    for (var i = log.length - 1; i >= 0; i--) if (log[i] > t0 && log[i] <= t1 + 400) return true;
     return false;
   }
   function recentPeak(foot) {
@@ -580,7 +583,7 @@
     }
     return n ? sum / n : 1;
   }
-  function fillMissed(step) {
+  function fillMissed(step, now) {
     if (!run || run.restNext || state.mode === 'demo') return;
     var live = liveFeet();
     if (!live[0] || !live[1]) return;
@@ -600,7 +603,6 @@
     if (iv.length < 2) return;
     var usual = (iv[(iv.length - 1) >> 1] + iv[iv.length >> 1]) / 2;
     if (!(usual > 150)) return;
-    var now = performance.now();
     var prev = s[n - 1];
     var prevAt = run.clockStart + run.pausedMs + prev.t;      // その歩のページ上の時刻
     var gap = now - prevAt;
@@ -625,15 +627,21 @@
 
   /**
    * @param {object} step 検出した 1 ふみ
-   * @param {number} [atMs] その歩のページ上の時刻（補った歩だけ。ふだんは今）
+   * @param {number} [atMs] その歩のページ上の時刻（補った歩だけ）。ふだんは、CORE のふみなら
+   *   センサーの時計で決めた時刻（step.t。届くのが遅れても、ふんだ時刻）、それ以外は今
    */
   function registerStep(step, atMs) {
+    var now = isFinite(atMs) ? atMs : (step.aligned && isFinite(step.t) ? Math.min(step.t, performance.now()) : performance.now());
     if (!step.fill) {
-      fillMissed(step);
+      fillMissed(step, now);
       if (run.done) return;   // 補った歩でできあがった
     }
-    var now = isFinite(atMs) ? atMs : performance.now();
     if (run.count === 0) { run.clockStart = now; run.clock = 0; }
+    else {
+      // 遅れて届いた足のふみが、先に数えた反対の足より前の時刻になることがある。きろくは時刻順にそろえる
+      var lastAt = run.clockStart + run.pausedMs + run.steps[run.steps.length - 1].t;
+      if (now < lastAt) now = lastAt;
+    }
     run.clock = now - run.clockStart - run.pausedMs;
     var entry = { t: run.clock, foot: step.foot, ref: step, rest: run.restNext };
     run.restNext = false;
@@ -645,20 +653,14 @@
     hideAssist();
     $('playHint').classList.add('is-gone');
 
-    // リズムのコンボ: いつもの間隔とほぼ同じ間隔でふめたら、つながる（規則は combo.js）
-    var prevLevel = UdonCombo.level(run.streak);
-    var combo = UdonCombo.advance(run.steps, run.streak);
-    run.streak = combo.streak;
-    if (combo.broke) comboBreak();
-    if (run.streak > run.maxCombo) run.maxCombo = run.streak;
-    var level = UdonCombo.level(run.streak);
+    // リズムのコンボ: いつもの間隔とほぼ同じ間隔でふめたら、つながる（規則は combo.js）。
+    // CORE のふみは、着地の時刻が分かってから判定する（settleRhythm。0.2 秒ほどあとになる）。
+    // 倍率は、そこまでに判定できたコンボのものを使う
+    var prevLevel = run.level;
+    run.rhythmQueue.push(entry);
+    settleRhythm(false);
+    var level = run.level;
     var mult = UdonCombo.mult(run.streak);
-    if (level > prevLevel) {
-      callout(COMBO_LEVELS[level - 1].call);
-      UdonAudio.good();
-      burst(DOUGH_X, BOARD_Y - 220, 6 + level * 3);
-    }
-    run.level = level;
     run.points = Math.min(run.target, run.points + mult);
     recNote(step.foot, 'step:' + (step.source || 'imu'), run.count, mult);
 
@@ -689,6 +691,52 @@
       }
     }
     sceneStep(run.phase, step.foot, strength, mult);
+  }
+
+  // ---------------------------------------------------------------------------
+  // リズムの判定（コンボ）は「足が床に当たった時刻」で行う
+  //
+  // ふみを数えるのは足の動き出し（step.t）だが、そこから着地までは毎回 0〜200 ms ほどばらつく。
+  // 2 台の CORE は BLE の届き方もちがう（片足だけ 100〜300 ms 遅れることがある）。数える時刻のままだと、
+  // リズムよくふんでも間隔がばらばらに見えてコンボが切れる。そこで、センサーの時計にそろえた
+  // 着地の時刻（step.impactT。step-detector.js）が確定するのを待って、時刻順に並べてから判定する。
+  // 確定しない（データが途切れた）ときも、RHYTHM_WAIT_MS で打ち切って、そのときの値で判定する。
+  // INSOLE・おためしモード・補った歩は、数えた時刻のまま、すぐ判定する
+  // ---------------------------------------------------------------------------
+  var RHYTHM_WAIT_MS = 600;
+
+  /** 着地の時刻が確定したふみから順に、コンボを判定する（registerStep と毎フレームから呼ぶ） */
+  function settleRhythm(force) {
+    if (!run || !run.rhythmQueue) return;
+    var nowMs = performance.now();
+    while (run.rhythmQueue.length) {
+      var e = run.rhythmQueue[0], ref = e.ref || {};
+      if (!force && ref.aligned && !ref.settled && nowMs - (ref.at || 0) < RHYTHM_WAIT_MS) break;
+      run.rhythmQueue.shift();
+      e.rt = e.t + (ref.aligned && isFinite(ref.impactT) && isFinite(ref.t) ? Math.max(0, ref.impactT - ref.t) : 0);
+      judgeRhythm(e);
+    }
+  }
+
+  function judgeRhythm(e) {
+    var list = run.rhythm;
+    var item = { t: e.rt, foot: e.foot, rest: e.rest };
+    var i = list.length;
+    while (i > 0 && list[i - 1].t > item.t) i--;
+    list.splice(i, 0, item);
+    if (i !== list.length - 1) return;   // ほぼ同時に左右をふんで、順番が入れかわった。この 1 歩では判定しない
+    var prevLevel = UdonCombo.level(run.streak);
+    var combo = UdonCombo.advance(list, run.streak);
+    run.streak = combo.streak;
+    if (combo.broke && !run.done) comboBreak();
+    if (run.streak > run.maxCombo) run.maxCombo = run.streak;
+    var level = UdonCombo.level(run.streak);
+    run.level = level;
+    if (level > prevLevel && !run.done) {
+      callout(COMBO_LEVELS[level - 1].call);
+      UdonAudio.good();
+      burst(DOUGH_X, BOARD_Y - 220, 6 + level * 3);
+    }
   }
 
   function comboBreak() {
@@ -793,7 +841,7 @@
     var course = courseById(store.settings.course) || COURSES[1];
     var live = liveFeet();
     run = {
-      course: course, target: course.steps, count: 0, points: 0, steps: [], phase: 'knead', folds: 0,
+      course: course, target: course.steps, count: 0, points: 0, steps: [], rhythm: [], rhythmQueue: [], phase: 'knead', folds: 0,
       clockStart: 0, clock: 0, pausedMs: 0, pauseStart: 0, pauses: 0, streak: 0, maxCombo: 0, level: 0,
       startedAt: performance.now(), lastStepAt: performance.now(), done: false,
       assistUntil: 0, assistOff: false, restNext: false,
@@ -849,6 +897,7 @@
   /** ゆであがり → できあがり */
   function beginBoil() {
     run.done = true;
+    settleRhythm(true);   // まだ判定していない最後のふみも、最大コンボに入れる
     recStop(run.points >= run.target - 1e-9 ? 'finish' : 'quit', run);
     hideAssist();
     scene.boil.t = 0;
@@ -858,10 +907,12 @@
   }
 
   function finishRun() {
+    settleRhythm(true);
     var steps = run.steps.map(function (s) {
       // INSOLE: 圧力で数えたふみ、または加速度が先に数えて圧力があとから同じ着地を見つけたふみには、押しぐあいが付く
       var sole = s.ref.source === 'press' ? s.ref : (s.ref.sole || null);
-      return { t: s.t, foot: s.foot, peak: s.ref.peak, rest: s.rest, press: sole ? sole.rel : null, fore: sole ? sole.fore : null };
+      // リズムの解析も、着地の時刻（判定に使ったもの）で行う
+      return { t: isFinite(s.rt) ? s.rt : s.t, foot: s.foot, peak: s.ref.peak, rest: s.rest, press: sole ? sole.rel : null, fore: sole ? sole.fore : null };
     });
     var analysis = UdonHealth.analyze({ steps: steps, feet: feetInPlay(steps) });
     var feet = analysis.feet;
@@ -2000,6 +2051,7 @@
     var dt = Math.min(0.05, (now - lastFrame) / 1000);
     lastFrame = now;
     try {
+      if (run && !run.done && run.rhythmQueue && run.rhythmQueue.length) settleRhythm(false);
       updateScene(dt);
       draw();
       updateHud(now, dt);
@@ -2519,7 +2571,9 @@
       }
     },
     detector: detector,
-    state: state
+    state: state,
+    /** いまのふみふみの記録（解析・テスト用。読むだけにする） */
+    get run() { return run; }
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

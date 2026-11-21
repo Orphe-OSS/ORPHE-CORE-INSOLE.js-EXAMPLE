@@ -255,7 +255,14 @@
       ],
       metrics: function () {
         var g = window.UdonGame; if (!g || !g.state) return null;
-        return { device: g.state.device, screen: g.state.screen };
+        var m = { device: g.state.device, screen: g.state.screen };
+        var r = g.run;
+        if (r) { m.steps = r.count; m.maxCombo = r.maxCombo; m.filled = r.filled || 0; }
+        // 足ごとの通信の遅れ（いちばん速く届いたときとの差 p90 [ms]）。片足だけ大きいと、その足のリズムが乱れやすい
+        if (g.detector && g.detector.linkDelay) {
+          [0, 1].forEach(function (f) { var d = g.detector.linkDelay(f); if (d) m['delayP90_' + (f ? 'R' : 'L')] = d.p90; });
+        }
+        return m;
       },
     },
   };
