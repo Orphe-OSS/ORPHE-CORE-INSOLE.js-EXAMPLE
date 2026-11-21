@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>ORPHE 接続ハブ — つないだまま example を切り替える</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <!-- ORPHE CORE / INSOLE SDK（新 API）。cores（= bles）と buildCoreToolkit() は orphe-core-insole-toolkit.js が用意する -->
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Orphe-OSS/ORPHE-CORE-INSOLE.js@v0.3.0/dist/browser/orphe-core-insole-toolkit.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: #0b1020; color: #e8eefc; font-family: system-ui, -apple-system, "Hiragino Sans", sans-serif; }
+    #menu { max-width: 1100px; margin: 0 auto; padding: 20px 24px 40px; }
+    header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header h1 { font-size: 22px; margin: 0; flex: 1; }
+    header a, header button { color: #cfe0ff; }
+    .lead { color: #9fb0d0; font-size: 14px; margin: 6px 0 16px; }
+    .dock { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .slot { background: #141c38; border: 1px solid #2a3a66; border-radius: 12px; padding: 12px 14px; }
+    .slot h2 { font-size: 14px; margin: 0 0 6px; color: #9fc0ff; }
+    .slot .state { font-size: 13px; color: #9fb0d0; margin-top: 6px; min-height: 1.4em; }
+    .slot .state.on { color: #5be08a; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+    .game { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 14px; background: #17213d; border: 1px solid #2a3a66;
+            color: #fff; text-align: left; cursor: pointer; font: inherit; }
+    .game:hover { background: #1f2c52; }
+    .game b { font-size: 18px; } .game span { color: #cfe0ff; font-size: 14px; } .game small { color: #8fa6d6; }
+    .note { color: #8fa6d6; font-size: 12px; margin-top: 18px; line-height: 1.7; }
+    #frame { position: fixed; inset: 0; width: 100vw; height: 100vh; border: 0; display: none; background: #000; }
+    body.playing #menu { display: none; }
+    body.playing #frame { display: block; }
+  </style>
+  <script src="../assets/js/site-analytics.js"></script>
+</head>
+<body>
+  <div id="menu">
+    <header>
+      <h1>ORPHE 接続ハブ</h1>
+      <button type="button" class="btn btn-sm btn-outline-light" id="btn-fullscreen"><i class="bi bi-arrows-fullscreen"></i> 全画面</button>
+      <a href="../" id="link-gallery" class="small">example の一覧</a>
+    </header>
+    <p class="lead">ここで ORPHE CORE をつないでおくと、下のゲームを切り替えても接続が切れません（ゲームはこのページの中で開きます）。
+      ゲームの左上の「◀ メニュー」でここに戻ります。</p>
+
+    <div class="dock">
+      <div class="slot"><h2>CORE 01（左足 / 1P）</h2><div id="toolkit_placeholder1"></div><div class="state" id="state0">未接続</div></div>
+      <div class="slot"><h2>CORE 02（右足 / 2P）</h2><div id="toolkit_placeholder2"></div><div class="state" id="state1">未接続</div></div>
+    </div>
+    <div id="ble-support-message" class="alert alert-warning" style="display:none"></div>
+
+    <div class="grid" id="games"></div>
+
+    <p class="note">
+      ・ゲームの中の CORE の接続スイッチは、ここでつないだ CORE を自動で使います（デバイスの選択画面は出ません）。<br>
+      ・ORPHE INSOLE で遊ぶときは、ゲームの中で INSOLE をつないでください（INSOLE はゲームごとの接続になります）。<br>
+      ・このページを閉じる・再読み込みする・一覧へ移ると、CORE の接続は切れます。
+    </p>
+  </div>
+  <iframe id="frame" title="example" allow="bluetooth; fullscreen; autoplay; gamepad"></iframe>
+
+  <script>
+    // ORPHE CORE 2 台をこのページでつなぐ。STEP_ANALYSIS_AND_SENSOR_VALUES はゲームが使うデータのすべてを含む
+    // （SENSOR_VALUES だけのゲームにも、STEP_ANALYSIS を使うゲームにも配れる）。
+    // toolkit は既定でタブ間共有（useSharedBridge）を有効にするので、ゲーム側は Secondary として受信する。
+    buildCoreToolkit(document.querySelector('#toolkit_placeholder1'), '01', 0, 'STEP_ANALYSIS_AND_SENSOR_VALUES', { forceDeviceSelection: true });
+    buildCoreToolkit(document.querySelector('#toolkit_placeholder2'), '02', 1, 'STEP_ANALYSIS_AND_SENSOR_VALUES', { forceDeviceSelection: true });
+    guardCoreToolkitBluetooth({ coreIds: [0, 1], messageElement: '#ble-support-message' });
+
+    var GAMES = [
+      { path: 'GAME-SUPER-HURDLE/', title: 'SUPER VIRTUAL HURDLE', sub: '110m ハードル', dev: 'CORE 2台 / INSOLE 2台' },
+      { path: 'UDON/', title: 'うどんふみふみ', sub: '足ぶみでうどんを作る', dev: 'CORE 2台 / INSOLE 2台' },
+      { path: 'GAME-SUPER-START/', title: 'SUPER VIRTUAL START', sub: '号砲リアクション', dev: 'CORE 1台（手に持つ）' },
+      { path: 'GAME-SUPER-RELAY/', title: 'SUPER VIRTUAL RELAY', sub: 'バーチャルリレー 4×100m', dev: 'CORE 1台（バトン）' },
+      { path: 'GAME-SUPER-ADVENTURE/', title: 'SUPER VIRTUAL ADVENTURE', sub: '主観視点アクション', dev: 'CORE 2台 / INSOLE 2台' },
+      { path: 'GAME-SUPER-PINGPONG/', title: '湯けむりピンポン', sub: 'SUPER PINGPONG', dev: 'CORE 2台' },
+    ];
+    var frame = document.getElementById('frame');
+    var grid = document.getElementById('games');
+    GAMES.forEach(function (g) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'game';
+      b.innerHTML = '<b></b><span></span><small></small>';
+      b.querySelector('b').textContent = g.title;
+      b.querySelector('span').textContent = g.sub;
+      b.querySelector('small').textContent = g.dev;
+      b.addEventListener('click', function () { openGame(g.path); });
+      grid.appendChild(b);
+    });
+
+    function openGame(path) {
+      frame.src = '../' + path;
+      document.body.classList.add('playing');
+      frame.addEventListener('load', function once() { frame.removeEventListener('load', once); try { frame.focus(); frame.contentWindow.focus(); } catch (e) { /* ignore */ } });
+      history.replaceState(null, '', '#' + path.replace(/\/$/, ''));
+    }
+    function showMenu() {
+      // about:blank でゲームを止める（音・描画・ゲーム側の受信が止まる）。CORE の接続はこのページが持ったまま
+      frame.src = 'about:blank';
+      document.body.classList.remove('playing');
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+    // ゲームの中の assets/js/home-button.js が呼ぶ
+    window.__orpheHub = { showMenu: showMenu, open: openGame };
+
+    // 接続の表示（受信レートは直近 2 秒）
+    var counts = [[], []];
+    bles.forEach(function (ble, i) {
+      ble.on('*', function (s) { if (s && (s.acc || s.converted_acc)) counts[i].push(performance.now()); });
+    });
+    setInterval(function () {
+      var now = performance.now();
+      bles.forEach(function (ble, i) {
+        var c = counts[i]; while (c.length && now - c[0] > 2000) c.shift();
+        var el = document.getElementById('state' + i);
+        var on = ble.connectionState === 'connected';
+        var name = ble.transport && ble.transport.device && ble.transport.device.name;
+        el.textContent = on ? '接続中 ✓ ' + (name || '') + ' ・ ' + Math.round(c.length / 2) + ' Hz' : (ble.connectionState === 'connecting' || ble.connectionState === 'reconnecting' ? '接続しています…' : '未接続');
+        el.classList.toggle('on', on);
+      });
+    }, 500);
+
+    // つないでいる間は、うっかり閉じたり再読み込みしたりしないよう確認する
+    window.addEventListener('beforeunload', function (e) {
+      if (bles.some(function (b) { return b.connectionState === 'connected'; })) { e.preventDefault(); e.returnValue = ''; }
+    });
+    document.getElementById('btn-fullscreen').addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(function () { /* not allowed */ });
+    });
+    // #GAME-SUPER-HURDLE のように開いたら、そのゲームを開く（再読み込み後に CORE をつなぎ直してから使う）
+    if (location.hash.length > 1) {
+      var want = location.hash.slice(1) + '/';
+      if (GAMES.some(function (g) { return g.path === want; })) openGame(want);
+    }
+  </script>
+</body>
+</html>

@@ -12,6 +12,49 @@
   },
   "entries": [
     {
+      "id": "connection-hub",
+      "title": "Connection Hub",
+      "path": "HUB/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "educator",
+        "game-player"
+      ],
+      "value": "Connect two ORPHE COREs once and switch between games without reconnecting: the games open inside the hub and share its connection (BleSharedBridge). For exhibitions and workshops.",
+      "topics": [
+        "tool",
+        "exhibition",
+        "connection",
+        "shared bridge"
+      ],
+      "data": [
+        "convertedAcc",
+        "euler",
+        "gait"
+      ],
+      "devices": 2,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "getting-started",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/connection-hub.png",
+      "sort_order": 5,
+      "links": {
+        "demo": "HUB/index.html",
+        "source": "HUB/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
       "id": "terminal",
       "title": "Terminal",
       "path": "TERMINAL/",
