@@ -156,6 +156,7 @@
     if (isInsole()) return;              // INSOLE をえらんでいる間は、CORE のデータは使わない
     if (state.mode === 'demo') return;   // おためし中は、キーボード／タップの合成データだけを使う
     recBegin(foot);
+    notePacket(foot, acc.serial_number);
     detector.push(foot, acc.x, acc.y, acc.z, performance.now(), acc.timestamp);
     afterSample(foot);
     recAcc(foot, acc);
@@ -176,6 +177,7 @@
     if (!acc || !isInsole() || state.mode === 'demo') return;
     if (!isFinite(acc.x) || !isFinite(acc.y) || !isFinite(acc.z)) return;
     recBegin(foot);
+    notePacket(foot, acc.serial_number);
     detector.push(foot, acc.x, acc.y, acc.z, performance.now());
     afterSample(foot);
     recAcc(foot, acc);
@@ -564,8 +566,21 @@
     var now = performance.now(), log = lossLog[foot];
     log.push(now);
     while (log.length && now - log[0] > FILL.keepMs) log.shift();
-    if (run && !run.done) run.lostPackets = (run.lostPackets || 0) + Math.max(1, info && isFinite(info.serial) && isFinite(info.prev) ? ((info.serial - info.prev + 65536) % 65536) - 1 : 1);
+    var lost = Math.max(1, info && isFinite(info.serial) && isFinite(info.prev) ? ((info.serial - info.prev + 65536) % 65536) - 1 : 1);
+    if (run && !run.done) run.lostPackets = (run.lostPackets || 0) + lost;
+    for (var k = 0; k < Math.min(lost, 50); k++) linkLoss[foot] += (1 - linkLoss[foot]) * LINK_LOSS_ALPHA;
   }
+
+  // 足ごとの通信の欠けぐあい（直近およそ 100 パケットの指数平均。0〜1）。LOSSY 以上の足は、着地の衝撃が
+  // 届かないことが多く、ふんだ時刻が見積もりになるので、コンボの判定をゆるめる（combo.js の options.lossy）
+  var LINK_LOSS_ALPHA = 0.01, LOSSY = 0.25;
+  var linkLoss = [0, 0], lastSerial = [null, null];
+  function notePacket(foot, serial) {
+    if (serial === undefined || serial === null || serial === lastSerial[foot]) return;
+    lastSerial[foot] = serial;
+    linkLoss[foot] += (0 - linkLoss[foot]) * LINK_LOSS_ALPHA;
+  }
+  function lossyFeet() { return [linkLoss[0] >= LOSSY, linkLoss[1] >= LOSSY]; }
   /**
    * foot のデータが t0〜t1 の間に欠けていたか。欠けは次のパケットが届いたときに分かり、
    * t0・t1 はセンサーの時計にそろえた時刻（届いた時刻より前）なので、届くまでの遅れのぶん少しあとまで見る
@@ -696,14 +711,16 @@
   // ---------------------------------------------------------------------------
   // リズムの判定（コンボ）は「足が床に当たった時刻」で行う
   //
-  // ふみを数えるのは足の動き出し（step.t）だが、そこから着地までは毎回 0〜200 ms ほどばらつく。
+  // ふみを数えるのは足の動き出し（step.t）だが、そこから着地までは毎回 0〜300 ms ほどばらつく。
   // 2 台の CORE は BLE の届き方もちがう（片足だけ 100〜300 ms 遅れることがある）。数える時刻のままだと、
   // リズムよくふんでも間隔がばらばらに見えてコンボが切れる。そこで、センサーの時計にそろえた
   // 着地の時刻（step.impactT。step-detector.js）が確定するのを待って、時刻順に並べてから判定する。
+  // 通信が欠けて着地の衝撃が届かなかったふみは、その足のいつもの「動き出し → 着地」の時間で見積もる。
   // 確定しない（データが途切れた）ときも、RHYTHM_WAIT_MS で打ち切って、そのときの値で判定する。
   // INSOLE・おためしモード・補った歩は、数えた時刻のまま、すぐ判定する
   // ---------------------------------------------------------------------------
-  var RHYTHM_WAIT_MS = 600;
+  var RHYTHM_WAIT_MS = 800;
+  var DEFAULT_LANDING_MS = 100;
 
   /** 着地の時刻が確定したふみから順に、コンボを判定する（registerStep と毎フレームから呼ぶ） */
   function settleRhythm(force) {
@@ -713,9 +730,26 @@
       var e = run.rhythmQueue[0], ref = e.ref || {};
       if (!force && ref.aligned && !ref.settled && nowMs - (ref.at || 0) < RHYTHM_WAIT_MS) break;
       run.rhythmQueue.shift();
-      e.rt = e.t + (ref.aligned && isFinite(ref.impactT) && isFinite(ref.t) ? Math.max(0, ref.impactT - ref.t) : 0);
+      e.rt = e.t + landingDelay(e);
       judgeRhythm(e);
     }
+  }
+
+  /** 数えた時刻から着地までの時間 [ms]。衝撃が届いたふみは実測、届かなかったふみは、その足の直近の実測の中央値 */
+  function landingDelay(e) {
+    var ref = e.ref || {};
+    if (!ref.aligned || !isFinite(ref.impactT) || !isFinite(ref.t)) return 0;
+    var log = run.landing || (run.landing = [[], []]);
+    if (ref.landingClear) {
+      var d = Math.max(0, ref.impactT - ref.t);
+      log[e.foot].push(d);
+      if (log[e.foot].length > 8) log[e.foot].shift();
+      return d;
+    }
+    var pool = log[e.foot].length ? log[e.foot] : log[0].concat(log[1]);
+    if (!pool.length) return DEFAULT_LANDING_MS;
+    var sorted = pool.slice().sort(function (a, b) { return a - b; });
+    return sorted[sorted.length >> 1];
   }
 
   function judgeRhythm(e) {
@@ -726,7 +760,7 @@
     list.splice(i, 0, item);
     if (i !== list.length - 1) return;   // ほぼ同時に左右をふんで、順番が入れかわった。この 1 歩では判定しない
     var prevLevel = UdonCombo.level(run.streak);
-    var combo = UdonCombo.advance(list, run.streak);
+    var combo = UdonCombo.advance(list, run.streak, { lossy: lossyFeet() });
     run.streak = combo.streak;
     if (combo.broke && !run.done) comboBreak();
     if (run.streak > run.maxCombo) run.maxCombo = run.streak;
@@ -2572,6 +2606,8 @@
     },
     detector: detector,
     state: state,
+    /** 足ごとの通信の欠けぐあい（0〜1、直近およそ 100 パケット）。解析・表示用 */
+    linkLoss: function () { return linkLoss.slice(); },
     /** いまのふみふみの記録（解析・テスト用。読むだけにする） */
     get run() { return run; }
   };

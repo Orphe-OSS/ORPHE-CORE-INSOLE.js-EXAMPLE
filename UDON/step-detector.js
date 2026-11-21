@@ -65,6 +65,9 @@
     attackTauMs: 25,      // 包絡線の立ち上がり
     releaseTauMs: 60,     // 包絡線の戻り
     peakWindowMs: 220,    // ふみ検出後、この時間内の最大値を「ふみの強さ」とする
+    landingMaxMs: 450,    // 着地をさがす時間の上限。動き出しから着地までは、ゆっくりふむと 250〜300 ms かかる
+    landingIntervalRatio: 0.45, // …ただし同じ足の直近の間隔のこの割合まで（速くふんでいるときは短く。テンポを上げたときの 1 歩を飲みこまない）
+    landingClearRatio: 2.2,    // しきい値のこの倍以上の鋭い山を「着地の衝撃」とみなす（足の振りだけの山は 1〜2 倍）
     warmupMs: 350,        // 接続直後は重力推定が落ち着くまで数えない
     noiseRiseTauMs: 6000, // ノイズフロア推定: 上がるのはゆっくり（足踏みの山を覚えない）
     noiseFallTauMs: 300,  //                   下がるのは速く（静かな瞬間にすぐ合わせる）
@@ -126,9 +129,10 @@
    * @param {object} [options] DEFAULTS を上書きする設定。onStep(step) を渡すと検出ごとに呼ばれる。
    *   step = { foot: 0|1, t: 動き出しを検出した時刻[ms], at: そのデータが届いた時刻[ms],
    *            aligned: t をセンサーの時計で決めたか, peak: ふみの強さ[G],
-   *            impactT: いちばん大きく動いた（着地した）時刻[ms], impact: そのときの動き[G],
-   *            settled: peak / impactT が確定したか }
-   *   peak・impact・impactT・settled は、検出後 peakWindowMs の間に届いたサンプルで更新され続ける
+   *            impactT: 着地の衝撃（いちばん大きく動いた瞬間）の時刻[ms], impact: そのときの動き[G],
+   *            landingClear: 鋭い衝撃の山が見つかったか（通信が欠けると見つからないことがある）,
+   *            settled: impactT が確定したか }
+   *   peak は検出後 peakWindowMs、impact・impactT は着地をさがす間（最大 landingMaxMs）に届いたサンプルで更新される
    */
   function UdonStepDetector(options) {
     options = options || {};
@@ -357,17 +361,24 @@
     st.hist.push(tMs, dyn);
     while (st.hist.length > 2 && tMs - st.hist[0] > 4000) st.hist.splice(0, 2);
 
-    // 検出済みのふみは、しばらく最大値を追いかけて「強さ」を確定させる。
-    // いちばん大きく動いた瞬間（＝足が床に当たった瞬間）の時刻も残す。検出するのは動き出し（足を
-    // 上げはじめたところ）で、着地までの時間は毎回 0〜200 ms ほどばらつくので、リズムは着地の時刻で見る
+    // 検出済みのふみは、しばらく最大値を追いかけて「強さ」を確定させる（peakWindowMs）。
+    // あわせて着地の衝撃（鋭い山）をさがし、その時刻を残す（impactT）。検出するのは足の動き出しで、
+    // 着地までの時間は毎回 0〜300 ms ほどばらつくので、リズムは着地の時刻で見る（game.js の settleRhythm）。
+    // 衝撃の山が過ぎたら、そこで確定（settled）。見つからないまま時間が過ぎたときも確定する（landingClear = false）
     if (st.cur) {
-      if (tMs - st.cur.t <= c.peakWindowMs) {
-        if (dyn > st.cur.peak) st.cur.peak = dyn;
-        if (dyn > st.cur.impact) { st.cur.impact = dyn; st.cur.impactT = tMs; }
-      } else {
-        st.cur.settled = true;
-        st.cur = null;
+      var cur = st.cur, age = tMs - cur.t;
+      if (age <= c.peakWindowMs && dyn > cur.peak) cur.peak = dyn;
+      if (!cur.settled && age <= cur.landingMs) {
+        if (dyn > cur.impact) { cur.impact = dyn; cur.impactT = tMs; }
+        var clearG = Math.max(c.threshold, MIN_THRESHOLD) * c.landingClearRatio;
+        if (cur.impact >= clearG) {
+          cur.landingClear = true;
+          if (dyn < cur.impact * 0.35) cur.settled = true;   // 衝撃の山が過ぎた
+        }
+      } else if (!cur.settled) {
+        cur.settled = true;
       }
+      if (cur.settled && age > c.peakWindowMs) st.cur = null;
     }
 
     if (!warm) return null;
@@ -414,6 +425,9 @@
     var since = tMs - st.lastStepT;
     var refractory = clamp(st.ivl * c.refractoryIntervalRatio, Math.min(c.minRefractoryMs, c.refractoryMs), c.refractoryMs);
     if (since < refractory) return null;
+    // 前のふみの着地をまださがしている間（衝撃が見つかっていない）に来た山は、同じ 1 歩の着地のほう。
+    // 通信が欠けて衝撃が届かないと、振り上げと着地が別々の山に見えて 2 回数えてしまうのを防ぐ
+    if (st.cur && st.cur.foot === foot && !st.cur.settled && !st.cur.landingClear && since < st.cur.landingMs) return null;
 
     // 足を上下に動かすと、加速度は 1 歩のあいだに「行き」と「帰り」で逆向きの山を 2 つ作る。
     // 前のふみと逆向きの山が、いつもの間隔よりずっと早く来たら、同じ 1 歩の残り半分なので数えない
@@ -429,7 +443,11 @@
     this.lastStepAnyT = tMs;
     this.lastStepFoot = foot;
     if (st.cur) st.cur.settled = true;
-    var step = { foot: foot, t: tMs, at: tArr, aligned: aligned, peak: Math.max(dyn, st.env), impact: dyn, impactT: tMs, settled: false };
+    var landingMs = clamp(st.ivl * c.landingIntervalRatio, c.peakWindowMs, c.landingMaxMs);
+    var step = {
+      foot: foot, t: tMs, at: tArr, aligned: aligned, peak: Math.max(dyn, st.env),
+      impact: dyn, impactT: tMs, landingClear: false, landingMs: landingMs, settled: false
+    };
     st.cur = step;
     if (this.onStep) this.onStep(step);
     return step;

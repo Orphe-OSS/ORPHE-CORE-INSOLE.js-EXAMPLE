@@ -262,6 +262,8 @@
         if (g.detector && g.detector.linkDelay) {
           [0, 1].forEach(function (f) { var d = g.detector.linkDelay(f); if (d) m['delayP90_' + (f ? 'R' : 'L')] = d.p90; });
         }
+        // 足ごとの通信の欠け（直近およそ 100 パケット）。25% 以上の足は、コンボの判定がゆるくなる
+        if (g.linkLoss) { var ll = g.linkLoss(); m.lossL = Math.round(ll[0] * 100); m.lossR = Math.round(ll[1] * 100); }
         return m;
       },
     },

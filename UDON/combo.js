@@ -11,6 +11,8 @@
  *     ±25% 以内で、反対の足の 1 歩がひとまたぎの中のいつもの位置（±0.15）に入っていればよい。
  *     2 台の CORE は時計も BLE の届き方も足ごとにちがい、左右の「ふみ」の間隔にはそのずれが入るが、
  *     同じ足どうしの間隔にはほとんど入らない。反対の足の 1 歩が通信で欠けても切れない
+ *   - 通信の欠けが多い足（options.lossy）のふみは、コンボが続いている間は、ひとまたぎが ±35% 以内ならつながる
+ *     （着地の衝撃が届かず、ふんだ時刻が見積もりになるため。コンボを始めるのは、ふつうの判定で）
  *   - 1 回ずれただけなら 1 段階さがるだけ。2 秒以上あいたら（または ひとやすみ明けは）最初から
  */
 (function (root) {
@@ -25,6 +27,7 @@
   var MAX_GAP_MS = 2000;
   var WINDOW = 4;
   var PHASE_TOLERANCE = 0.15;   // ひとまたぎの中で、反対の足の 1 歩が入る位置（0〜1）のずれの許容
+  var LOSSY_TOLERANCE = 0.35;   // 通信の欠けが多い足のひとまたぎの許容（着地の衝撃が届かず、時刻が見積もりになるため）
 
   /** つづいた回数 → コンボの段階（0 = なし、1〜3） */
   function level(streak) {
@@ -39,8 +42,8 @@
     return lv ? LEVELS[lv - 1].mult : 1;
   }
 
-  function near(x, y) {
-    return y > 0 && Math.abs(x - y) <= y * TOLERANCE;
+  function near(x, y, tol) {
+    return y > 0 && Math.abs(x - y) <= y * (tol || TOLERANCE);
   }
 
   /**
@@ -90,13 +93,38 @@
     return (steps[i].t - steps[i - 1].t) / d;
   }
 
+  /** steps[n-1] より前の、foot のひとまたぎ（新しい順に最大 WINDOW 個）の中央値。なければ null */
+  function usualStride(steps, foot) {
+    var n = steps.length, prev = [];
+    for (var j = n - 2; j >= 1 && prev.length < WINDOW; j--) {
+      if (steps[j + 1].rest || steps[j + 1].t - steps[j].t >= MAX_GAP_MS) break;
+      if (steps[j].foot !== foot) continue;
+      var d = strideAt(steps, j);
+      if (d !== null) prev.push(d);
+    }
+    if (!prev.length) return null;
+    prev.sort(function (x, y) { return x - y; });
+    return (prev[(prev.length - 1) >> 1] + prev[prev.length >> 1]) / 2;
+  }
+
+  /** 通信の欠けが多い足（options.lossy = [左, 右]）のふみを、ゆるめの許容でつなげてよいか */
+  function lossyKept(steps, lossy, streak) {
+    var n = steps.length, f = steps[n - 1].foot;
+    if ((f !== 0 && f !== 1) || !lossy[f] || streak <= 0) return false;
+    var a = strideAt(steps, n - 1);
+    if (a === null) return false;
+    var ref = usualStride(steps, f);
+    return ref !== null && near(a, ref, LOSSY_TOLERANCE);
+  }
+
   /**
    * 最新の 1 ふみを受けて、コンボがどうなるかを返す。
-   * @param {Array<{t:number, rest?:boolean}>} steps これまでのふみ（最後が最新。t はミリ秒）
+   * @param {Array<{t:number, foot?:number, rest?:boolean}>} steps これまでのふみ（最後が最新。t はミリ秒）
    * @param {number} streak 直前までにつづいていた回数
+   * @param {object} [options] { lossy: [左, 右] } 通信の欠けが多い足（true）
    * @returns {{ streak:number, broke:boolean }} broke = コンボがさがった／切れた
    */
-  function advance(steps, streak) {
+  function advance(steps, streak, options) {
     var n = steps.length;
     if (n < 3) return { streak: 0, broke: false };
     var last = steps[n - 1];
@@ -114,6 +142,7 @@
     var sorted = prev.slice().sort(function (x, y) { return x - y; });
     var ref = (sorted[(sorted.length - 1) >> 1] + sorted[sorted.length >> 1]) / 2;
     if (near(a, ref) || (prev.length >= 2 && near(a, prev[1])) || strideKept(steps)) return { streak: streak + 1, broke: false };
+    if (options && options.lossy && lossyKept(steps, options.lossy, streak)) return { streak: streak + 1, broke: false };
 
     // 1 回ずれた: 1 段階さがる
     var lv = level(streak);
@@ -123,6 +152,7 @@
   var UdonCombo = {
     LEVELS: LEVELS,
     TOLERANCE: TOLERANCE,
+    LOSSY_TOLERANCE: LOSSY_TOLERANCE,
     MAX_GAP_MS: MAX_GAP_MS,
     FULL: LEVELS[LEVELS.length - 1].at,
     level: level,
