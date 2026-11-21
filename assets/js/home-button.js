@@ -7,8 +7,9 @@
 //   （ページを移っても ORPHE CORE の接続はハブが持ち続ける）
 // - 別のタブ（またはハブ）が同じスロットの ORPHE CORE をつないでいれば、そのページの CORE の接続スイッチを
 //   自動で入れる。SDK のタブ間共有（BleSharedBridge）でデータを受け取るので、デバイスの選択画面は出ない
-// - 置き場所は左上。左上にロゴや文字・ボタンがあれば、空いている隅（左下 → 右上 → 右下）へ移す
-//   固定したいとき／出さないとき: <body data-home-button="top-left|bottom-left|top-right|bottom-right"> / <body data-home-button="off">
+// - 置き場所はいつも左上（画面に固定）。ページの左上にロゴなどの帯があるときは、その先頭に
+//   <span data-home-slot></span> を置くと、ボタンがそこに並ぶ（ロゴに重ならない）
+//   別の隅にしたいとき／出さないとき: <body data-home-button="bottom-left|top-right|bottom-right"> / <body data-home-button="off">
 (function () {
   'use strict';
   if (window.__orpheHomeButton) return;
@@ -45,11 +46,19 @@
     });
     // keep the games' keyboard handlers from reacting to a click on the button
     a.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    var slot = document.querySelector('[data-home-slot]');
+    if (slot) {
+      // ページの帯（ヘッダー）の先頭に並べる
+      a.style.position = 'static';
+      a.style.display = 'inline-flex';
+      a.style.alignItems = 'center';
+      a.style.marginRight = '10px';
+      a.style.flex = '0 0 auto';
+      slot.appendChild(a);
+      return;
+    }
     document.body.appendChild(a);
-    var fixed = /^(top|bottom)-(left|right)$/.test(mode || '') ? mode : null;
-    place(a, fixed || 'top-left');
-    // ページの UI ができあがってから（タイトル画面など）、左上がふさがっていれば空いている隅へ移す
-    if (!fixed) setTimeout(function () { place(a, freeCorner(a)); }, 1200);
+    place(a, /^(top|bottom)-(left|right)$/.test(mode || '') ? mode : 'top-left');
   }
 
   function place(a, corner) {
@@ -58,45 +67,6 @@
     a.style.bottom = v[0] === 'bottom' ? '8px' : 'auto';
     a.style.left = v[1] === 'left' ? '8px' : 'auto';
     a.style.right = v[1] === 'right' ? '8px' : 'auto';
-  }
-  // 隅に文字・画像・ボタンなど「見えている中身」があるか。背景（canvas・大きな入れ物）は空きとみなす
-  var CONTENT = /^(IMG|SVG|BUTTON|A|INPUT|LABEL|SELECT|TEXTAREA|VIDEO|svg|path|use|text)$/;
-  function occupied(a, rect) {
-    var vw = window.innerWidth, vh = window.innerHeight;
-    var pts = [[0.05, 0.1], [0.05, 0.9], [0.5, 0.5], [0.98, 0.1], [0.98, 0.5], [0.98, 0.9], [0.5, 0.05], [0.5, 0.95]];
-    for (var i = 0; i < pts.length; i++) {
-      var x = rect.left + rect.width * pts[i][0], y = rect.top + rect.height * pts[i][1];
-      var list = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [];
-      for (var j = 0; j < list.length; j++) {
-        var el = list[j];
-        if (el === a || a.contains(el) || el === document.body || el === document.documentElement) continue;
-        if (el.closest && el.closest('#devtest')) continue;
-        var tag = el.tagName;
-        if (tag === 'CANVAS' || tag === 'IFRAME') break;     // 絵の上は置いてよい
-        var r = el.getBoundingClientRect();
-        if (r.width * r.height > vw * vh * 0.4) continue;    // 画面の大部分をおおう入れ物は背景
-        if (CONTENT.test(tag)) return true;
-        for (var k = 0; k < el.childNodes.length; k++) {
-          var n = el.childNodes[k];
-          if (n.nodeType === 3 && n.nodeValue.trim()) return true;   // 文字がある
-        }
-      }
-    }
-    return false;
-  }
-  function freeCorner(a) {
-    var corners = ['top-left', 'bottom-left', 'top-right', 'bottom-right'];
-    var w = a.offsetWidth || 72, h = a.offsetHeight || 26, vw = window.innerWidth, vh = window.innerHeight;
-    var prevVisibility = a.style.visibility;
-    a.style.visibility = 'hidden';
-    try {
-      for (var i = 0; i < corners.length; i++) {
-        var v = corners[i].split('-');
-        var rect = { left: v[1] === 'left' ? 8 : vw - 8 - w, top: v[0] === 'top' ? 8 : vh - 8 - h, width: w, height: h };
-        if (!occupied(a, rect)) return corners[i];
-      }
-    } finally { a.style.visibility = prevVisibility; }
-    return 'top-left';
   }
 
   // --- 接続の引き継ぎ（別タブ / ハブの ORPHE CORE を共有する）
