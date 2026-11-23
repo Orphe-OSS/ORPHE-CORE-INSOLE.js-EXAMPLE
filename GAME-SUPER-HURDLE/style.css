@@ -620,3 +620,51 @@ kbd {
   .result-analysis { grid-column: 1; grid-row: auto; border-left: 0; padding-left: 0; }
   .analysis-body { grid-template-columns: 1fr; }
 }
+
+/* ---------------------------------------------------------------- title-screen warm-up */
+.warmup {
+  position: absolute; right: 1.3em; bottom: 3.4em; width: 23.5em; padding: 0.9em 1.1em 0.8em;
+  background: var(--glass); border: 1px solid var(--line); border-radius: 0.9em;
+  box-shadow: 0 1.2em 3em rgba(0, 0, 0, 0.45); pointer-events: none;
+  animation: warm-in 0.4s ease both;
+}
+.warmup[hidden] { display: none; }
+#stage:not([data-screen="title"]) .warmup { display: none; }
+@keyframes warm-in { from { opacity: 0; transform: translateY(0.8em); } }
+.warm-head { display: flex; align-items: baseline; gap: 0.7em; margin-bottom: 0.6em; }
+.warm-tag { font-family: var(--display); font-size: 1.35em; letter-spacing: 0.14em; color: var(--lime); }
+.warm-title { font-size: 0.85em; font-weight: 700; }
+.warm-title small { margin-left: 0.5em; font-weight: 400; color: var(--mute); }
+.warm-row { display: grid; grid-template-columns: auto auto 1fr auto auto; align-items: center; gap: 0.55em; padding: 0.45em 0.6em; margin-bottom: 0.4em; background: rgba(255, 255, 255, 0.045); border-radius: 0.6em; border-left: 3px solid var(--c, var(--cyan)); }
+.warm-who { font-family: var(--display); letter-spacing: 0.1em; color: var(--c, var(--cyan)); font-size: 1.05em; }
+.warm-speed { height: 0.55em; background: rgba(255, 255, 255, 0.1); border-radius: 1em; overflow: hidden; }
+.warm-speed i { display: block; height: 100%; width: 0; background: var(--grad); border-radius: 1em; transition: width 0.1s linear; }
+.warm-kmh { min-width: 4.2em; text-align: right; white-space: nowrap; }
+.warm-kmh b { font-family: var(--display); font-weight: 400; font-size: 1.5em; line-height: 1; }
+.warm-kmh small { margin-left: 0.2em; font-size: 0.7em; color: var(--mute); }
+.warm-lamp { font-size: 0.72em; font-weight: 700; color: var(--mute); white-space: nowrap; padding: 0.25em 0.5em; border-radius: 0.4em; border: 1px solid transparent; transition: color 0.1s, background 0.1s; }
+.warm-lamp.on { color: #04121a; background: var(--lime); }
+.warm-lamp.jump.on { background: var(--cyan); }
+.warm-lamp b { font-family: var(--display); font-weight: 400; font-size: 1.2em; margin-left: 0.15em; }
+.warm-lamp.pop { animation: warm-pop 0.35s ease; }
+@keyframes warm-pop { 30% { transform: scale(1.25); } }
+.warm-hint { margin: 0.4em 0 0; font-size: 0.74em; color: var(--mute); }
+.warm-hint i { color: var(--lime); }
+
+/* ---------------------------------------------------------------- sensitivity buttons (sensor-settings.js) */
+.sens-levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35em; margin: 0.4em 0 0.3em; }
+.sens-level {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.15em;
+  min-height: 4.6em; padding: 0.45em 0.2em 0.4em; cursor: pointer; color: var(--mute);
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); border-radius: 0.5em;
+  font-family: var(--jp); transition: all 0.15s;
+}
+.sens-level i { display: block; width: 0.55em; background: currentColor; border-radius: 0.2em; opacity: 0.7; }   /* height: set per level (taller = needs a bigger move) */
+.sens-level b { font-size: 0.72em; line-height: 1.2; text-align: center; color: #d5def2; }
+.sens-level small { font-size: 0.66em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sens-level:hover { background: rgba(255, 255, 255, 0.1); }
+.sens-level.is-on { color: var(--cyan); background: rgba(34, 227, 255, 0.14); border-color: var(--cyan); box-shadow: inset 0 -2px 0 var(--cyan); }
+.sens-level.is-on b { color: var(--ink); }
+.sens-hint { margin: 0 0 0.6em; font-size: 0.74em; color: var(--mute); }
+.sens-hint b { color: var(--ink); margin-right: 0.3em; }
+#jump-zero-note b { color: var(--cyan); }

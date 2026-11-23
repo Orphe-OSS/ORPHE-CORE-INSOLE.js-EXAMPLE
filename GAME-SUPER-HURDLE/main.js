@@ -94,9 +94,12 @@ function loadRules() {
 }
 const RULES = loadRules();
 
-// ORPHE parameters (configurable)
-window.accThresholdAccel = 1.1;
-window.pitchThresholdJump = 0.15;  // ラジアンで設定
+// ORPHE parameters (configurable). sensor-settings.js loads the values saved from the settings drawer
+// before this module runs; these are the defaults when nothing is saved.
+window.accThresholdAccel ??= 1.1;
+window.pitchThresholdJump ??= 0.15;  // ラジアン（設定ドロワーでは度で表示）
+window.jumpCooldownMs ??= 700;       // 次のジャンプを受け付けるまでの間隔
+window.jumpFoot ??= 'any';           // SOLO でジャンプに使う足: 'any' | 'left'(CORE 01) | 'right'(CORE 02)
 
 // ---------------------------------------------------------------------------
 // Renderer / scene
@@ -119,7 +122,10 @@ for (let i = 0; i < HURDLES; i++) {
 // of the screen) and P[1] in lane 5 (CORE 02, right half).
 const VS_LANES = [PLAYER_LANE - 1, PLAYER_LANE];
 const VS_TIMEOUT_SEC = 15;       // after the first finisher, the other runner gets this long
-const SENSOR_JUMP_COOLDOWN_MS = 700;  // same cooldown the solo sensor script uses
+/** Same cooldown the solo sensor script uses (set in the settings drawer, 700 ms by default). */
+const jumpCooldown = () => (Number.isFinite(window.jumpCooldownMs) ? window.jumpCooldownMs : 700);
+/** SOLO: whether device `id` may trigger a jump under the "which foot" setting. VS always uses its own device. */
+const jumpFootAllows = (id) => mode === 'vs' || window.jumpFoot === 'any' || !window.jumpFoot || (window.jumpFoot === 'left' ? id === 0 : id === 1);
 function makePlayer(index) {
   const camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.06, 900);
   scene.add(camera);
@@ -136,6 +142,8 @@ function makePlayer(index) {
     // presentation state (never read by the rules)
     view: {}, cam: { mode: 'title', blend: 1, blendDur: 1, shot: 0, shotT: 0, shift: 0, fromPos: new THREE.Vector3(), fromQuat: new THREE.Quaternion(), fromFov: 55, fromShift: 0 },
     place: 1, cleared: 0, combo: 0, topSpeed: 0, viewW: 1, fpVisible: false, bodyVisible: false,
+    // title-screen warm-up (practice only, never read by the rules): speed, jump and stride of the runner shown there
+    warm: { v: 0, y: 0, vy: 0, air: false, airV: 0, jumpAt: 0, sensorAt: 0, phase: 0, jumps: 0 }, warmVisible: false,
     fxView: null, fpBody: null, shadowBody: null, figure: null, hud: null,
     trace: null, analysis: null,
   };
@@ -208,7 +216,11 @@ addEventListener('keydown', e => {
   const bind = KEYS[mode][e.code];
   if (bind) {
     const p = P[bind[0]];
-    if (bind[1] === 'jump') { jump(p); p.keyJumpAt = performance.now(); } else p.accelKeyboard = true;
+    if (stageView.phase === 'title') warmup.keyAt = performance.now();   // the keys also drive the title-screen warm-up
+    if (bind[1] === 'jump') {
+      if (stageView.phase === 'title') warmJump(p); else jump(p);
+      p.keyJumpAt = performance.now();
+    } else p.accelKeyboard = true;
   }
   if (e.code === 'Escape') resetGame();  // ESCキーでリセット
   if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat) {
@@ -267,7 +279,7 @@ function sensorJump(p) {
     if (t == null || t > CUE_EARLY_SEC) {
       const now = performance.now();
       p.jumpHeldAt = now;                                  // released by releaseHeldJump() when the zone starts
-      if ((t == null || t > JUMP_GUARD_SEC) && now - p.guardAt > SENSOR_JUMP_COOLDOWN_MS) {   // the trigger repeats every sample while the toe is up: count episodes
+      if ((t == null || t > JUMP_GUARD_SEC) && now - p.guardAt > jumpCooldown()) {   // the trigger repeats every sample while the toe is up: count episodes
         p.guardAt = now;
         p.guarded++;
         const next = nextHurdle(p);
@@ -338,8 +350,8 @@ let soloCoverUntil = 0;   // performance.now() until which the sensor script is 
 function pollSoloCover() {
   const now = performance.now();
   const p = P[0], devices = window.devices;
-  if (now >= soloCoverUntil || !devices || !p.isGround || now - p.sensorJumpAt <= SENSOR_JUMP_COOLDOWN_MS) return;
-  const toeUp = [devices[0], devices[1]].some((d) => d && d.eulers && d.eulers.pitch < -window.pitchThresholdJump);
+  if (now >= soloCoverUntil || !devices || !p.isGround || now - p.sensorJumpAt <= jumpCooldown()) return;
+  const toeUp = [0, 1].some((id) => jumpFootAllows(id) && devices[id]?.eulers && devices[id].eulers.pitch < -window.pitchThresholdJump);
   if (toeUp && sensorJump(p) && !p.isGround) p.sensorJumpAt = now;
 }
 
@@ -354,7 +366,7 @@ function pollVsSensors() {
     const d = devices[p.index];
     if (!d) continue;
     if (d.acc) p.accelOrphe = Math.hypot(d.acc.x, d.acc.y, d.acc.z) > window.accThresholdAccel;
-    if (d.eulers && d.eulers.pitch < -window.pitchThresholdJump && now - p.sensorJumpAt > SENSOR_JUMP_COOLDOWN_MS) {
+    if (d.eulers && d.eulers.pitch < -window.pitchThresholdJump && now - p.sensorJumpAt > jumpCooldown()) {
       if (sensorJump(p)) p.sensorJumpAt = now;
     }
   }
@@ -718,10 +730,11 @@ window.resetGame = resetGame;
 window.gameJump = function() {
   if (mode !== 'solo') return true;
   const p = P[0];
+  if (stageView.phase === 'title') { warmJump(p); return true; }   // warm-up: jump at once, no take-off guard
   const wasGround = p.isGround;
   const accepted = sensorJump(p);
   if (accepted && wasGround && !p.isGround) p.sensorJumpAt = performance.now();
-  else if (!insole && state === 'running') soloCoverUntil = performance.now() + SENSOR_JUMP_COOLDOWN_MS;
+  else if (!insole && state === 'running') soloCoverUntil = performance.now() + jumpCooldown();
   return accepted;
 };
 window.setAccelPressed = function(pressed) {
@@ -800,7 +813,7 @@ function sessionMeta() {
   const meta = {
     app: 'GAME-SUPER-HURDLE', deviceType: insole ? 'insole' : 'core', insoleToe: insole ? insole.toeState() : null,
     mode, rules: { ...RULES }, lanes: active.map((p) => p.lane),
-    thresholds: { accG: window.accThresholdAccel, jumpPitchRad: window.pitchThresholdJump },
+    thresholds: { accG: window.accThresholdAccel, jumpPitchRad: window.pitchThresholdJump, jumpCooldownMs: jumpCooldown(), jumpFoot: window.jumpFoot },
     constants: { COURSE_LEN_M, FIRST_HURDLE_M, HURDLE_SPACING_M, MAX_SPEED, ACCEL_RATE, FRICTION, JUMP_V0, GRAVITY, JUMP_SPEED_LOSS, CRUISE_SPEED, STAMINA_BURN_AT_MAX, EXHAUSTED_SPEED, EXHAUSTED_RECOVER_LEVEL, JUMP_GUARD_SEC, JUMP_HOLD_MS, CUE_EARLY_SEC, CUE_LATE_SEC },
     devices: [0, 1].map((i) => ({ id: i, player: mode === 'vs' ? i : 0, name: bles[i]?.transport?.device?.name ?? null, info: bles[i]?.profile?.device_information ?? null })),
     // 新 SDK は版数のグローバルを持たないので、読み込んだ script の URL（タグ付き CDN）を残す
@@ -1091,6 +1104,12 @@ function updateCamera(p, dt) {
     tQuat.setFromRotationMatrix(lookM);
     shift = 0.15;
     v.fade = Math.max(1 - cam.shotT / 0.7, (cam.shotT - (SHOT_SECONDS - 0.7)) / 0.7, 0);
+  } else if (cam.mode === 'warm') {
+    fov = warmShot(tPos, tLook);
+    lookM.lookAt(tPos, tLook, UP);
+    tQuat.setFromRotationMatrix(lookM);
+    shift = WARM_SHIFT;
+    v.fade = Math.max(0, v.fade - dt * 2);
   } else {
     v.fade = Math.max(0, v.fade - dt * 2);
     const sp = Math.PI * v.stepPhase;
@@ -1161,6 +1180,143 @@ function jumpProgress(p) {
 /** Stamina an even pace would have left at this point: full at the gun, empty on the line. */
 function paceTarget(p) {
   return 1 - Math.min(1, Math.max(0, (-p.rig.position.z - 2) / (COURSE_LEN_M - 2)));
+}
+
+// ---------------------------------------------------------------------------
+// Warm-up on the title screen.
+// With a sensor connected (or after a game key), the player's own runner stands in its lane just past the
+// start line: it runs on the spot faster as the feet stamp, and jumps when the toes go up, so the two moves
+// can be tried before the race. The camera stops touring the stadium and frames the runner(s).
+// Practice only: the race state (p.vz, p.rig, stamina, hits ...) is never touched, the jump guard does not
+// apply, and the sensor jump fires straight away. Speed builds and fades with the race's own ACCEL_RATE / FRICTION.
+// While the warm-up runs, a foot held still for 1.5 s becomes that foot's toe-up zero (the same rule the
+// countdown applies when the jump assist is on), so a sensor strapped at an angle can jump here too.
+const WARM_Z = -1.6;          // where the warm-up runner stands (the start line is at z = 0)
+const WARM_KEY_SEC = 12;      // keyboard practice keeps the warm-up open this long after the last game key
+const warmup = { on: false, keyAt: -1e9, zeroAt: 0, uiAt: 0, samples: [[], []] };
+function warmWanted() {
+  if (stageView.phase !== 'title' || !ui) return false;
+  if (document.getElementById('ranking-layer').style.display !== 'none') return false;
+  return ui.isConnected(0) || ui.isConnected(1) || performance.now() - warmup.keyAt < WARM_KEY_SEC * 1000;
+}
+function warmJump(p) {
+  if (!warmup.on || !active.includes(p)) return;
+  const w = p.warm;
+  if (w.air) return;
+  w.air = true; w.vy = JUMP_V0; w.jumpAt = performance.now(); w.jumps++;
+  audio.jump();
+  ui.warmJump(p.index);
+}
+/** VS: each CORE drives its own runner (SOLO goes through window.setAccelPressed / window.gameJump). */
+function pollWarmVs() {
+  const devices = window.devices;
+  if (!devices) return;
+  const now = performance.now();
+  for (const p of active) {
+    const d = devices[p.index];
+    if (!d) continue;
+    if (d.acc) p.accelOrphe = Math.hypot(d.acc.x, d.acc.y, d.acc.z) > window.accThresholdAccel;
+    if (d.eulers && d.eulers.pitch < -window.pitchThresholdJump && now - p.warm.sensorAt > jumpCooldown()) {
+      p.warm.sensorAt = now;
+      warmJump(p);
+    }
+  }
+}
+/** Toe-up zero while warming up: a foot held still for ZERO_WINDOW_MS sets it, as in the countdown. */
+function warmZero(now) {
+  const devices = window.devices;
+  if (!devices) return;
+  for (const i of [0, 1]) {
+    const e = devices[i]?.eulers;
+    if (!e) continue;
+    const buf = warmup.samples[i];
+    buf.push([now, e.pitch + pitchZero[i]]);   // the sensor script hands over pitch minus the current zero
+    while (buf.length && now - buf[0][0] > ZERO_WINDOW_MS) buf.shift();
+  }
+  if (now - warmup.zeroAt < 250 || RULES.guard !== 'on') return;
+  warmup.zeroAt = now;
+  for (const i of [0, 1]) {
+    if (!ui.isConnected(i)) continue;
+    const buf = warmup.samples[i];
+    if (buf.length < 20 || now - buf[0][0] < ZERO_WINDOW_MS * 0.9) continue;
+    const xs = buf.map((r) => r[1]).sort((a, b) => a - b);
+    if (xs[Math.floor(xs.length * 0.95)] - xs[Math.floor(xs.length * 0.05)] > ZERO_MAX_SPREAD) continue;
+    const zero = Math.min(1.2, Math.max(-0.2, xs[xs.length >> 1]));
+    if (Math.abs(zero - pitchZero[i]) < 0.01) continue;
+    pitchZero[i] = zero;
+    if (insole) insole.setPitchZero(i, zero);
+  }
+}
+function setWarm(on) {
+  if (on === warmup.on && (!on || warmup.mode === mode)) return;
+  warmup.on = on;
+  warmup.mode = mode;
+  warmup.samples = [[], []];
+  for (const p of P) {
+    Object.assign(p.warm, { v: 0, y: 0, vy: 0, air: false, airV: 0, jumpAt: 0, phase: 0, jumps: 0 });
+    p.warmVisible = false;
+  }
+  if (stageView.phase === 'title') {
+    // into the warm-up: frame the runner; out of it (sensor gone, keys idle): back to the stadium tour
+    setCamMode(P[0], on ? 'warm' : 'title', on ? 1.3 : 1.4);
+    if (!on) { P[0].cam.shot = 0; P[0].cam.shotT = 0.7; }
+  }
+  ui.setWarm(on, active.map((p) => ({ index: p.index, label: whoLabel(p), color: PLAYER_LOOKS[p.index].color })));
+}
+const poseWarm = newPose();
+function presentWarm(dt) {
+  setWarm(warmWanted());
+  if (!warmup.on) return;
+  const now = performance.now();
+  if (mode === 'vs') pollWarmVs();
+  warmZero(now);
+  for (const p of P) p.warmVisible = warmup.on && active.includes(p);
+  for (const p of active) {
+    const w = p.warm;
+    const pressing = p.accelKeyboard || p.accelOrphe;
+    if (w.air) {
+      if (RULES.jump === 'coast') w.v *= Math.exp(-AIR_DRAG * dt);
+      else if (pressing) w.v = Math.min(MAX_SPEED, w.v + ACCEL_RATE * dt);
+      w.y += w.vy * dt; w.vy -= GRAVITY * dt;
+      if (w.y <= 0) { w.y = 0; w.vy = 0; w.air = false; audio.land(0.6 + 0.3 * (w.v / MAX_SPEED)); }
+    } else if (pressing) {
+      w.v = Math.min(MAX_SPEED, w.v + ACCEL_RATE * dt);
+    } else {
+      w.v = Math.max(0, w.v - FRICTION * dt);
+    }
+    // stride: the same cadence the race uses (footsteps, arm swing)
+    const k = w.v / MAX_SPEED;
+    const before = Math.floor(w.phase);
+    if (!w.air && w.v > 0.4) w.phase += (1.4 + 2.6 * k) * dt;
+    if (Math.floor(w.phase) !== before && !w.air && w.v > 1.5) {
+      audio.footstep((mode === 'vs' ? (p.index ? 0.6 : -0.6) : 0) + (Math.floor(w.phase) % 2 ? 0.4 : -0.4), 0.5 + 0.35 * k);
+    }
+    w.airV += ((w.air ? 1 : 0) - w.airV) * Math.min(1, dt * (w.air ? 14 : 9));
+    const u = w.air ? Math.min(1, (now - w.jumpAt) / (JUMP_AIR_TIME * 1000)) : 1;
+    poseRun(poseA, Math.PI * w.phase, k, 0.06 + 0.14 * k);
+    lerpPose(poseWarm, poseA, poseHurdle(poseB, u), w.airV);
+    p.figure.root.position.set(laneX(p.lane), w.y, WARM_Z);
+    p.figure.apply(poseWarm);
+  }
+  if (now - warmup.uiAt > 80) {
+    warmup.uiAt = now;
+    const t = performance.now();
+    ui.updateWarm(active.map((p) => ({
+      index: p.index, kmh: p.warm.v * 3.6, ratio: p.warm.v / MAX_SPEED, jumps: p.warm.jumps,
+      accel: p.accelKeyboard || p.accelOrphe, air: p.warm.air || t - p.warm.jumpAt < 300,
+    })));
+  }
+}
+/** Camera for the warm-up: in front of the runner(s) and a little to the right, looking back at them.
+ * The view is slid right (shift in updateCamera) so the runners stand between the title text and the dock. */
+const WARM_SHIFT = 0.14;
+function warmShot(pos, look) {
+  const xs = active.map((p) => laneX(p.lane));
+  const lo = Math.min(...xs), hi = Math.max(...xs), cx = (lo + hi) / 2, spread = hi - lo;
+  const t = stageView.time;
+  pos.set(cx + 2.0 + spread * 0.4 + 0.1 * Math.sin(t * 0.21), 1.3 + 0.03 * Math.sin(t * 0.17), WARM_Z - 6.6 - spread * 1.6);
+  look.set(cx, 0.95, WARM_Z);
+  return 40;
 }
 
 // ---------------------------------------------------------------------------
@@ -1248,14 +1404,14 @@ function presentPlayer(p, dt, sdt) {
 
   // post FX for this runner's view
   const U = p.fxView.uniforms;
-  U.uSpeed.value = p.cam.mode === 'title' ? 0 : k;
+  U.uSpeed.value = p.cam.mode === 'title' || p.cam.mode === 'warm' ? 0 : k;
   U.uHit.value = v.hit;
   U.uFlash.value = v.flash;
   U.uFade.value = v.fade;
   const tired = running && (blocked(p) ? 1 : p.stamina < 0.15 ? (1 - p.stamina / 0.15) * 0.6 : 0);
   v.exhaust += ((tired || 0) - v.exhaust) * Math.min(1, dt * 4);
   U.uExhaust.value = v.exhaust;
-  p.fxView.lines.update(sdt, p.rig.position.x, p.rig.position.z, p.cam.mode === 'title' ? 0 : speed);
+  p.fxView.lines.update(sdt, p.rig.position.x, p.rig.position.z, p.cam.mode === 'title' || p.cam.mode === 'warm' ? 0 : speed);
 }
 
 function present(dt, rawDt) {
@@ -1269,6 +1425,7 @@ function present(dt, rawDt) {
   }
   const sdt = dt * ts;
 
+  presentWarm(dt);
   for (const p of active) presentPlayer(p, dt, sdt);
 
   // rivals + live places
@@ -1360,11 +1517,11 @@ function renderView(p, x, w, h) {
     const own = q === p;
     q.fpBody.group.visible = own && q.fpVisible;
     q.shadowBody.root.visible = own && q.bodyVisible;
-    q.figure.root.visible = !own && q.bodyVisible;
+    q.figure.root.visible = (!own && q.bodyVisible) || q.warmVisible;
     q.fxView.lines.mesh.visible = own && q.fxView.lines.on;
   }
   world.viewGuides(p.index);
-  world.focusShadow(stageView.phase === 'title' ? p.camera.position.z + 5 : p.rig.position.z);
+  world.focusShadow(warmup.on ? WARM_Z : stageView.phase === 'title' ? p.camera.position.z + 5 : p.rig.position.z);
   world.preRender(p.camera);
   p.fxView.render(x, w, h);
 }
@@ -1377,7 +1534,7 @@ function render() {
     renderView(P[1], half, w - half, h);
   } else {
     renderer.setScissorTest(false);
-    for (const q of P) { if (q !== P[0]) { q.fpBody.group.visible = false; q.shadowBody.root.visible = false; q.figure.root.visible = false; q.fxView.lines.mesh.visible = false; } }
+    for (const q of P) { if (q !== P[0]) { q.fpBody.group.visible = false; q.shadowBody.root.visible = false; q.figure.root.visible = q.warmVisible; q.fxView.lines.mesh.visible = false; } }
     renderView(P[0], 0, w, h);
   }
 }
@@ -1530,6 +1687,7 @@ async function boot() {
     // window.hurdlePitchZero[id] itself; the recorder's listener keeps the raw value as before.
     window.hurdlePitchZero = pitchZero;
   }
+  window.hurdleZeroView = pitchZero;   // read-only, for the settings drawer (sensor-settings.js)
   telemetry.attach(sensors);
   const refreshRec = async () => ui.setRecState({ recording: telemetry.recording, active: telemetry.active, count: await telemetry.count(), hasLast: !!telemetry.last });
   telemetry.onChange(refreshRec);
@@ -1616,6 +1774,8 @@ window.hurdleDebug = {
   get hits() { return P[0].hits; }, get time() { return P[0].runTime; }, get fps() { return perf.fps; },
   get pixelRatio() { return fx ? pixelRatio() : 0; }, get place() { return P[0].place; }, get grounded() { return P[0].isGround; },
   get exhausted() { return P[0].exhausted; },
+  /** Title-screen warm-up: whether it is showing, and each runner's practice speed [m/s] / height / jump count */
+  get warm() { return { on: warmup.on, cam: P[0].cam.mode, players: active.map((p) => ({ v: +p.warm.v.toFixed(2), y: +p.warm.y.toFixed(2), air: p.warm.air, jumps: p.warm.jumps })) }; },
   /** Per-runner snapshot, e.g. hurdleDebug.players[1].z */
   get players() {
     return active.map((p) => ({ z: p.rig.position.z, speed: p.vz, stamina: p.stamina, hits: p.hits, time: p.runTime, finished: p.finished, grounded: p.isGround, exhausted: p.exhausted, place: p.place, lane: p.lane, ignoredJumps: p.guarded, heldJumps: p.heldJumps, pitchZero: [...pitchZero] }));

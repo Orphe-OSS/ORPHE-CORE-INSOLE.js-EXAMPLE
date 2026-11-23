@@ -109,7 +109,8 @@ export function setupInsole() {
       // toe up past the threshold = jump (mirrors the CORE sensor script). A trigger the game's
       // jump guard ignored (no hurdle coming up) does not start the cooldown, so it cannot
       // swallow the real take-off that follows.
-      if (pitch < -window.pitchThresholdJump && (now - lastJumpTime) > JUMP_COOLDOWN_MS) {
+      const footOk = window.jumpFoot === 'left' ? id === 0 : window.jumpFoot === 'right' ? id === 1 : true;   // 設定ドロワーの「ジャンプに使う足」
+      if (footOk && pitch < -window.pitchThresholdJump && (now - lastJumpTime) > (window.jumpCooldownMs ?? JUMP_COOLDOWN_MS)) {
         if (window.gameJump && window.gameJump() !== false) lastJumpTime = now;
       }
     });
