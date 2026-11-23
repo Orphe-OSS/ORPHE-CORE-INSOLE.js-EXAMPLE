@@ -7,7 +7,7 @@
   <title>SUPER VIRTUAL HURDLE　110m</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="style.css?v=20261118a">
+  <link rel="stylesheet" href="style.css?v=20261123a">
   <!-- three.js + its post-processing add-ons are resolved through this import map. -->
   <!--
     Cache busting. The game is several ES modules; a browser that keeps an old copy of one of
@@ -21,14 +21,14 @@
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
         "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-        "./world.js": "./world.js?v=20261118a",
-        "./runner.js": "./runner.js?v=20261118a",
-        "./fx.js": "./fx.js?v=20261118a",
-        "./audio.js": "./audio.js?v=20261118a",
-        "./ui.js": "./ui.js?v=20261118a",
-        "./telemetry.js": "./telemetry.js?v=20261118a",
-        "./analysis.js": "./analysis.js?v=20261118a",
-        "./insole.js": "./insole.js?v=20261118a"
+        "./world.js": "./world.js?v=20261123a",
+        "./runner.js": "./runner.js?v=20261123a",
+        "./fx.js": "./fx.js?v=20261123a",
+        "./audio.js": "./audio.js?v=20261123a",
+        "./ui.js": "./ui.js?v=20261123a",
+        "./telemetry.js": "./telemetry.js?v=20261123a",
+        "./analysis.js": "./analysis.js?v=20261123a",
+        "./insole.js": "./insole.js?v=20261123a"
       }
     }
   </script>
@@ -67,7 +67,9 @@
     })();
   </script>
   <!-- Game: main.js (rules, input, flow) + world / runner / fx / audio / ui modules. -->
-  <script type="module" src="main.js?v=20261118a"></script>
+  <!-- 感度の設定（保存値）を main.js より先に入れる -->
+  <script src="sensor-settings.js?v=20261123a"></script>
+  <script type="module" src="main.js?v=20261123a"></script>
 <script src="../assets/js/site-analytics.js"></script>
 </head>
 <body>
@@ -141,6 +143,16 @@
         <div class="popup-layer" data-el="popups"></div>
       </div>
     </template>
+
+    <!-- ===== Title-screen warm-up: shown while a sensor is connected (main.js presentWarm / ui.js setWarm) ===== -->
+    <div class="warmup" id="warmup" hidden aria-live="polite">
+      <div class="warm-head">
+        <span class="warm-tag">WARM-UP</span>
+        <span class="warm-title">動きの練習 <small>STARTを押すまで何度でも</small></span>
+      </div>
+      <div id="warm-rows"></div>
+      <p class="warm-hint"><i class="bi bi-lightning-charge-fill"></i> 足踏みで加速　<i class="bi bi-arrow-up-circle-fill"></i> つま先を上げてジャンプ</p>
+    </div>
 
     <!-- ===== Start overlay ===== -->
     <div class="screen" id="start-layer">
@@ -384,30 +396,57 @@
         </div>
 
         <h4>⚡ 加速設定 / Acceleration</h4>
+        <p class="drawer-note">足の加速度の大きさがこの値をこえると、加速します（止まっていても重力で 1.0 G）。左ほど強く踏む必要があり、右ほど小さな動きで進みます。</p>
+        <div class="sens-levels" id="accel-levels" role="radiogroup" aria-label="加速の感度 / Acceleration sensitivity"></div>
+        <p class="sens-hint" id="accel-level-hint"></p>
         <div class="config-item">
-          <label for="accelThreshold">加速度閾値 / Acceleration Threshold</label>
+          <label for="accelThreshold">加速度のしきい値 / Acceleration Threshold</label>
           <div class="config-control">
-            <input type="range" id="accelThreshold" min="0.1" max="5.1" value="1.1" step="0.2">
-            <span id="accelThresholdValue">1.1 G</span>
+            <input type="range" id="accelThreshold" min="1.02" max="3" value="1.1" step="0.02">
+            <span id="accelThresholdValue">1.10 G</span>
           </div>
         </div>
 
         <h4>⬆️ ジャンプ設定 / Jump</h4>
+        <p class="drawer-note">つま先をこの角度より上げると、ジャンプします。左ほど大きく上げる必要があり、右ほど小さな動きで跳びます。</p>
+        <div class="sens-levels" id="jump-levels" role="radiogroup" aria-label="ジャンプの感度 / Jump sensitivity"></div>
+        <p class="sens-hint" id="jump-level-hint"></p>
         <div class="config-item">
-          <label for="jumpPitchThreshold">ジャンプPITCH閾値 / Jump Pitch Threshold</label>
+          <label for="jumpPitchThreshold">つま先を上げる角度 / Toe-up angle</label>
           <div class="config-control">
-            <input type="range" id="jumpPitchThreshold" min="0.05" max="0.5" value="0.15" step="0.05">
-            <span id="jumpPitchThresholdValue">0.15 rad</span>
+            <input type="range" id="jumpPitchThreshold" min="2" max="30" value="9" step="1">
+            <span id="jumpPitchThresholdValue">9°</span>
           </div>
+        </div>
+        <div class="config-item">
+          <label for="jumpCooldown">次のジャンプまでの間隔 / Interval between jumps</label>
+          <div class="config-control">
+            <input type="range" id="jumpCooldown" min="0.3" max="1.5" value="0.7" step="0.05">
+            <span id="jumpCooldownValue">0.70 秒</span>
+          </div>
+        </div>
+        <div class="config-item">
+          <label for="jumpFoot">ジャンプに使う足（SOLO） / Foot used to jump</label>
+          <div class="config-control">
+            <select id="jumpFoot">
+              <option value="any">左右どちらでも / Either</option>
+              <option value="left">左足（CORE 01）だけ / Left only</option>
+              <option value="right">右足（CORE 02）だけ / Right only</option>
+            </select>
+          </div>
+        </div>
+        <p class="drawer-note" id="jump-zero-note"></p>
+        <div class="config-item">
+          <button type="button" class="hx-btn small" id="sens-reset">感度を初期値に戻す / Reset sensitivity</button>
         </div>
 
         <div class="controls-help">
           <p>🎮 操作方法 / Controls</p>
-          <p>• 足踏み（加速度 &gt; 1.1G） → 前進加速</p>
-          <p>• つま先を上げる（PITCH &lt; -0.15 rad） → ジャンプ</p>
+          <p>• <span id="help-accel">足踏み（加速度 &gt; 1.10 G） → 前進加速</span></p>
+          <p>• <span id="help-jump">つま先を 9° 以上上げる → ジャンプ</span></p>
           <p>• ジャンプ・スタミナのルールは下の「ルール」で切り替えできます</p>
-          <p class="en">• Stamp feet (Accel &gt; 1.1G) → Accelerate forward</p>
-          <p class="en">• Lift toe up (Pitch &lt; -0.15 rad) → Jump</p>
+          <p class="en">• <span id="help-accel-en">Stamp feet (Accel &gt; 1.10 G) → Accelerate forward</span></p>
+          <p class="en">• <span id="help-jump-en">Lift toes 9° or more → Jump</span></p>
           <p class="en">• Jump and stamina rules can be switched under "Rules" below</p>
         </div>
 
@@ -521,7 +560,7 @@
     
     let basePitch = [null, null];
     let lastJumpTime = 0;
-    const jumpCooldownMs = 700;
+    // ジャンプの間隔（window.jumpCooldownMs）と、ジャンプに使う足（window.jumpFoot）は設定ドロワーで決める（sensor-settings.js）
 
     // ★ ここが追加・重要：加速オンのクールダウン（250ms）
     let lastAccelTime = 0;
@@ -579,7 +618,8 @@
         const currentPitch = _euler.pitch;
         const now = performance.now();
         // Jump when pitch goes negative (toe up)
-        if (currentPitch < -window.pitchThresholdJump && (now - lastJumpTime) > jumpCooldownMs) {
+        const footOk = window.jumpFoot === 'left' ? id === 0 : window.jumpFoot === 'right' ? id === 1 : true;
+        if (footOk && currentPitch < -window.pitchThresholdJump && (now - lastJumpTime) > (window.jumpCooldownMs ?? 700)) {
           if (window.gameJump) {
             window.gameJump();
             lastJumpTime = now;
@@ -589,6 +629,8 @@
     }
     
     // Sensor value display update
+    const PITCH_BAR_DEG = 60;
+    const ACC_BAR_G = 3;   // 加速度のバーは 0〜3 G
     function updateSensorDisplay() {
       let maxAccel = 0;
       let maxPitchDelta = 0;
@@ -599,11 +641,13 @@
         const pitchElem = document.getElementById(`pitch${i}`);
         
         if (pitchElem) {
-          pitchElem.textContent = pitch.toFixed(3) + ' rad';
+          const deg = pitch * 180 / Math.PI;
+          pitchElem.textContent = (deg > 0.5 ? '+' : deg < -0.5 ? '−' : '') + Math.abs(deg).toFixed(0) + '°';
           
           const pitchBar = document.getElementById(`pitchBar${i}`);
           if (pitchBar) {
-            const position = ((pitch + 2) / 4) * 100;
+            // バーは −60°（左＝つま先を上げた側）〜 +60° を表示する
+            const position = ((deg + PITCH_BAR_DEG) / (2 * PITCH_BAR_DEG)) * 100;
             pitchBar.style.left = Math.max(0, Math.min(100, position)) + '%';
             
             // Check for toe-up position (negative pitch)
@@ -636,7 +680,7 @@
           
           const accBar = document.getElementById(`accBar${i}`);
           if (accBar) {
-            const width = (accMag / 2) * 100;
+            const width = (accMag / ACC_BAR_G) * 100;
             accBar.style.width = Math.min(100, width) + '%';
             
             if (accMag > window.accThresholdAccel) {
@@ -679,37 +723,20 @@
         const pitchLine = document.getElementById(`pitchThreshold${i}`);
         if (pitchLine) {
           // Display negative threshold position (toe up)
-          pitchLine.style.left = ((2 - window.pitchThresholdJump) / 4 * 100) + '%';
+          const thDeg = window.pitchThresholdJump * 180 / Math.PI;
+          pitchLine.style.left = ((PITCH_BAR_DEG - thDeg) / (2 * PITCH_BAR_DEG) * 100) + '%';
         }
         
         const accLine = document.getElementById(`accThreshold${i}`);
         if (accLine) {
-          accLine.style.left = (window.accThresholdAccel / 2 * 100) + '%';
+          accLine.style.left = Math.min(100, window.accThresholdAccel / ACC_BAR_G * 100) + '%';
         }
       }
     }
     
     // DOM ready function
     document.addEventListener('DOMContentLoaded', function() {
-      // Slider event listeners
-      const accelSlider = document.getElementById('accelThreshold');
-      if (accelSlider) {
-        accelSlider.addEventListener('input', function(e) {
-          window.accThresholdAccel = parseFloat(e.target.value);
-          document.getElementById('accelThresholdValue').textContent = e.target.value + ' G';
-          updateThresholdVisuals();
-        });
-      }
-      
-      const pitchSlider = document.getElementById('jumpPitchThreshold');
-      if (pitchSlider) {
-        pitchSlider.addEventListener('input', function(e) {
-          window.pitchThresholdJump = parseFloat(e.target.value);
-          const val = parseFloat(e.target.value);
-          document.getElementById('jumpPitchThresholdValue').textContent = val.toFixed(2) + ' rad';
-          updateThresholdVisuals();
-        });
-      }
+      // 感度のスライダー・ボタンは sensor-settings.js が受け持つ（値を変えると updateThresholdVisuals() を呼ぶ）
       
       // Start sensor display updates
       setInterval(updateSensorDisplay, 16);
