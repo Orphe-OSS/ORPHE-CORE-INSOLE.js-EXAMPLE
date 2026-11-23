@@ -686,8 +686,12 @@
     // INSOLE: 圧力で数えたふみは、押しぐあい（その人のいつもの強さ = 1）も演出の強さに使う
     if (step.source === 'press') strength = Math.max(strength, Math.min(1, step.rel * 0.8));
 
+    // 補った歩（通信で欠けた着地の代わり）は、足の動き・音・文字を出さずに数だけ進める。
+    // 欠けたと分かるのは反対の足が着地したときで、そのとき補った足はちょうど上がっているところなので、
+    // そこで「ふむ」演出を出すと、足を上げた瞬間にふんだように見える（2026-11-23 の実機記録）
+    var show = !step.fill;
     if (run.points >= run.target - 1e-9) {
-      sceneStep(prevPhase, step.foot, strength, mult);
+      if (show) sceneStep(prevPhase, step.foot, strength, mult);
       beginBoil();
       return;
     }
@@ -705,7 +709,7 @@
         burst(DOUGH_X, BOARD_Y - 160, 8);
       }
     }
-    sceneStep(run.phase, step.foot, strength, mult);
+    if (show) sceneStep(run.phase, step.foot, strength, mult);
   }
 
   // ---------------------------------------------------------------------------
