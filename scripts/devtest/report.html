@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>実機テストの結果（devtest）</title>
+<style>
+  body { margin: 0; font: 14px/1.6 system-ui, -apple-system, "Hiragino Sans", sans-serif; background: #0b1020; color: #e8eefc; }
+  header { padding: 16px 24px; background: #141c38; display: flex; gap: 12px; align-items: center; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  main { padding: 16px 24px; }
+  button { font: inherit; color: #fff; background: #2c3d73; border: 1px solid #4a5f9e; border-radius: 6px; padding: 4px 12px; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 20px; }
+  th, td { border-bottom: 1px solid #2a3558; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { color: #8fa6d6; font-weight: normal; }
+  .ok { color: #5be08a; } .ng { color: #ff6b80; } .na { color: #8fa6d6; }
+  textarea { width: 100%; height: 220px; background: #0d1530; color: #e8eefc; border: 1px solid #3a4a7a; border-radius: 6px; font: 12px/1.5 ui-monospace, Menlo, monospace; }
+  h2 { font-size: 15px; color: #9fc0ff; margin: 18px 0 4px; }
+  small { color: #8fa6d6; }
+</style>
+</head>
+<body>
+<header><h1>実機テストの結果</h1><label><input type="checkbox" id="latest" checked> ページ×デバイスごとに最新だけ</label><button id="reload">再読み込み</button></header>
+<main>
+  <table id="table"><thead><tr><th>保存</th><th>ページ</th><th>デバイス（名前 / FW / 最大Hz / 欠損）</th><th>自動</th><th>手で確認</th><th>メモ・エラー</th></tr></thead><tbody></tbody></table>
+  <h2>README の「動作確認済み FW」に足す行（自動・手の確認が全部 OK のものだけ）</h2>
+  <small>手で確認する項目に NG があるもの、未確認が残るものは出しません。</small>
+  <textarea id="readme" readonly></textarea>
+  <h2>PR に貼る確認結果</h2>
+  <textarea id="pr" readonly></textarea>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var mark = function (v) { return v === true ? '<span class="ok">✓</span>' : v === false ? '<span class="ng">✗</span>' : '<span class="na">…</span>'; };
+  var LABEL = { core: 'ORPHE CORE', insole: 'ORPHE INSOLE' };
+  function deviceText(r) {
+    var by = {};
+    (r.devices || []).forEach(function (d) { var k = d.model ? 'ORPHE ' + d.model : (LABEL[d.kind] || d.kind); by[k] = (by[k] || 0) + 1; });
+    return Object.keys(by).map(function (k) { return k + ' ×' + by[k]; }).join(' + ');
+  }
+  function fwText(r) {
+    var seen = {};
+    (r.devices || []).forEach(function (d) { var key = (d.model || (LABEL[d.kind] || d.kind).replace('ORPHE ', '')) + ': ' + (d.fw || '不明'); seen[key] = true; });
+    return Object.keys(seen).join(' / ');
+  }
+  function passed(r) {
+    var auto = (r.auto || []).filter(function (c) { return c.id !== 'auto-reconnect'; });
+    return auto.every(function (c) { return c.ok !== false; }) && (r.devices || []).length > 0 &&
+      (r.manual || []).some(function (m) { return m.ok === true; }) && (r.manual || []).every(function (m) { return m.ok !== false; });
+  }
+  function load() {
+    fetch('/__devtest/results').then(function (x) { return x.json(); }).then(function (all) {
+      var rows = all;
+      if ($('latest').checked) {
+        var last = {};
+        all.forEach(function (r) { last[r.page + '|' + deviceText(r)] = r; });
+        rows = Object.keys(last).sort().map(function (k) { return last[k]; });
+      }
+      $('table').querySelector('tbody').innerHTML = rows.map(function (r) {
+        return '<tr><td>' + esc((r.savedAt || '').replace('T', ' ').slice(0, 16)) + '<br><small>' + esc(r.git && (r.git.branch + ' ' + r.git.commit)) + ' / SDK ' + esc(r.sdk) + '</small></td>' +
+          '<td>' + esc(r.page) + '</td><td>' + (r.devices || []).map(function (d) {
+            return esc(d.slot + ': ' + d.kind + ' ' + (d.name || '') + ' / ' + (d.fw || '?') + ' / ' + d.peakHz + 'Hz / 欠損' + d.lost + (d.reconnects ? ' / 再接続' + d.reconnects : ''));
+          }).join('<br>') + '</td><td>' + (r.auto || []).map(function (c) { return mark(c.ok) + ' ' + esc(c.label); }).join('<br>') + '</td>' +
+          '<td>' + (r.manual || []).map(function (m) { return mark(m.ok) + ' ' + esc(m.label); }).join('<br>') + '</td>' +
+          '<td>' + esc(r.note) + ((r.errors || []).length ? '<br><span class="ng">' + esc(r.errors.map(function (e) { return e.msg; }).slice(-3).join(' / ')) + '</span>' : '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="na">まだ保存された結果がありません（各ページのパネルで「保存」）</td></tr>';
+      var ok = rows.filter(passed);
+      $('readme').value = ok.map(function (r) {
+        var day = (r.savedAt || '').slice(0, 10);
+        return '# ' + r.page + '/README.md\n| ' + fwText(r) + ' | ' + deviceText(r) + ' | ' + (r.tester || '') + ' | ' + day + ' |';
+      }).join('\n\n');
+      $('pr').value = '実機確認（scripts/devtest で記録）\n\n| example | デバイス | FW | 最大受信 | 欠損 | 手で確認 | メモ |\n|---|---|---|---|---|---|---|\n' + rows.map(function (r) {
+        var man = (r.manual || []), okN = man.filter(function (m) { return m.ok === true; }).length, ngN = man.filter(function (m) { return m.ok === false; }).length;
+        return '| ' + r.page + ' | ' + deviceText(r) + ' | ' + fwText(r) + ' | ' + (r.devices || []).map(function (d) { return d.peakHz + 'Hz'; }).join(' / ') + ' | ' +
+          (r.devices || []).reduce(function (n, d) { return n + d.lost; }, 0) + ' | OK ' + okN + ' / NG ' + ngN + ' / 未 ' + (man.length - okN - ngN) + ' | ' + String(r.note || '').replace(/\n/g, ' ') + ' |';
+      }).join('\n');
+    });
+  }
+  $('reload').addEventListener('click', load);
+  $('latest').addEventListener('change', load);
+  load();
+})();
+</script>
+</body>
+</html>

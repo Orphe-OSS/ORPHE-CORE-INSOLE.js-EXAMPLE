@@ -12,6 +12,49 @@
   },
   "entries": [
     {
+      "id": "connection-hub",
+      "title": "Connection Hub",
+      "path": "HUB/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "educator",
+        "game-player"
+      ],
+      "value": "Connect two ORPHE COREs once and switch between games without reconnecting: the games open inside the hub and share its connection (BleSharedBridge). For exhibitions and workshops.",
+      "topics": [
+        "tool",
+        "exhibition",
+        "connection",
+        "shared bridge"
+      ],
+      "data": [
+        "convertedAcc",
+        "euler",
+        "gait"
+      ],
+      "devices": 2,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "getting-started",
+      "difficulty": "beginner",
+      "featured": false,
+      "thumbnail": "_thumbnails/connection-hub.png",
+      "sort_order": 5,
+      "links": {
+        "demo": "HUB/index.html",
+        "source": "HUB/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
       "id": "terminal",
       "title": "Terminal",
       "path": "TERMINAL/",
@@ -626,6 +669,139 @@
       "links": {
         "demo": "GAME-SUPER-HURDLE/index.html",
         "source": "GAME-SUPER-HURDLE/"
+      },
+      "requires_device": true,
+      "device_count": 2,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "both"
+    },
+    {
+      "id": "game-super-start",
+      "title": "SUPER VIRTUAL START",
+      "path": "GAME-SUPER-START/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "educator"
+      ],
+      "value": "Reaction to the starting gun: hold one ORPHE CORE still on \"SET\" and move the instant the gun fires. Faster than 0.100 s is a false start. Raw data of every attempt can be recorded.",
+      "topics": [
+        "game",
+        "virtual sports",
+        "track",
+        "sprint start",
+        "reaction time",
+        "recording"
+      ],
+      "data": [
+        "convertedAcc",
+        "convertedGyro"
+      ],
+      "devices": 1,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/super-start.png",
+      "sort_order": 206,
+      "links": {
+        "demo": "GAME-SUPER-START/index.html",
+        "source": "GAME-SUPER-START/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-super-relay",
+      "title": "SUPER VIRTUAL RELAY",
+      "path": "GAME-SUPER-RELAY/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "educator"
+      ],
+      "value": "Virtual 4×100m relay with one ORPHE CORE as the baton: shake it flat out on the track, then hold it still in the takeover zone to hand it on without losing speed. One to four players.",
+      "topics": [
+        "game",
+        "virtual sports",
+        "track",
+        "relay",
+        "baton pass",
+        "recording"
+      ],
+      "data": [
+        "convertedAcc",
+        "convertedGyro"
+      ],
+      "devices": 1,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/super-relay.png",
+      "sort_order": 207,
+      "links": {
+        "demo": "GAME-SUPER-RELAY/index.html",
+        "source": "GAME-SUPER-RELAY/"
+      },
+      "requires_device": true,
+      "device_count": 1,
+      "needs_real_device_validation": true,
+      "public_navigation": "listed",
+      "device": "core"
+    },
+    {
+      "id": "game-super-adventure",
+      "title": "SUPER VIRTUAL ADVENTURE",
+      "path": "GAME-SUPER-ADVENTURE/",
+      "type": "web-app",
+      "status": "public",
+      "audience": [
+        "game-player",
+        "educator"
+      ],
+      "value": "A side-scrolling action game seen through the runner's own eyes: stamp to run, toe up to jump. Speed builds up as long as you keep stamping: dash over wide gaps, slow down for small footholds. One miss sends you back to the start (an easy mode is included). ORPHE INSOLE support and a live chart of the raw acceleration.",
+      "topics": [
+        "game",
+        "action",
+        "platformer",
+        "first person",
+        "running",
+        "speed control",
+        "insole"
+      ],
+      "data": [
+        "convertedAcc",
+        "euler"
+      ],
+      "devices": 2,
+      "validation": [
+        "static-page-check",
+        "thumbnail-exists",
+        "needs-device-verification"
+      ],
+      "category": "virtual-sports",
+      "difficulty": "intermediate",
+      "featured": false,
+      "thumbnail": "_thumbnails/super-adventure.png",
+      "sort_order": 208,
+      "links": {
+        "demo": "GAME-SUPER-ADVENTURE/index.html",
+        "source": "GAME-SUPER-ADVENTURE/"
       },
       "requires_device": true,
       "device_count": 2,
