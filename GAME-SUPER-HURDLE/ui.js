@@ -286,6 +286,47 @@ export function createUI({ audio, courseLen, hurdleDistances, maxRivals, handler
     }
   }
   setInterval(pollDock, 300);
+  /** Whether CORE / INSOLE slot `id` is connected (what the dock shows as 接続済). */
+  function isConnected(id) {
+    const sw = $(`switch_ble${id}`), group = $(`ui${id}`);
+    return !!(sw && sw.checked && group && group.style.visibility === 'visible');
+  }
+
+  // ------------------------------------------------------------ title-screen warm-up panel
+  const warmEl = $('warmup'), warmRows = $('warm-rows');
+  let warmSig = '';
+  /** players: [{ index, label, color }] for the runners on screen, or on = false to hide the panel. */
+  function setWarm(on, players = []) {
+    warmEl.hidden = !on;
+    stage.classList.toggle('warming', on);
+    const sig = players.map((p) => `${p.index}:${p.label}`).join('|');
+    if (!on || sig === warmSig) return;
+    warmSig = sig;
+    warmRows.innerHTML = players.map((p) => `
+      <div class="warm-row" data-p="${p.index}" style="--c:${p.color}">
+        <span class="warm-who">${esc(p.label)}</span>
+        <span class="warm-lamp accel"><i class="bi bi-lightning-charge-fill"></i> 加速</span>
+        <div class="warm-speed"><i></i></div>
+        <span class="warm-kmh"><b>0</b><small>km/h</small></span>
+        <span class="warm-lamp jump"><i class="bi bi-arrow-up-circle-fill"></i> JUMP <b class="warm-jumps">0</b></span>
+      </div>`).join('');
+  }
+  /** rows: [{ index, kmh, ratio, jumps, accel, air }] */
+  function updateWarm(rows) {
+    for (const r of rows) {
+      const row = warmRows.querySelector(`[data-p="${r.index}"]`);
+      if (!row) continue;
+      row.querySelector('.warm-speed i').style.width = `${Math.round(Math.min(1, r.ratio) * 100)}%`;
+      setText(row.querySelector('.warm-kmh b'), String(Math.round(r.kmh)));
+      setText(row.querySelector('.warm-jumps'), String(r.jumps));
+      row.querySelector('.warm-lamp.accel').classList.toggle('on', !!r.accel);
+      row.querySelector('.warm-lamp.jump').classList.toggle('on', !!r.air);
+    }
+  }
+  function warmJump(index) {
+    const row = warmRows.querySelector(`[data-p="${index}"]`);
+    if (row) restart(row.querySelector('.warm-lamp.jump'), 'pop');
+  }
   function pollSensors(keys) {
     let accel = !!keys?.accel, jump = !!keys?.jump;
     const devices = window.devices;
@@ -294,7 +335,9 @@ export function createUI({ audio, courseLen, hurdleDistances, maxRivals, handler
         const d = devices[id];
         if (!d) continue;
         if (d.acc && Math.hypot(d.acc.x, d.acc.y, d.acc.z) > window.accThresholdAccel) accel = true;
-        if (d.eulers && d.eulers.pitch < -window.pitchThresholdJump) jump = true;
+        // SOLO で「ジャンプに使う足」を片方にしたときは、その足だけ見る
+        const footOk = mode === 'vs' || (window.jumpFoot === 'left' ? id === 0 : window.jumpFoot === 'right' ? id === 1 : true);
+        if (footOk && d.eulers && d.eulers.pitch < -window.pitchThresholdJump) jump = true;
       }
     }
     checkAccel.classList.toggle('on', accel);
@@ -504,6 +547,7 @@ export function createUI({ audio, courseLen, hurdleDistances, maxRivals, handler
   return {
     setRecState,
     huds, setScreen, countdown, countdownGo, showFinish, showFinishVs, updateBoard, pollSensors, setDrawer,
+    isConnected, setWarm, updateWarm, warmJump,
     setMode(m) { mode = m; renderCopy(); },
     /** type: 'core' | 'insole'. failed: INSOLE was chosen but its scripts did not load. */
     setDevice(type, failed) {
