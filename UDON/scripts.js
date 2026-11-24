@@ -37,7 +37,7 @@ if (typeof buildCoreToolkit === 'function' && typeof bles !== 'undefined') {
                 });
             }
         });
-        // ジャイロは、生データのきろく（画面上の ● ボタン）にだけ使います。ふみの判定には使いません
+        // ジャイロは、足が動いている間の重力の向き（上下）を追いかけるのに使います（着地の判定）。生データのきろくにも残します
         ble.on('converted_gyro', function (gyro) {
             UdonGame.pushGyro(index, gyro);
         });

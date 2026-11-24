@@ -157,14 +157,20 @@
     if (state.mode === 'demo') return;   // おためし中は、キーボード／タップの合成データだけを使う
     recBegin(foot);
     notePacket(foot, acc.serial_number);
+    // CORE（足の甲）: 足を上げる動きは数えず、下げた足が止まった瞬間（着地）だけを「ふみ」にする（step-detector.js）
+    detector.cfg.landingOnly = true;
     detector.push(foot, acc.x, acc.y, acc.z, performance.now(), acc.timestamp);
     afterSample(foot);
     recAcc(foot, acc);
   }
 
-  /** scripts.js の gotConvertedGyro から呼ばれる（加速度のすぐあとに届く）。生データのきろくにだけ使う */
+  /**
+   * scripts.js の gotConvertedGyro から呼ばれる（加速度のすぐあとに届く）。足が動いている間、重力の向き（上下）を
+   * 足の回転に合わせて追いかけるのに使う（着地の判定。step-detector.js の pushGyro）。生データのきろくにも残す
+   */
   function pushGyro(foot, gyro) {
     if (isInsole() || state.mode === 'demo') return;
+    if (gyro) detector.pushGyro(foot, gyro.x, gyro.y, gyro.z);
     recGyro(foot, gyro);
     recFlush(foot, null);
   }
@@ -178,6 +184,8 @@
     if (!isFinite(acc.x) || !isFinite(acc.y) || !isFinite(acc.z)) return;
     recBegin(foot);
     notePacket(foot, acc.serial_number);
+    // INSOLE（足うら）は、着地を圧力で見る（Fusion）。加速度は、これまでどおり動きの山で数える
+    detector.cfg.landingOnly = false;
     detector.push(foot, acc.x, acc.y, acc.z, performance.now());
     afterSample(foot);
     recAcc(foot, acc);
@@ -457,6 +465,7 @@
       var n = function () { return (Math.random() - 0.5) * 0.012; };
       var acc = { x: 0.25 * p + n(), y: n(), z: 1 + 0.95 * p + n() };
       recBegin(foot);
+      detector.cfg.landingOnly = false;   // おためしは 1 回のキー・タップが 1 つの山（上げ下げの形にしていない）
       detector.push(foot, acc.x, acc.y, acc.z, now);
       afterSample(foot);
       recAcc(foot, acc);
