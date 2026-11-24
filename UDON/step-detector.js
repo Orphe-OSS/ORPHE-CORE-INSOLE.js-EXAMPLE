@@ -12,12 +12,23 @@
  *   4. env の「山」と「谷」を追いかける。しきい値を超え、かつ直前の谷から十分に立ち上がったら 1 ふみ。
  *      次を数えるには、山から 3 割ほど下がればよい（速くバタバタふんで、包絡線がしきい値まで
  *      下がりきらなくても数えられる）。
+ *      ＋足を上げる動きは数えず、下げた足が止まった瞬間（着地）で数える（下の「着地で数える」）
  *      ＋同じ足の連続検出を防ぐ不応期（足踏みが速いときは自動で短くなる）
  *      ＋反対の足への振動の伝わり（クロストーク）対策
  *
  * しきい値（＝感度）を下げれば、座ったままのやさしい足踏みでも反応します。
- * 従来版は「連続 2 サンプルの差が 0.06（正規化値）以上」という衝撃ベースの判定で、
- * ±16G レンジではおよそ 1G の鋭い衝撃が必要でした。
+ *
+ * 着地で数える（下げた足が止まった瞬間だけ「ふみ」にする）:
+ *   1 歩の包絡線には山が 2 つある。足を上げる動きの山（立って足踏みすると 1.5〜2 G）と、
+ *   着地の衝撃の山（5〜20 G）。しきい値だけで判定すると、上げる動きを 1 ふみに数え、着地でもう 1 回数える
+ *   （2026-11-23 の実機記録 3 人ぶん: 着地 25〜36 回に対して 6〜21 回の数えすぎ。着地の瞬間に数えられたのは
+ *   半分ほど）。画面と音が、足を上げたときに出たり着地で出たりして、リズムよくふんでもちぐはぐになる。
+ *   そこで、加速度のベクトルを重力の向き（上下）に分けて見る:
+ *     - 上げる動きの山 … 止まっていた足が上向きに動き出す。山の前に下向きの動きがない
+ *     - 着地の山       … 下向きに動いてきた足が、上向きの鋭い力で止まる
+ *   「山の直前に下向きに動いていた（_fall）」かつ「上向きの力がしきい値の 2 倍以上（upMax）」の山だけを数える。
+ *   重力の向きは、足が動いている間はジャイロで回して追いかける（pushGyro。なくても動く）。
+ *   着地の衝撃が見えないまま足が止まったとき（通信で欠けた・そっと下ろした）は、止まった時刻で数える。
  */
 (function (root) {
   'use strict';
@@ -56,6 +67,7 @@
     gravityStillTauMs: 40, //          止まっている間の時定数（すばやく合わせる）
     gravityClampG: 0.3,   // 動いている間の 1 回の修正量の上限（衝撃で引きずられない）
     settleTauMs: 110,     // 接続直後に重力推定を落ち着かせる時定数
+    stillMagG: 0.2,       // 「止まっている」とみなす加速度の大きさ（1 G からのずれ）
     stillG: 0.012,        // ゆらぎがこれ未満なら「止まっている」
     stillFloorRatio: 1.8, // …ただしセンサーのノイズが大きい個体では、直近のゆらぎの最小値のこの倍まで許す
     stillWindowMs: 4000,  // ゆらぎの最小値を覚えておく時間
@@ -68,6 +80,26 @@
     landingMaxMs: 450,    // 着地をさがす時間の上限。動き出しから着地までは、ゆっくりふむと 250〜300 ms かかる
     landingIntervalRatio: 0.45, // …ただし同じ足の直近の間隔のこの割合まで（速くふんでいるときは短く。テンポを上げたときの 1 歩を飲みこまない）
     landingClearRatio: 2.2,    // しきい値のこの倍以上の鋭い山を「着地の衝撃」とみなす（足の振りだけの山は 1〜2 倍）
+    // --- 着地で数える（下げた足が止まった瞬間） ---
+    landingOnly: true,    // false にすると、上げる動きの山も数える（2026-11-23 までの動き）
+    fallNeedRatio: 0.4,   // 山の直前に必要な下向きの速さ [m/s] ＝ しきい値 [G] × この値（0.6 G で 0.24 m/s）
+    fallMin: 0.04,        // …の下限
+    fallMax: 0.25,        // …の上限 [m/s]（しっかりふむ設定でも、これだけ下向きに動いていればよい）
+    fallWindowMs: 150,    // 山の直前、この時間の上下の加速度を積分して下向きの速さを見る
+    fallSpikeG: 0.3,      // 上向きの力がこれを超えたところからを「衝撃の山」とみなし、その手前までを積分する
+    velLeakMs: 800,       // 止まってからの上下の速さ（積分）を忘れる時定数（ずっと動いている速い足踏みで、ずれをためない）
+    upRatio: 2,           // 着地の山は、上向きの力がしきい値のこの倍以上（下ろす途中の動きを着地とまちがえない）
+    upHoldMs: 25,         // 上向きの力の最大を覚えておく時間（衝撃は数サンプルで向きが振れる）
+    gyroSign: 1,          // 重力の向きをジャイロで回す向き（センサーから見た重力は −ω × g で動く）。0 で使わない
+    gyroMaxDtMs: 15,      // サンプルが続けて届いている間だけジャイロで回す（欠けをまたぐと回しすぎる）
+    softLanding: true,    // 衝撃が見えないまま足が止まったら、止まった時刻で数える
+    softMinMs: 120,       // …山が見えてから、これ以上たっていること（上げた直後の一瞬の静止を数えない）
+    softMaxMs: 500,       // …山が見えなくなってから、これ以上たったら忘れる
+    lossyRate: 0.1,       // 通信の欠けぐあい（loss）がこれ以上の足は「欠けが多い」
+    lossyUpScale: 0.4,    // 欠けが多い足は、上向きの力の条件をこの倍率にゆるめる（衝撃のいちばん鋭いところが届かない）
+    lossyImpactG: 3,      // …または、下向きに動いてきた足にこれ以上の衝撃があれば着地とみなす（欠けが多いと重力の向きがずれ、衝撃が上向きに見えないことがある）
+    quickStillDps: 20,    // 足の回転がこれ未満で、加速度がほぼ 1 G なら「床についている」（ジャイロがあるとき。0 = 使わない）
+    quickStillMs: 60,     // …がこの時間つづいたら、上下の速さを 0 に戻し、「止まったら数える」の合図にする
     warmupMs: 350,        // 接続直後は重力推定が落ち着くまで数えない
     noiseRiseTauMs: 6000, // ノイズフロア推定: 上がるのはゆっくり（足踏みの山を覚えない）
     noiseFallTauMs: 300,  //                   下がるのは速く（静かな瞬間にすぐ合わせる）
@@ -119,6 +151,8 @@
       armed: false, peak: 0, valley: 0, level: 0, ivl: 1000, lastStepT: -1e9, firstT: null,
       dvx: 0, dvy: 0, dvz: 0, ux: 0, uy: 0, uz: 0,
       prevSampleTs: null, cur: null, hist: [],
+      pend: null, loss: 0, dtMin: 60, qStill: 0,
+      wx: 0, wy: 0, wz: 0, wT: -1e9, vz: 0, vHist: [], up: 0, upMax: 0, vzBefore: 0,
       clockOff: null, clockFar: 0, lastArr: -1e9, lastAligned: -1e9, delays: [],
       dtEst: null, rateT0: null, rateN: 0,
       lastT: -1e9, samples: 0
@@ -131,7 +165,9 @@
    *            aligned: t をセンサーの時計で決めたか, peak: ふみの強さ[G],
    *            impactT: 着地の衝撃（いちばん大きく動いた瞬間）の時刻[ms], impact: そのときの動き[G],
    *            landingClear: 鋭い衝撃の山が見つかったか（通信が欠けると見つからないことがある）,
-   *            settled: impactT が確定したか }
+   *            settled: impactT が確定したか,
+   *            fall: 山の直前の下向きの速さ [m/s]（負 = 下向き）,
+   *            soft: 衝撃が見えないまま足が止まったので数えた（t は止まりはじめた時刻） }
    *   peak は検出後 peakWindowMs、impact・impactT は着地をさがす間（最大 landingMaxMs）に届いたサンプルで更新される
    */
   function UdonStepDetector(options) {
@@ -190,6 +226,11 @@
     return this._threshold(this.feet[foot]);
   };
 
+  /** その足の通信の欠けぐあい（0〜1 の目安。サンプルの間隔が開いた割合）。lossyRate 以上なら着地の条件をゆるめている */
+  UdonStepDetector.prototype.lossRate = function (foot) {
+    return this.feet[foot] ? this.feet[foot].loss : 0;
+  };
+
   UdonStepDetector.prototype._threshold = function (st) {
     var c = this.cfg;
     var guard = Math.min(st.noise * c.noiseGuard, c.noiseGuardMaxG, c.threshold * c.noiseGuardMaxRatio);
@@ -220,6 +261,32 @@
   UdonStepDetector.prototype.clockOffset = function (foot) {
     var st = this.feet[foot];
     return st ? st.clockOff : null;
+  };
+
+  /**
+   * ジャイロ [deg/s] を入れる（任意）。足が動いている間、重力の向きを足の回転に合わせて回すのに使う。
+   * 加速度の直前か直後に呼ぶ（1 サンプルぶん古くてもよい）
+   */
+  UdonStepDetector.prototype.pushGyro = function (foot, gx, gy, gz) {
+    var st = this.feet[foot];
+    if (!st || !isFinite(gx) || !isFinite(gy) || !isFinite(gz)) return;
+    st.wx = gx; st.wy = gy; st.wz = gz; st.wT = st.lastArr;
+  };
+
+  /**
+   * 山の直前に、足が下向きに動いていた速さ [m/s]（負 = 下向き）。山そのもの（上向きの衝撃）はさかのぼって除く。
+   * 次の 2 つの小さいほう（どちらかが下向きなら、下向きに動いていた）:
+   *   - 山の手前 fallWindowMs の上下の加速度の積分（勢いよくふみおろす。ずっと動いていても、ずれがたまらない）
+   *   - 止まってからの上下の速さ（ゆっくり一定の速さで下ろして、最後に踵が当たる。直前の加速度は 0 に近い）
+   */
+  UdonStepDetector.prototype._fall = function (st) {
+    var c = this.cfg, h = st.vHist, i = h.length - 4;
+    while (i >= 0 && h[i + 1] > c.fallSpikeG) i -= 4;   // 衝撃の立ち上がりをさかのぼる
+    if (i < 0) return 0;
+    var tEnd = h[i], v = 0, vz = h[i + 3];
+    for (; i >= 0 && tEnd - h[i] <= c.fallWindowMs; i -= 4) v += h[i + 1] * 9.80665 * Math.min(h[i + 2], 50) / 1000;
+    st.vzBefore = vz;
+    return Math.min(v, vz);
   };
 
   UdonStepDetector.prototype.reset = function (foot) {
@@ -289,6 +356,9 @@
       if (d > 0 && d < 200) dt = d;
     }
     st.prevSampleTs = isFinite(sampleTs) ? sampleTs : null;
+    // 通信の欠けぐあい（0〜1）: サンプルの間隔が、いつもの間隔の 2.5 倍より開いた割合
+    if (st.dtEst && isFinite(sampleTs)) st.loss += ((dt > Math.max(12, st.dtMin * 2.5) ? 1 : 0) - st.loss) * 0.02;
+    if (dt > 0 && dt < st.dtMin) st.dtMin = dt;
     st.lastT = tMs;
     st.samples++;
 
@@ -335,20 +405,46 @@
     }
     var jFloor = Math.min(st.jMinCur, st.jMinPrev);
     var stillThr = Math.max(c.stillG, isFinite(jFloor) ? jFloor * c.stillFloorRatio : 0);
-    st.stillMs = st.jit < stillThr ? st.stillMs + dt : 0;
+    // 足を下ろす途中は、ゆらぎが小さいまま加速度がほぼ 0 G（落ちている）になることがある。
+    // それを「止まっている」とみなすと、重力の向きを見失う。大きさがほぼ 1 G のときだけ「止まっている」
+    var amag = Math.sqrt(ax * ax + ay * ay + az * az);
+    st.stillMs = (st.jit < stillThr && Math.abs(amag - 1) < c.stillMagG) ? st.stillMs + dt : 0;
 
     if (!warm || st.stillMs >= c.stillHoldMs) {
       // 接続直後と、止まっている間: すばやく合わせる
       var aS = 1 - Math.exp(-dt / (warm ? c.gravityStillTauMs : c.settleTauMs));
       st.gx += aS * dx; st.gy += aS * dy; st.gz += aS * dz;
     } else {
-      // 動いている間: ごくゆっくり、しかも 1 回の修正量を制限する
+      // 動いている間: ジャイロがあれば、重力の向きを足の回転ぶん回す（センサーから見た重力は −ω × g で動く）
+      if (c.gyroSign && tArr - st.wT < 100 && dt <= c.gyroMaxDtMs) {
+        var kr = c.gyroSign * dt / 1000 * Math.PI / 180;
+        var rx = (st.wy * st.gz - st.wz * st.gy) * kr, ry = (st.wz * st.gx - st.wx * st.gz) * kr, rz = (st.wx * st.gy - st.wy * st.gx) * kr;
+        st.gx -= rx; st.gy -= ry; st.gz -= rz;
+      }
+      // ごくゆっくり、しかも 1 回の修正量を制限する
       var aG = 1 - Math.exp(-dt / c.gravityTauMs);
       var cl = c.gravityClampG;
       st.gx += aG * clamp(dx, -cl, cl);
       st.gy += aG * clamp(dy, -cl, cl);
       st.gz += aG * clamp(dz, -cl, cl);
     }
+
+    // 上下の速さ [m/s]（上向きが正）。重力の向きの成分を積分する。止まっている間は 0 に戻す
+    var gn = Math.sqrt(st.gx * st.gx + st.gy * st.gy + st.gz * st.gz) || 1;
+    var up = (dx * st.gx + dy * st.gy + dz * st.gz) / gn;
+    // 速い足踏みや欠けの多い足では、ゆらぎがおさまる前に次の 1 歩が始まる。ジャイロがあれば、
+    // 回転が止まっていて加速度がほぼ 1 G のときも「床についている」とみなす（重力推定の早合わせには使わない）
+    var wn = Math.sqrt(st.wx * st.wx + st.wy * st.wy + st.wz * st.wz);
+    st.qStill = (c.quickStillDps && tArr - st.wT < 100 && wn < c.quickStillDps && Math.abs(amag - 1) < c.stillMagG) ? st.qStill + dt : 0;
+    var grounded = warm && (st.stillMs >= c.stillHoldMs || st.qStill >= c.quickStillMs);
+    if (grounded) st.vz = 0;
+    else st.vz = (st.vz + up * 9.80665 * Math.min(dt, 50) / 1000) * Math.exp(-dt / c.velLeakMs);
+    st.vHist.push(tMs, up, dt, st.vz);
+    while (st.vHist.length > 4 && tMs - st.vHist[0] > 400) st.vHist.splice(0, 4);
+    st.up = up;
+    // 直近 upHoldMs の上向きの加速度の最大（衝撃は数サンプルで向きが振れるので、少しのあいだ覚えておく）
+    st.upMax = up;
+    for (var ui = st.vHist.length - 8; ui >= 0 && tMs - st.vHist[ui] <= c.upHoldMs; ui -= 4) if (st.vHist[ui + 1] > st.upMax) st.upMax = st.vHist[ui + 1];
 
     // 動きの向き（少しならしたもの）。足を「振り上げる」と「ふみおろす」では逆を向く
     var aD = 1 - Math.exp(-dt / c.dirTauMs);
@@ -385,6 +481,20 @@
 
     var thr = this._threshold(st);
 
+    // 止まったら数える: 山はあったのに着地の衝撃が見えないまま（通信で欠けた・そっと下ろした）、
+    // 下向きに動いた足が止まったら 1 ふみにする
+    if (st.pend) {
+      var pd = st.pend;
+      if (tMs - pd.last > c.softMaxMs) st.pend = null;
+      else if (c.softLanding && pd.down && tMs - pd.t >= c.softMinMs && grounded) {
+        // ゆらぎがおさまって「止まった」と分かるのは 0.1〜0.3 秒あと。時刻は、動きの山が最後に見えたところにする
+        var tStop = pd.last;
+        st.armed = false; st.peak = st.env;
+        var softStep = this._count(foot, st, tStop, tArr, aligned, dyn, 0, { peak: pd.peak });
+        if (softStep) return softStep;
+      }
+    }
+
     // ノイズフロア（包絡線の下側）を学習する。下がるのは速く、上がるのはゆっくりなので、
     // 足踏みの「谷」に張りつく。ずっとざわついているセンサーでは全体が持ち上がる
     // 接続して最初の数秒は、そのセンサーのノイズ量を早めに覚える
@@ -409,6 +519,27 @@
     if (st.env < st.valley) st.valley = st.env;
     var rise = Math.max(thr * c.riseRatio, st.level * c.relRiseRatio);
     if (st.env < thr || (st.env - st.valley) < rise) return null;
+    // 下向きに動いてきた足が、上向きの力で止まった山（着地）だけを数える。
+    // 止まっていた足が動き出した山（上げる動き）や、下ろす途中の動きは数えない。検出の準備はそのまま続ける
+    var fall = this._fall(st);
+    var fallNeed = clamp(c.threshold * c.fallNeedRatio, c.fallMin, c.fallMax);
+    // 通信の欠けが多い足は、衝撃のいちばん鋭いところが届かないことが多いので、上向きの条件をゆるめる
+    var upNeed = thr * c.upRatio * (st.loss >= c.lossyRate ? c.lossyUpScale : 1);
+    // 欠けが多い足では、ジャイロも欠けて重力の向きがずれ、着地の衝撃が上向きに見えないことがある。
+    // 下ろす途中の動きは 1〜2 G どまりなので、それよりずっと大きい衝撃なら着地とみなす
+    var hard = false;
+    if (c.lossyImpactG && st.loss >= c.lossyRate) {
+      for (var hi = st.hist.length - 2; hi >= 0 && tMs - st.hist[hi] <= c.upHoldMs; hi -= 2) if (st.hist[hi + 1] >= c.lossyImpactG) hard = true;
+    }
+    if (c.landingOnly && (fall > -fallNeed || (st.upMax < upNeed && !hard))) {
+      // 着地の形をしていない山。あとで足が止まったときのために、山があったことと、下向きに動いたかを覚えておく
+      if (!st.pend) st.pend = { t: tMs, last: tMs, peak: st.env, down: false };
+      st.pend.last = tMs;
+      if (st.env > st.pend.peak) st.pend.peak = st.env;
+      // （上で足を止める直前も、加速度だけ見ると下向きになる。ここは止まってからの速さで見る）
+      if (st.vzBefore <= -fallNeed) st.pend.down = true;
+      return null;
+    }
 
     // 反対の足の直後で、しかもずっと小さい動きなら、床を伝わってきた振動かもしれない。
     // まだ数えずに様子を見る（本当にふんでいれば、このあと大きくなって数えられる）
@@ -421,6 +552,13 @@
     // 山が来た。数えるかどうかにかかわらず、いったん下がるまで再検出しない
     st.armed = false;
     st.peak = st.env;
+    return this._count(foot, st, tMs, tArr, aligned, dyn, fall, false);
+  };
+
+  /** 不応期などを確かめて 1 ふみを数える。soft = 衝撃が見えないまま足が止まった（下の「止まったら数える」） */
+  UdonStepDetector.prototype._count = function (foot, st, tMs, tArr, aligned, dyn, fall, soft) {
+    var c = this.cfg;
+    st.pend = null;
     // 不応期: ゆっくりふんでいるときは長め（持ち上げと着地の二重カウントを防ぐ）、速いときは短め
     var since = tMs - st.lastStepT;
     var refractory = clamp(st.ivl * c.refractoryIntervalRatio, Math.min(c.minRefractoryMs, c.refractoryMs), c.refractoryMs);
@@ -432,7 +570,7 @@
     // 足を上下に動かすと、加速度は 1 歩のあいだに「行き」と「帰り」で逆向きの山を 2 つ作る。
     // 前のふみと逆向きの山が、いつもの間隔よりずっと早く来たら、同じ 1 歩の残り半分なので数えない
     var dn = Math.sqrt(st.dvx * st.dvx + st.dvy * st.dvy + st.dvz * st.dvz);
-    if (dn > 1e-6) {
+    if (!soft && dn > 1e-6) {
       var cos = (st.dvx * st.ux + st.dvy * st.uy + st.dvz * st.uz) / dn;
       if (cos < c.oppositeCos && since < Math.min(st.ivl, 1500) * c.oppositeRatio) return null;
       st.ux = st.dvx / dn; st.uy = st.dvy / dn; st.uz = st.dvz / dn;
@@ -446,9 +584,11 @@
     var landingMs = clamp(st.ivl * c.landingIntervalRatio, c.peakWindowMs, c.landingMaxMs);
     var step = {
       foot: foot, t: tMs, at: tArr, aligned: aligned, peak: Math.max(dyn, st.env),
-      impact: dyn, impactT: tMs, landingClear: false, landingMs: landingMs, settled: false
+      impact: dyn, impactT: tMs, landingClear: false, landingMs: landingMs, settled: false,
+      fall: fall, soft: !!soft
     };
-    st.cur = step;
+    if (soft) { step.peak = step.impact = soft.peak; step.settled = true; }
+    else st.cur = step;
     if (this.onStep) this.onStep(step);
     return step;
   };
